@@ -1,14 +1,15 @@
-# Plan 0001: Sylvestris bootstrap
+# Plan 0001: Mandate bootstrap
 
 **Status:** DRAFT  
 **Date:** 2026-05-24  
 **Related:** [ADR-0001](../adr-0001-auth-strategy-seams.md),
+[plan-0002 rename](plan-0002-rename-sylvestris-to-mandate.md),
 [canopy plan-0021](https://github.com/forestrie/canopy/blob/main/docs/plans/plan-0021-delegation-coordinator-apis.md),
 [univocity plan-0029](https://github.com/forestrie/univocity/blob/main/docs/plans/plan-0029-eip-compatible-ks256-signers.md)
 
 ## Goal
 
-Bootstrap **Sylvestris** as an isolated SvelteKit app for BYOK delegation wallet UX:
+Bootstrap **Mandate** as an isolated SvelteKit app for BYOK delegation wallet UX:
 connect wallet, list pending delegation needs, sign KS256 payload hash, submit material to
 the delegation coordinator via a BFF.
 
@@ -16,7 +17,7 @@ the delegation coordinator via a BFF.
 
 | Area                  | Choice                                                  |
 | --------------------- | ------------------------------------------------------- |
-| Repo                  | `forestrie/sylvestris` (isolated from canopy workers)   |
+| Repo                  | `forestrie/mandate` (isolated from canopy workers)      |
 | Deploy                | Cloudflare Pages + GitHub Actions                       |
 | Wallet                | Privy (`@privy-io/js-sdk-core`, client-only)            |
 | Coordinator access v1 | BFF with `COORDINATOR_APP_TOKEN`                        |
@@ -30,7 +31,7 @@ the delegation coordinator via a BFF.
 - Pending list + material submit vertical slice
 - Auth/signing backend stubs for Safe and wallet-challenge
 - CI: test, PR preview deploy, main prod deploy
-- Doppler project `sylvestris` (documented; manual setup)
+- Doppler project `mandate` (documented; manual setup)
 
 ## Out of scope (bootstrap)
 

@@ -1,7 +1,7 @@
 version: '3'
 
 vars:
-  DOPPLER_PROJECT: sylvestris
+  DOPPLER_PROJECT: mandate
 
 tasks:
   dev:

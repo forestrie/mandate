@@ -17,11 +17,11 @@
 
 <main class="mx-auto flex min-h-[70vh] max-w-3xl flex-col justify-center gap-8 p-6">
 	<div class="space-y-3">
-		<p class="text-sm font-medium tracking-wide text-emerald-700 uppercase">Sylvestris</p>
+		<p class="text-sm font-medium tracking-wide text-emerald-700 uppercase">Mandate</p>
 		<h1 class="text-4xl font-semibold tracking-tight text-zinc-950">Delegation wallet console</h1>
 		<p class="max-w-2xl text-base leading-relaxed text-zinc-600">
-			BYOK operators use Sylvestris to review pending delegation leases and submit signed material
-			to the Forestrie delegation coordinator — without running Canopy.
+			BYOK operators use Mandate to review pending delegation leases and submit signed material to
+			the Forestrie delegation coordinator — without running Canopy.
 		</p>
 	</div>
 

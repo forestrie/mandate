@@ -7,14 +7,14 @@
 
 ## Context
 
-Sylvestris calls delegation-coordinator management APIs from browser UX flows. The
+Mandate calls delegation-coordinator management APIs from browser UX flows. The
 coordinator currently accepts a global `COORDINATOR_APP_TOKEN` on UX endpoints; issuance
 also accepts per-log `issuerToken`. BYOK operators will eventually prove authority-log
 ownership via wallet challenge without a shared app token.
 
 ## Decision
 
-Implement **`CoordinatorAuthStrategy`** in Sylvestris with three modes:
+Implement **`CoordinatorAuthStrategy`** in Mandate with three modes:
 
 | Mode               | Env        | Implementation                                   | Coordinator dependency           |
 | ------------------ | ---------- | ------------------------------------------------ | -------------------------------- |
@@ -39,14 +39,14 @@ mirror that pattern:
 checkBearerToken(request, env.COORDINATOR_APP_TOKEN, issuerToken);
 ```
 
-Sylvestris `IssuerTokenStrategy` throws `501` until coordinator and session plumbing land.
+Mandate `IssuerTokenStrategy` throws `501` until coordinator and session plumbing land.
 
 ## v3: Wallet challenge (stub)
 
 Future flow:
 
 1. `POST /api/auth/challenge` returns nonce bound to `authLogId`.
-2. Wallet signs challenge; Sylvestris verifies against Univocity trust root (curator).
+2. Wallet signs challenge; Mandate verifies against Univocity trust root (curator).
 3. BFF forwards `Wallet-Challenge` proof to coordinator.
 
 `POST /api/auth/challenge` returns **501** until curator/arbor features ship.
@@ -62,6 +62,6 @@ Separate from coordinator auth:
 
 ## Consequences
 
-- Sylvestris repo can ship before coordinator auth extensions.
+- Mandate repo can ship before coordinator auth extensions.
 - No coordinator CORS required while BFF mode is default.
 - Direct browser → coordinator mode remains possible later via CORS + issuer/challenge auth.

@@ -1,6 +1,6 @@
-# Sylvestris
+# Mandate
 
-BYOK delegation wallet console for Forestrie. Sylvestris is an isolated SvelteKit app
+BYOK delegation wallet console for Forestrie. Mandate is an isolated SvelteKit app
 that talks to the [delegation coordinator](https://github.com/forestrie/canopy) through a
 same-origin BFF — private keys stay in the browser via [Privy](https://privy.io).
 
@@ -51,7 +51,7 @@ same-origin BFF — private keys stay in the browser via [Privy](https://privy.i
 
 ```text
 Browser (Privy wallet)
-  → Sylvestris Pages Functions (/api/coordinator/* BFF)
+  → Mandate Pages Functions (/api/coordinator/* BFF)
   → delegation-coordinator (coordinator-dev.forestrie.dev)
 ```
 
@@ -62,17 +62,17 @@ See [docs/adr-0001-auth-strategy-seams.md](docs/adr-0001-auth-strategy-seams.md)
 
 Deployments run from GitHub Actions only (disable Cloudflare dashboard Git auto-build):
 
-- **PR (non-fork):** preview to `sylvestris-dev` Pages project
-- **`main`:** production to `sylvestris-prod`
+- **PR (non-fork):** preview to `mandate-dev` Pages project
+- **`main`:** production to `mandate-prod`
 
 Proposed hostnames:
 
-- dev: `sylvestris-dev.forestrie.dev`
-- prod: `sylvestris.forestrie.dev`
+- dev: `mandate-dev.forestrie.dev`
+- prod: `mandate.forestrie.dev`
 
 ### Doppler + GitHub Environments
 
-Create Doppler project **`sylvestris`** with `dev` and `prod` configs synced to GitHub
+Create Doppler project **`mandate`** with `dev` and `prod` configs synced to GitHub
 Environments **`dev`** and **`prod`**.
 
 | Secret / variable         | dev | prod |
@@ -104,5 +104,6 @@ pnpm sync:coordinator-types
 ## Related docs
 
 - [plan-0001 bootstrap](docs/plans/plan-0001-bootstrap.md)
+- [plan-0002 rename](docs/plans/plan-0002-rename-sylvestris-to-mandate.md)
 - [ADR-0001 auth strategy seams](docs/adr-0001-auth-strategy-seams.md)
 - [canopy plan-0021](https://github.com/forestrie/canopy/blob/main/docs/plans/plan-0021-delegation-coordinator-apis.md)
