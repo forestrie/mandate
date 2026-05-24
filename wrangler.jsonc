@@ -1,0 +1,12 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "sylvestris",
+	"compatibility_date": "2026-05-24",
+	"compatibility_flags": ["nodejs_compat"],
+	"pages_build_output_dir": ".svelte-kit/cloudflare",
+	"vars": {
+		"NODE_ENV": "production",
+		"COORDINATOR_AUTH_MODE": "app_token_bff",
+		"COORDINATOR_UPSTREAM_URL": "https://coordinator-dev.forestrie.dev"
+	}
+}

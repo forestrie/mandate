@@ -1,0 +1,55 @@
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: pages-prod
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy Pages production
+    runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        env:
+          CF_PAGES: '1'
+          PUBLIC_COORDINATOR_BFF_BASE: /api/coordinator
+          PUBLIC_PRIVY_APP_ID: ${{ vars.PUBLIC_PRIVY_APP_ID }}
+          PUBLIC_PRIVY_CLIENT_ID: ${{ vars.PUBLIC_PRIVY_CLIENT_ID }}
+          PUBLIC_DEFAULT_CHAIN_ID: ${{ vars.PUBLIC_DEFAULT_CHAIN_ID }}
+        run: pnpm build
+
+      - name: Deploy production
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy .svelte-kit/cloudflare --project-name=sylvestris-prod --branch=main
+
+      - name: Bind Pages secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "${{ secrets.COORDINATOR_APP_TOKEN }}" | pnpm exec wrangler pages secret put COORDINATOR_APP_TOKEN --project-name=sylvestris-prod

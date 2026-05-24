@@ -1,0 +1,52 @@
+version: '3'
+
+vars:
+  DOPPLER_PROJECT: sylvestris
+
+tasks:
+  dev:
+    desc: Run Vite dev server
+    cmds:
+      - pnpm dev
+
+  dev:doppler:
+    desc: Run dev with Doppler-injected secrets
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config dev -- pnpm dev
+
+  build:
+    desc: Production build for Cloudflare Pages
+    env:
+      CF_PAGES: '1'
+    cmds:
+      - pnpm build
+
+  build:doppler:
+    desc: Build with Doppler secrets for local Pages preview
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config dev -- env CF_PAGES=1 pnpm build
+
+  preview:
+    desc: Preview built Pages output locally
+    cmds:
+      - pnpm preview
+
+  test:
+    desc: Unit tests
+    cmds:
+      - pnpm test
+
+  check:
+    desc: Typecheck
+    cmds:
+      - pnpm check
+
+  lint:
+    desc: Prettier + ESLint
+    cmds:
+      - pnpm lint
+
+  sync:coordinator-types:
+    desc: Copy coordinator types from sibling canopy checkout
+    cmds:
+      - pnpm sync:coordinator-types

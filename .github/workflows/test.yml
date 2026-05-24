@@ -1,0 +1,51 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    name: Lint, typecheck, unit, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        env:
+          PUBLIC_COORDINATOR_BFF_BASE: /api/coordinator
+          PUBLIC_PRIVY_APP_ID: ci-placeholder
+          PUBLIC_PRIVY_CLIENT_ID: ci-placeholder
+          PUBLIC_DEFAULT_CHAIN_ID: '11155111'
+        run: pnpm check
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        env:
+          CF_PAGES: '1'
+          PUBLIC_COORDINATOR_BFF_BASE: /api/coordinator
+          PUBLIC_PRIVY_APP_ID: ci-placeholder
+          PUBLIC_PRIVY_CLIENT_ID: ci-placeholder
+          PUBLIC_DEFAULT_CHAIN_ID: '11155111'
+        run: pnpm build
+
+      - name: Audit client bundle for secret names
+        run: pnpm audit:client-secrets
