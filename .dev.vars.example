@@ -1,4 +1,4 @@
 COORDINATOR_APP_TOKEN=
-COORDINATOR_UPSTREAM_URL=https://coordinator-dev.forestrie.dev
+COORDINATOR_UPSTREAM_URL=https://coordinator.forest-2.forestrie.dev
 COORDINATOR_AUTH_MODE=app_token_bff
 ENABLE_CUSTODY_KEYS_BFF=false

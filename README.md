@@ -22,7 +22,7 @@ same-origin BFF — private keys stay in the browser via [Privy](https://privy.i
 
 2. Fill in Privy app IDs (public) and coordinator secrets in `.dev.vars`:
    - `COORDINATOR_APP_TOKEN`
-   - `COORDINATOR_UPSTREAM_URL` (default: `https://coordinator-dev.forestrie.dev`)
+   - `COORDINATOR_UPSTREAM_URL` (default: `https://coordinator.forest-2.forestrie.dev` — catalog pattern: `https://coordinator.{DNS_SUB}.{DNS_APEX}`)
 
 3. Run with Doppler (recommended):
 
@@ -52,7 +52,7 @@ same-origin BFF — private keys stay in the browser via [Privy](https://privy.i
 ```text
 Browser (Privy wallet)
   → Mandate Pages Functions (/api/coordinator/* BFF)
-  → delegation-coordinator (coordinator-dev.forestrie.dev)
+  → delegation-coordinator (coordinator.{DNS_SUB}.{DNS_APEX})
 ```
 
 Auth modes are pluggable — v1 uses `app_token_bff` (server holds `COORDINATOR_APP_TOKEN`).
