@@ -7,6 +7,6 @@
 	"vars": {
 		"NODE_ENV": "production",
 		"COORDINATOR_AUTH_MODE": "app_token_bff",
-		"COORDINATOR_UPSTREAM_URL": "https://coordinator-dev.forestrie.dev"
+		"COORDINATOR_UPSTREAM_URL": "https://coordinator.forest-2.forestrie.dev"
 	}
 }
