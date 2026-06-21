@@ -1,0 +1,20 @@
+{
+	"name": "@mandate/register",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"description": "Univocity instance registration and provisioning (FOR-100)",
+	"bin": {
+		"mandate-register": "./src/cli.ts"
+	},
+	"scripts": {
+		"build": "tsc --noEmit",
+		"check": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"@types/node": "^22",
+		"typescript": "^6.0.2",
+		"vitest": "^4.1.3"
+	}
+}

@@ -15,7 +15,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..');
 const canopyRoot = process.env.CANOPY_ROOT ?? resolve(repoRoot, '../canopy');
 const sourceDir = join(canopyRoot, 'packages/apps/delegation-coordinator/src/types');
-const targetDir = join(repoRoot, 'src/lib/coordinator/types');
+const targetDir = join(repoRoot, 'packages/apps/ui/src/lib/coordinator/types');
 
 if (!existsSync(sourceDir)) {
 	console.error(`Coordinator types not found at ${sourceDir}`);

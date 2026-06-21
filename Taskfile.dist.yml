@@ -5,7 +5,7 @@ vars:
 
 tasks:
   dev:
-    desc: Run Vite dev server
+    desc: Run Vite dev server (@mandate/ui)
     cmds:
       - pnpm dev
 
@@ -15,16 +15,21 @@ tasks:
       - doppler run --project {{.DOPPLER_PROJECT}} --config dev -- pnpm dev
 
   build:
-    desc: Production build for Cloudflare Pages
-    env:
-      CF_PAGES: '1'
+    desc: Production build for all workspace packages
     cmds:
       - pnpm build
 
-  build:doppler:
-    desc: Build with Doppler secrets for local Pages preview
+  build:ui:
+    desc: Production build for Cloudflare Pages (@mandate/ui)
+    env:
+      CF_PAGES: '1'
     cmds:
-      - doppler run --project {{.DOPPLER_PROJECT}} --config dev -- env CF_PAGES=1 pnpm build
+      - pnpm build:ui
+
+  build:doppler:
+    desc: Build ui with Doppler secrets for local Pages preview
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config dev -- pnpm build:ui
 
   preview:
     desc: Preview built Pages output locally

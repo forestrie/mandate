@@ -30,7 +30,7 @@ jobs:
           PUBLIC_PRIVY_APP_ID: ci-placeholder
           PUBLIC_PRIVY_CLIENT_ID: ci-placeholder
           PUBLIC_DEFAULT_CHAIN_ID: '11155111'
-        run: pnpm build
+        run: pnpm build:ui
 
   deploy-preview:
     name: Deploy Pages preview
@@ -63,14 +63,14 @@ jobs:
           PUBLIC_PRIVY_APP_ID: ${{ vars.PUBLIC_PRIVY_APP_ID }}
           PUBLIC_PRIVY_CLIENT_ID: ${{ vars.PUBLIC_PRIVY_CLIENT_ID }}
           PUBLIC_DEFAULT_CHAIN_ID: ${{ vars.PUBLIC_DEFAULT_CHAIN_ID }}
-        run: pnpm build
+        run: pnpm build:ui
 
       - name: Deploy preview
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy .svelte-kit/cloudflare --project-name=mandate-dev --branch=${{ github.head_ref }}
+          command: pages deploy packages/apps/ui/.svelte-kit/cloudflare --project-name=mandate-dev --branch=${{ github.head_ref }}
 
       - name: Comment preview URL
         uses: actions/github-script@v7

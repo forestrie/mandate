@@ -3,22 +3,19 @@
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
-	"description": "BYOK delegation wallet console for Forestrie",
+	"description": "BYOK Univocity instance management for Forestrie (ui, agent, register)",
 	"scripts": {
-		"dev": "vite dev",
-		"build": "CF_PAGES=1 vite build",
-		"build:check": "wrangler types --check && CF_PAGES=1 vite build",
-		"preview": "wrangler pages dev .svelte-kit/cloudflare --port 4173",
-		"prepare": "svelte-kit sync || echo ''",
-		"check": "PUBLIC_COORDINATOR_BFF_BASE=/api/coordinator PUBLIC_PRIVY_APP_ID=local PUBLIC_PRIVY_CLIENT_ID=local PUBLIC_DEFAULT_CHAIN_ID=11155111 svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"dev": "pnpm --filter @mandate/ui dev",
+		"build": "pnpm -r --filter './packages/**' build",
+		"build:ui": "pnpm --filter @mandate/ui build",
+		"preview": "pnpm --filter @mandate/ui preview",
+		"prepare": "pnpm --filter @mandate/ui prepare",
+		"check": "pnpm -r --filter './packages/**' check",
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
-		"test:unit": "vitest",
-		"test": "pnpm run test:unit -- --run",
+		"test": "pnpm -r --filter './packages/**' test",
 		"sync:coordinator-types": "node scripts/sync-coordinator-types.mjs",
-		"audit:client-secrets": "node scripts/audit-client-bundle.mjs",
-		"gen": "wrangler types"
+		"audit:client-secrets": "node scripts/audit-client-bundle.mjs"
 	},
 	"engines": {
 		"node": ">=22.0.0",
@@ -27,15 +24,6 @@
 	"devDependencies": {
 		"@eslint/compat": "^2.0.4",
 		"@eslint/js": "^10.0.1",
-		"@lucide/svelte": "^1.16.0",
-		"@sveltejs/adapter-cloudflare": "^7.2.8",
-		"@sveltejs/adapter-static": "^3.0.10",
-		"@sveltejs/adapter-vercel": "^6.3.3",
-		"@sveltejs/kit": "^2.57.0",
-		"@sveltejs/vite-plugin-svelte": "^7.0.0",
-		"@tailwindcss/vite": "^4.2.2",
-		"@types/node": "^22",
-		"clsx": "^2.1.1",
 		"eslint": "^10.2.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.17.0",
@@ -43,19 +31,6 @@
 		"prettier": "^3.8.1",
 		"prettier-plugin-svelte": "^3.5.1",
 		"prettier-plugin-tailwindcss": "^0.7.2",
-		"svelte": "^5.55.2",
-		"svelte-check": "^4.4.6",
-		"tailwind-merge": "^3.6.0",
-		"tailwind-variants": "^3.2.2",
-		"tailwindcss": "^4.2.2",
-		"typescript": "^6.0.2",
-		"typescript-eslint": "^8.58.1",
-		"vite": "^8.0.7",
-		"vitest": "^4.1.3",
-		"wrangler": "^4.81.0"
-	},
-	"dependencies": {
-		"@privy-io/js-sdk-core": "^0.65.1",
-		"viem": "^2.50.4"
+		"typescript-eslint": "^8.58.1"
 	}
 }

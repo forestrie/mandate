@@ -1,28 +1,45 @@
 # Mandate
 
-BYOK delegation wallet console for Forestrie. Mandate is an isolated SvelteKit app
-that talks to the [delegation coordinator](https://github.com/forestrie/canopy) through a
-same-origin BFF — private keys stay in the browser via [Privy](https://privy.io).
+BYOK Univocity instance management for Forestrie — operator console, delegation
+agent, and registration provisioner. The **operator console** (`@mandate/ui`) is a
+SvelteKit app that talks to the
+[delegation coordinator](https://github.com/forestrie/canopy) through a same-origin
+BFF; private keys stay in the browser via [Privy](https://privy.io).
+
+## Monorepo layout
+
+```text
+packages/
+  apps/
+    ui/        @mandate/ui — operator console (Cloudflare Pages)
+    agent/     @mandate/agent — webhook receiver + signer (Worker, FOR-98)
+    register/  @mandate/register — instance provisioning (FOR-100)
+  libs/
+    coordinator-types/  shared coordinator API types (Phase 2)
+```
+
+See [docs/plans/plan-0003-for-97-package-split.md](docs/plans/plan-0003-for-97-package-split.md).
 
 ## Stack
 
-- SvelteKit 2 + Svelte 5
+- pnpm workspace
+- SvelteKit 2 + Svelte 5 (`@mandate/ui`)
 - Cloudflare Pages (`@sveltejs/adapter-cloudflare`)
 - Privy (`@privy-io/js-sdk-core`, client-only)
 - Tailwind CSS v4 + lightweight UI primitives
 
 ## Local development
 
-1. Copy env templates:
+1. Copy env templates in `packages/apps/ui/`:
 
    ```sh
-   cp .env.example .env
-   cp .dev.vars.example .dev.vars
+   cp packages/apps/ui/.env.example packages/apps/ui/.env
+   cp packages/apps/ui/.dev.vars.example packages/apps/ui/.dev.vars
    ```
 
 2. Fill in Privy app IDs (public) and coordinator secrets in `.dev.vars`:
    - `COORDINATOR_APP_TOKEN`
-   - `COORDINATOR_UPSTREAM_URL` (default: `https://coordinator.forest-2.forestrie.dev` — catalog pattern: `https://coordinator.{DNS_SUB}.{DNS_APEX}`)
+   - `COORDINATOR_UPSTREAM_URL` (default: `https://coordinator.forest-2.forestrie.dev`)
 
 3. Run with Doppler (recommended):
 
@@ -30,22 +47,23 @@ same-origin BFF — private keys stay in the browser via [Privy](https://privy.i
    task dev:doppler
    ```
 
-   Or plain Vite after hydrating `.env` / `.dev.vars`:
+   Or plain Vite after hydrating env files:
 
    ```sh
    pnpm dev
    ```
 
-## Scripts
+## Scripts (repo root)
 
-| Command                       | Purpose                                        |
-| ----------------------------- | ---------------------------------------------- |
-| `pnpm dev`                    | Vite dev server                                |
-| `pnpm build`                  | Cloudflare Pages build (`CF_PAGES=1`)          |
-| `pnpm check`                  | Typecheck                                      |
-| `pnpm test`                   | Vitest unit tests                              |
-| `pnpm sync:coordinator-types` | Copy types from sibling `canopy` checkout      |
-| `pnpm audit:client-secrets`   | Ensure server secrets are not in client bundle |
+| Command                       | Purpose                                    |
+| ----------------------------- | ------------------------------------------ |
+| `pnpm dev`                    | Vite dev server (`@mandate/ui`)            |
+| `pnpm build`                  | Build all workspace packages               |
+| `pnpm build:ui`               | Cloudflare Pages build for ui only         |
+| `pnpm check`                  | Typecheck all packages                     |
+| `pnpm test`                   | Vitest across workspace                    |
+| `pnpm sync:coordinator-types` | Copy types from sibling `canopy` checkout  |
+| `pnpm audit:client-secrets`   | Ensure server secrets are not in ui bundle |
 
 ## Architecture
 
@@ -64,6 +82,8 @@ Deployments run from GitHub Actions only (disable Cloudflare dashboard Git auto-
 
 - **PR (non-fork):** preview to `mandate-dev` Pages project
 - **`main`:** production to `mandate-prod`
+
+Build output: `packages/apps/ui/.svelte-kit/cloudflare`
 
 Proposed hostnames:
 
@@ -84,17 +104,9 @@ Environments **`dev`** and **`prod`**.
 | `PUBLIC_PRIVY_CLIENT_ID`  | var | var  |
 | `PUBLIC_DEFAULT_CHAIN_ID` | var | var  |
 
-Set production `COORDINATOR_UPSTREAM_URL` and `COORDINATOR_AUTH_MODE` in the Cloudflare
-Pages project settings (or `.dev.vars` / wrangler vars for local).
-
-### Vercel fallback
-
-Set `ADAPTER=vercel` and run `pnpm build` to use `@sveltejs/adapter-vercel`. No Vercel
-workflow is included in v1.
-
 ## Coordinator types
 
-Types under `src/lib/coordinator/types/` are copied from
+Types under `packages/apps/ui/src/lib/coordinator/types/` are copied from
 `canopy/packages/apps/delegation-coordinator`. Re-sync when coordinator APIs change:
 
 ```sh
@@ -104,6 +116,6 @@ pnpm sync:coordinator-types
 ## Related docs
 
 - [plan-0001 bootstrap](docs/plans/plan-0001-bootstrap.md)
-- [plan-0002 rename](docs/plans/plan-0002-rename-sylvestris-to-mandate.md)
+- [plan-0003 FOR-97 package split](docs/plans/plan-0003-for-97-package-split.md)
 - [ADR-0001 auth strategy seams](docs/adr-0001-auth-strategy-seams.md)
 - [canopy plan-0021](https://github.com/forestrie/canopy/blob/main/docs/plans/plan-0021-delegation-coordinator-apis.md)

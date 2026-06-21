@@ -1,0 +1,16 @@
+{
+	"name": "@mandate/agent",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"description": "Delegation webhook receiver and non-custodial signer (FOR-98)",
+	"scripts": {
+		"build": "tsc --noEmit",
+		"check": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"typescript": "^6.0.2",
+		"vitest": "^4.1.3"
+	}
+}
