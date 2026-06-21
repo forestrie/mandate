@@ -45,7 +45,7 @@ jobs:
           PUBLIC_PRIVY_APP_ID: ci-placeholder
           PUBLIC_PRIVY_CLIENT_ID: ci-placeholder
           PUBLIC_DEFAULT_CHAIN_ID: '11155111'
-        run: pnpm build
+        run: pnpm build:ui
 
       - name: Audit client bundle for secret names
         run: pnpm audit:client-secrets
