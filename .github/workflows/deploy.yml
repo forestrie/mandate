@@ -11,6 +11,7 @@ concurrency:
 jobs:
   deploy:
     name: Deploy Pages production
+    if: vars.ENABLE_PAGES_DEPLOY == 'true'
     runs-on: ubuntu-latest
     environment: prod
     permissions:

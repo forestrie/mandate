@@ -26,3 +26,10 @@ Preview project (`mandate-dev`) should use dev coordinator URL (default in
 
 Rename or create Doppler project **`mandate`** with `dev` and `prod` configs synced to
 GitHub Environments **`dev`** and **`prod`**.
+
+## GitHub Actions deploy gate
+
+Deploy workflows are gated on repository variable **`ENABLE_PAGES_DEPLOY=true`**
+(set under Settings → Secrets and variables → Actions → Variables). Keep it unset
+until **`dev`** / **`prod`** environments have `CLOUDFLARE_API_TOKEN`,
+`CLOUDFLARE_ACCOUNT_ID`, and `COORDINATOR_APP_TOKEN`.
