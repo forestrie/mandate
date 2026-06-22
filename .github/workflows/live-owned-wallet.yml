@@ -94,3 +94,42 @@ jobs:
           PRIVY_OWNER_AUTHORIZATION_KEY: ${{ secrets.PRIVY_OWNER_AUTHORIZATION_KEY }}
           MANDATE_SIGNER_URL: ${{ secrets.MANDATE_SIGNER_URL }}
         run: pnpm --filter @mandate/privy-admin test:live
+
+  live-provision:
+    name: Provision + hands-off seal live e2e (FOR-101)
+    runs-on: ubuntu-latest
+    environment: live-signer
+    needs: live-owned
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Run provision live e2e
+        env:
+          CANOPY_API_URL: ${{ secrets.CANOPY_API_URL }}
+          CANOPY_PAYMENTS_ONBOARD_TOKEN: ${{ secrets.CANOPY_PAYMENTS_ONBOARD_TOKEN }}
+          CANOPY_OPS_ADMIN_TOKEN: ${{ secrets.CANOPY_OPS_ADMIN_TOKEN }}
+          CANOPY_UNIVOCITY_ADDR: ${{ secrets.CANOPY_UNIVOCITY_ADDR }}
+          CANOPY_CHAIN_ID: ${{ secrets.CANOPY_CHAIN_ID }}
+          DELEGATION_COORDINATOR_URL: ${{ secrets.DELEGATION_COORDINATOR_URL }}
+          MANDATE_AGENT_WEBHOOK_URL: ${{ secrets.MANDATE_AGENT_WEBHOOK_URL }}
+          PRIVY_APP_ID: ${{ secrets.PRIVY_APP_ID }}
+          PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
+          PRIVY_MODE_C_WALLET_ID: ${{ secrets.PRIVY_MODE_C_WALLET_ID }}
+          PRIVY_WALLET_ID: ${{ secrets.PRIVY_WALLET_ID }}
+          PRIVY_AUTHORIZATION_KEY: ${{ secrets.PRIVY_AUTHORIZATION_KEY || secrets.PRIVY_WALLET_SIGNER }}
+          PRIVY_MANDATE_SIGNER_ID: ${{ secrets.PRIVY_MANDATE_SIGNER_ID }}
+          PRIVY_OWNER_AUTHORIZATION_KEY: ${{ secrets.PRIVY_OWNER_AUTHORIZATION_KEY }}
+          MANDATE_SIGNER_URL: ${{ secrets.MANDATE_SIGNER_URL }}
+        run: pnpm --filter @mandate/register test:live:provision
