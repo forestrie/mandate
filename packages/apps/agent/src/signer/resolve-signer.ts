@@ -6,11 +6,12 @@ import type { DelegationSigner } from './delegation-signer.js';
 export function resolveSigner(
 	registry: KeyRegistry,
 	logIdHex32: string,
+	mandateSignerToken: string,
 	fetchImpl: typeof fetch = fetch
 ): DelegationSigner {
 	const descriptor = registry.get(logIdHex32);
 	if (descriptor.kind === 'remote') {
-		return new RemoteKs256Signer(descriptor, fetchImpl);
+		return new RemoteKs256Signer(descriptor, mandateSignerToken, fetchImpl);
 	}
 	return new LocalKs256Signer(descriptor);
 }

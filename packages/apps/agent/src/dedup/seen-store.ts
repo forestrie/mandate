@@ -1,6 +1,8 @@
 export interface SeenStore {
 	has(requestKey: string): Promise<boolean>;
 	markSeen(requestKey: string, ttlSeconds?: number): Promise<void>;
+	/** Release a reservation so a failed attempt can be retried. */
+	clear(requestKey: string): Promise<void>;
 }
 
 export class MemorySeenStore implements SeenStore {
@@ -12,6 +14,10 @@ export class MemorySeenStore implements SeenStore {
 
 	async markSeen(requestKey: string): Promise<void> {
 		this.seen.add(requestKey);
+	}
+
+	async clear(requestKey: string): Promise<void> {
+		this.seen.delete(requestKey);
 	}
 }
 
@@ -28,5 +34,9 @@ export class KvSeenStore implements SeenStore {
 
 	async markSeen(requestKey: string, ttlSeconds = this.defaultTtlSeconds): Promise<void> {
 		await this.kv.put(requestKey, '1', { expirationTtl: ttlSeconds });
+	}
+
+	async clear(requestKey: string): Promise<void> {
+		await this.kv.delete(requestKey);
 	}
 }

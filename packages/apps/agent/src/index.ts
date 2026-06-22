@@ -16,7 +16,8 @@ export default {
 				keyRegistry: new KeyRegistry(env.OPERATOR_ROOT_KEYS),
 				seenStore: new KvSeenStore(env.REQUEST_KEYS),
 				coordinatorUpstreamUrl: env.COORDINATOR_UPSTREAM_URL,
-				coordinatorAppToken: env.COORDINATOR_APP_TOKEN
+				coordinatorAppToken: env.COORDINATOR_APP_TOKEN,
+				mandateSignerToken: env.MANDATE_SIGNER_TOKEN
 			});
 		}
 		return new Response('Not Found', { status: 404 });

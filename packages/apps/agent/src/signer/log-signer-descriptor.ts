@@ -7,4 +7,6 @@ export interface LogSignerDescriptor {
 	kind: SignerKind;
 	privateKeyHex?: string;
 	signerUrl?: string;
+	/** Opaque signer key id for ADR-0003 remote signing (required when kind=remote). */
+	keyRef?: string;
 }

@@ -1,4 +1,4 @@
-import { buildDelegationCertificateKs256, type DelegationInput } from '@canopy/delegation-cose';
+import { buildDelegationCertificateKs256, type DelegationInput } from '@forestrie/delegation-cose';
 import { parseEthAddress } from '../bytes.js';
 import type { LogSignerDescriptor } from './log-signer-descriptor.js';
 import type { DelegationSigner } from './delegation-signer.js';

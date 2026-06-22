@@ -1,6 +1,6 @@
 import type { SubmitMaterialRequest } from '@mandate/coordinator-types';
 import { assertSameOrigin, bytesToBase64 } from '../bytes.js';
-import { parseDelegationCertificate } from '@canopy/delegation-cose';
+import { parseDelegationCertificate } from '@forestrie/delegation-cose';
 
 export async function submitDelegationMaterial(opts: {
 	materialSubmitUrl: string;

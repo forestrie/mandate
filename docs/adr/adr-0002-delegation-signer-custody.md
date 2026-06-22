@@ -44,8 +44,8 @@ over the raw JSON body.
 - Production signer backend choice (Privy server wallet vs GCP KMS in a
   mandate-specific GCP project) is deferred; see Linear follow-up for the
   delegation signer backend design.
-- `@canopy/delegation-cose` is consumed as a versioned package (not a canopy
-  workspace sibling) so forks install without cloning canopy.
+- `@forestrie/delegation-cose` is consumed as a versioned package from GitHub
+  Packages (see ADR-0004) so forks install without cloning canopy.
 - Component tests mock the coordinator; live end-to-end provisioning remains
   FOR-101.
 

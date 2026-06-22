@@ -9,12 +9,12 @@ import {
 	COSE_Y,
 	verifyDelegationCertificateKs256,
 	encodeIntKeyCbor
-} from '@canopy/delegation-cose';
+} from '@forestrie/delegation-cose';
 import type { DelegationRequiredEvent } from '@mandate/coordinator-types';
 import { bytesToBase64 } from '../src/bytes.js';
 import type { WebhookJwk } from '../src/webhook/jwks-resolver.js';
 
-export const TEST_LOG_ID = 'b2c3d4e5f67890ab1234567890abcdef12';
+export const TEST_LOG_ID = 'b2c3d4e5f67890ab1234567890abcdef';
 
 export interface TestKs256Root {
 	privateKeyHex: string;

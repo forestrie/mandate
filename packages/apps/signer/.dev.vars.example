@@ -1,0 +1,13 @@
+# Local dev secrets (copy to .dev.vars; never commit .dev.vars)
+MANDATE_SIGNER_TOKEN=replace-with-signer-bearer-token
+PRIVY_APP_ID=replace-with-privy-app-id
+PRIVY_APP_SECRET=replace-with-privy-app-secret
+KEY_DIRECTORY={"test-key":{"walletId":"replace-wallet-id","rootSignerAddress":"0x0000000000000000000000000000000000000001","logIds":["b2c3d4e5f67890ab1234567890abcdef"]}}
+# Mode C owned-wallet entry adds requiresAuthorizationSignature: true (see service-secrets.md).
+# Optional: enables the gated live Privy test (pnpm test:live). Provide a real
+# server-wallet id; PRIVY_WALLET_ADDRESS is optional (resolved from Privy if unset).
+# PRIVY_WALLET_ID=replace-wallet-id
+# PRIVY_WALLET_ADDRESS=0x...
+# Optional: owned-wallet Mode C path (pnpm test:live:owned). `wallet-auth:` +
+# base64 PKCS#8 DER P-256 additional-signer key; wallet must be user-owned.
+# PRIVY_AUTHORIZATION_KEY=wallet-auth:replace-base64-pkcs8-der
