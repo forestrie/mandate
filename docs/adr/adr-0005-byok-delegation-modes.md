@@ -98,8 +98,9 @@ UI queue that also hosts the Mode C revocation control.
 ### Privy
 
 - **Mode C wallet:** create user-owned; set `owner`/`owner_id` to the user (or
-  user-controlled quorum). Add mandate via `additional_signers` with a policy
-  scoped to `secp256k1_sign`.
+  user-controlled quorum). Add mandate via `additional_signers` with the
+  override policy from `@mandate/privy-admin` (`buildDelegationSigningPolicy` —
+  FOR-116; see [service-secrets.md](../service-secrets.md) § Mode C policy).
 - **Signing:** owned-wallet path — `secp256k1_sign` with `params: { hash }`
   (no `encoding` key) plus `privy-authorization-signature` from mandate's
   additional-signer key.

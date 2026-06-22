@@ -10,5 +10,11 @@ export interface RegisterConfig {
 	agentWebhookUrl?: string;
 }
 
-/** Scaffold placeholder — FOR-100 implements provisioning. */
+/** Scaffold placeholder — FOR-100 implements full canopy genesis provisioning. */
 export const REGISTER_PACKAGE = '@mandate/register';
+
+export {
+	onboardModeCWallet,
+	type OnboardModeCInput,
+	type ModeCOnboardOutput
+} from '@mandate/privy-admin';

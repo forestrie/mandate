@@ -34,3 +34,63 @@ jobs:
           PRIVY_AUTHORIZATION_KEY: ${{ secrets.PRIVY_AUTHORIZATION_KEY }}
           PRIVY_WALLET_ADDRESS: ${{ secrets.PRIVY_WALLET_ADDRESS }}
         run: pnpm --filter @mandate/signer test:live:owned
+
+  live-hands-off:
+    name: Agent hands-off sealing live test
+    runs-on: ubuntu-latest
+    environment: live-signer
+    needs: live-owned
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Run agent hands-off live test
+        env:
+          PRIVY_APP_ID: ${{ secrets.PRIVY_APP_ID }}
+          PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
+          PRIVY_WALLET_ID: ${{ secrets.PRIVY_WALLET_ID }}
+          PRIVY_AUTHORIZATION_KEY: ${{ secrets.PRIVY_AUTHORIZATION_KEY }}
+          PRIVY_WALLET_ADDRESS: ${{ secrets.PRIVY_WALLET_ADDRESS }}
+        run: pnpm --filter @mandate/agent test:live:hands-off
+
+  live-mode-c-onboard:
+    name: Mode C onboarding live test
+    runs-on: ubuntu-latest
+    environment: live-signer
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Mode C onboarding live test
+        env:
+          PRIVY_APP_ID: ${{ secrets.PRIVY_APP_ID }}
+          PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
+          PRIVY_AUTHORIZATION_KEY: ${{ secrets.PRIVY_AUTHORIZATION_KEY }}
+          PRIVY_MODE_C_WALLET_ID: ${{ secrets.PRIVY_MODE_C_WALLET_ID }}
+          PRIVY_MANDATE_SIGNER_ID: ${{ secrets.PRIVY_MANDATE_SIGNER_ID }}
+          PRIVY_OWNER_AUTHORIZATION_KEY: ${{ secrets.PRIVY_OWNER_AUTHORIZATION_KEY }}
+          MANDATE_SIGNER_URL: ${{ secrets.MANDATE_SIGNER_URL }}
+        run: pnpm --filter @mandate/privy-admin test:live

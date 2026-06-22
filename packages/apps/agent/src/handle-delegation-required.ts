@@ -5,6 +5,7 @@ import {
 	assertCertificateMatchesEvent,
 	CertificateValidationError
 } from './delegation/validate-certificate.js';
+import { logDelegationOutcome } from './delegation/delegation-outcome-log.js';
 import type { SeenStore } from './dedup/seen-store.js';
 import type { KeyRegistry } from './signer/key-registry.js';
 import { UnknownLogSignerError } from './signer/key-registry.js';
@@ -98,6 +99,7 @@ export async function handleDelegationRequired(
 		throw error;
 	}
 	if (await deps.seenStore.has(event.requestKey)) {
+		logDelegationOutcome(event, 'duplicate');
 		return jsonResponse(200, { ok: true, duplicate: true });
 	}
 
@@ -133,6 +135,7 @@ export async function handleDelegationRequired(
 		});
 	} catch (error) {
 		await deps.seenStore.clear(event.requestKey);
+		logDelegationOutcome(event, 'signer_failed');
 		throw error;
 	}
 
@@ -145,6 +148,7 @@ export async function handleDelegationRequired(
 	} catch (error) {
 		await deps.seenStore.clear(event.requestKey);
 		if (error instanceof CertificateValidationError) {
+			logDelegationOutcome(event, 'certificate_rejected');
 			return jsonResponse(502, { ok: false, error: error.message });
 		}
 		throw error;
@@ -166,6 +170,9 @@ export async function handleDelegationRequired(
 		await deps.seenStore.clear(event.requestKey);
 		const detail = await submitResponse.text();
 		console.error('material submit failed', submitResponse.status, detail);
+		logDelegationOutcome(event, 'coordinator_rejected', {
+			status: submitResponse.status
+		});
 		return jsonResponse(502, {
 			ok: false,
 			error: `material submit failed: ${submitResponse.status}`
@@ -173,6 +180,7 @@ export async function handleDelegationRequired(
 	}
 
 	await deps.seenStore.markSeen(event.requestKey);
+	logDelegationOutcome(event, 'signed_and_submitted');
 	return jsonResponse(200, { ok: true });
 }
 

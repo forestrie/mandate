@@ -12,6 +12,9 @@
 		"check": "tsc --noEmit",
 		"test": "vitest run"
 	},
+	"dependencies": {
+		"@mandate/privy-admin": "workspace:*"
+	},
 	"devDependencies": {
 		"@types/node": "^22",
 		"typescript": "^6.0.2",

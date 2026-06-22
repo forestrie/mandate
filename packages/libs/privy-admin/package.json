@@ -1,0 +1,25 @@
+{
+	"name": "@mandate/privy-admin",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"description": "Privy wallet admin helpers for Mode C onboarding (FOR-112, FOR-116)",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"build": "tsc --noEmit",
+		"check": "tsc --noEmit",
+		"test": "vitest run",
+		"test:live": "vitest run test/mode-c.live.test.ts"
+	},
+	"dependencies": {
+		"@noble/curves": "^1.9.7",
+		"canonicalize": "^2.1.0"
+	},
+	"devDependencies": {
+		"@types/node": "^22",
+		"typescript": "^6.0.2",
+		"vitest": "^4.1.3"
+	}
+}

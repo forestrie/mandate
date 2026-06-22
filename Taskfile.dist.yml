@@ -75,3 +75,10 @@ tasks:
     desc: Copy coordinator types from sibling canopy checkout
     cmds:
       - pnpm sync:coordinator-types
+
+  privy:onboard:mode-c:
+    desc: >-
+      Mode C Privy onboarding — attach mandate additional signer + policy;
+      requires PRIVY_* and MANDATE_SIGNER_URL in Doppler
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- pnpm --filter @mandate/register exec mandate-register privy onboard-mode-c {{.CLI_ARGS}}

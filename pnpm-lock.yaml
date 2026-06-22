@@ -80,6 +80,10 @@ importers:
         version: 4.94.0(@cloudflare/workers-types@4.20260524.1)
 
   packages/apps/register:
+    dependencies:
+      '@mandate/privy-admin':
+        specifier: workspace:*
+        version: link:../../libs/privy-admin
     devDependencies:
       '@types/node':
         specifier: ^22
@@ -197,6 +201,25 @@ importers:
 
   packages/libs/coordinator-types:
     devDependencies:
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.3
+        version: 4.1.7(@types/node@22.19.19)(vite@8.0.14(@types/node@22.19.19)(esbuild@0.27.3)(jiti@2.7.0))
+
+  packages/libs/privy-admin:
+    dependencies:
+      '@noble/curves':
+        specifier: ^1.9.7
+        version: 1.9.7
+      canonicalize:
+        specifier: ^2.1.0
+        version: 2.1.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.19.19
       typescript:
         specifier: ^6.0.2
         version: 6.0.3

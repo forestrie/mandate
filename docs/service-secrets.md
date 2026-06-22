@@ -83,9 +83,11 @@ When onboarding a Mode C user wallet in Privy:
 1. **Owner topology (I2):** wallet `owner` is the user alone (or a quorum that does
    not include mandate). Mandate is **additional signer only**, never in the
    owner quorum.
-2. **Signer policy (I6):** additional-signer policy allows only `secp256k1_sign`
-   on delegation payload hashes — no `eth_sendTransaction`, wallet export, or
-   owner updates by mandate.
+2. **Signer policy (I6, FOR-116):** attach the mandate **override policy** below
+   to the additional signer. Privy is default-deny: one `ALLOW` rule for
+   `secp256k1_sign`, explicit `DENY` rules for transfers, exports, and structured
+   signing. Privy cannot filter raw hash _content_ (ARC-0022 §12 residual) —
+   certificate binding and coordinator verification bound payload scope.
 3. **Authorization key:** register mandate's P-256 additional-signer key; store
    PKCS#8 DER as `PRIVY_AUTHORIZATION_KEY` (`wallet-auth:` + base64).
 4. **KEY_DIRECTORY:** set `requiresAuthorizationSignature: true` for the user's
@@ -93,8 +95,131 @@ When onboarding a Mode C user wallet in Privy:
 5. **Kill switch (FOR-114):** user can `PATCH /v1/wallets/{id}` with
    `additional_signers: []` or use the delegation console kill-switch controls.
 
-Exact Privy policy JSON is app-specific; track schema in FOR-112 until Privy
-documents a delegation-payload-scoped policy expression.
+Canonical policy template (`buildDelegationSigningPolicy` in
+`@mandate/privy-admin`):
+
+```json
+{
+	"version": "1.0",
+	"name": "Mandate Mode C delegation signing",
+	"chain_type": "ethereum",
+	"rules": [
+		{
+			"name": "Allow delegation secp256k1_sign",
+			"method": "secp256k1_sign",
+			"conditions": [],
+			"action": "ALLOW"
+		},
+		{
+			"name": "Deny exportPrivateKey",
+			"method": "exportPrivateKey",
+			"conditions": [],
+			"action": "DENY"
+		},
+		{
+			"name": "Deny exportSeedPhrase",
+			"method": "exportSeedPhrase",
+			"conditions": [],
+			"action": "DENY"
+		},
+		{
+			"name": "Deny eth_sendTransaction",
+			"method": "eth_sendTransaction",
+			"conditions": [],
+			"action": "DENY"
+		},
+		{
+			"name": "Deny eth_signTransaction",
+			"method": "eth_signTransaction",
+			"conditions": [],
+			"action": "DENY"
+		},
+		{
+			"name": "Deny eth_signUserOperation",
+			"method": "eth_signUserOperation",
+			"conditions": [],
+			"action": "DENY"
+		},
+		{
+			"name": "Deny eth_signTypedData_v4",
+			"method": "eth_signTypedData_v4",
+			"conditions": [],
+			"action": "DENY"
+		},
+		{
+			"name": "Deny personal_sign",
+			"method": "personal_sign",
+			"conditions": [],
+			"action": "DENY"
+		},
+		{
+			"name": "Deny eth_sign7702Authorization",
+			"method": "eth_sign7702Authorization",
+			"conditions": [],
+			"action": "DENY"
+		},
+		{
+			"name": "Deny wallet_sendCalls",
+			"method": "wallet_sendCalls",
+			"conditions": [],
+			"action": "DENY"
+		},
+		{
+			"name": "Deny signTransaction",
+			"method": "signTransaction",
+			"conditions": [],
+			"action": "DENY"
+		},
+		{
+			"name": "Deny signAndSendTransaction",
+			"method": "signAndSendTransaction",
+			"conditions": [],
+			"action": "DENY"
+		},
+		{
+			"name": "Deny transfer",
+			"method": "transfer",
+			"conditions": [],
+			"action": "DENY"
+		},
+		{
+			"name": "Deny earn_deposit",
+			"method": "earn_deposit",
+			"conditions": [],
+			"action": "DENY"
+		},
+		{
+			"name": "Deny earn_withdraw",
+			"method": "earn_withdraw",
+			"conditions": [],
+			"action": "DENY"
+		},
+		{
+			"name": "Deny signTransactionBytes",
+			"method": "signTransactionBytes",
+			"conditions": [],
+			"action": "DENY"
+		}
+	]
+}
+```
+
+Create via `POST /v1/policies` or:
+
+```sh
+doppler run --project mandate-forestrie --config dev -- \
+  pnpm --filter @mandate/register exec mandate-register privy onboard-mode-c \
+  --log-id <32-hex-log-id> --key-ref user-log-wallet
+```
+
+Live validation env (dedicated wallet — do not reuse `PRIVY_WALLET_ID`):
+
+| Env                             | Purpose                                        |
+| ------------------------------- | ---------------------------------------------- |
+| `PRIVY_MODE_C_WALLET_ID`        | User-owned wallet for onboarding live tests    |
+| `PRIVY_MANDATE_SIGNER_ID`       | Key quorum id for mandate additional signer    |
+| `PRIVY_OWNER_AUTHORIZATION_KEY` | Owner key for wallet PATCH during onboard      |
+| `MANDATE_SIGNER_URL`            | Deployed `@mandate/signer` `POST /v1/sign` URL |
 
 ## Fork deploy checklist
 
@@ -137,23 +262,53 @@ documents a delegation-payload-scoped policy expression.
 Workflow `.github/workflows/live-owned-wallet.yml` runs on `workflow_dispatch`.
 Configure GitHub Environment `live-signer` (or repository secrets) with:
 
-| Secret                    | Purpose                            |
-| ------------------------- | ---------------------------------- |
-| `PRIVY_APP_ID`            | Privy app id                       |
-| `PRIVY_APP_SECRET`        | Privy app secret                   |
-| `PRIVY_WALLET_ID`         | Mode C user-owned wallet id        |
-| `PRIVY_AUTHORIZATION_KEY` | Mandate additional-signer auth key |
-| `PRIVY_WALLET_ADDRESS`    | Optional; skips wallet lookup      |
+| Secret                          | Purpose                                              |
+| ------------------------------- | ---------------------------------------------------- |
+| `PRIVY_APP_ID`                  | Privy app id                                         |
+| `PRIVY_APP_SECRET`              | Privy app secret                                     |
+| `PRIVY_WALLET_ID`               | Mode C user-owned wallet id                          |
+| `PRIVY_AUTHORIZATION_KEY`       | Mandate additional-signer auth key                   |
+| `PRIVY_WALLET_ADDRESS`          | Optional; skips wallet lookup                        |
+| `PRIVY_MODE_C_WALLET_ID`        | Dedicated wallet for onboarding live tests (FOR-112) |
+| `PRIVY_MANDATE_SIGNER_ID`       | Mandate key quorum id                                |
+| `PRIVY_OWNER_AUTHORIZATION_KEY` | User owner key for wallet PATCH                      |
 
 Doppler project `mandate-forestrie` stores the auth key as `PRIVY_WALLET_SIGNER`;
 map it to `PRIVY_AUTHORIZATION_KEY` when running tests or syncing GitHub secrets.
 
-Local:
+Local signer live test:
 
 ```sh
 doppler run --project mandate-forestrie --config dev -- \
   pnpm --filter @mandate/signer test:live:owned
 ```
+
+Agent hands-off sealing (FOR-113):
+
+```sh
+doppler run --project mandate-forestrie --config dev -- \
+  pnpm --filter @mandate/agent test:live:hands-off
+```
+
+Mode C onboarding live validation (FOR-112):
+
+```sh
+doppler run --project mandate-forestrie --config dev -- \
+  pnpm --filter @mandate/privy-admin test:live
+```
+
+### Full live-canopy hands-off seal (runbook / FOR-101)
+
+Deferred until dev canopy coordinator + onboard token are available (FOR-100).
+When ready:
+
+1. **Genesis:** `POST /api/forest/{R}/genesis` with canopy onboard bearer.
+2. **Webhook:** `PUT /api/logs/{logId}/webhook` → mandate agent public URL.
+3. **Mode C onboard:** `task privy:onboard:mode-c` with `--log-id` from genesis;
+   bind `KEY_DIRECTORY` + `OPERATOR_ROOT_KEYS` worker secrets.
+4. **Trigger:** enqueue or wait for `delegation.required` for an MMR window.
+5. **Verify:** coordinator accepts material; receipt/cert verifies against the
+   log's registered `publicRoot` (wallet address for Mode C).
 
 CI sets `CICD=true` so `repo-init` always refreshes overlays from examples before
 deploy (ephemeral checkout).
