@@ -145,6 +145,9 @@ Configure GitHub Environment `live-signer` (or repository secrets) with:
 | `PRIVY_AUTHORIZATION_KEY` | Mandate additional-signer auth key |
 | `PRIVY_WALLET_ADDRESS`    | Optional; skips wallet lookup      |
 
+Doppler project `mandate-forestrie` stores the auth key as `PRIVY_WALLET_SIGNER`;
+map it to `PRIVY_AUTHORIZATION_KEY` when running tests or syncing GitHub secrets.
+
 Local:
 
 ```sh
