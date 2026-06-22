@@ -15,7 +15,7 @@ packages/
     agent/     @mandate/agent — webhook receiver + signer (Worker, FOR-98)
     register/  @mandate/register — instance provisioning (FOR-100)
   libs/
-    coordinator-types/  shared coordinator API types (Phase 2)
+    coordinator-types/  shared coordinator API types (@mandate/coordinator-types)
 ```
 
 See [docs/plans/plan-0003-for-97-package-split.md](docs/plans/plan-0003-for-97-package-split.md).
@@ -104,10 +104,34 @@ Environments **`dev`** and **`prod`**.
 | `PUBLIC_PRIVY_CLIENT_ID`  | var | var  |
 | `PUBLIC_DEFAULT_CHAIN_ID` | var | var  |
 
+## `@mandate/agent` (FOR-98)
+
+Webhook receiver Worker. Receives signed `delegation.required` events, builds
+KS256 delegation certificates via `@canopy/delegation-cose`, submits material to
+the coordinator.
+
+Local dev:
+
+```sh
+cp packages/apps/agent/.dev.vars.example packages/apps/agent/.dev.vars
+pnpm --filter @mandate/agent dev
+```
+
+`@canopy/delegation-cose` is vendored as
+`packages/apps/agent/canopy-delegation-cose-0.1.0.tgz`. Refresh from a sibling
+`canopy` checkout:
+
+```sh
+cd ../canopy/packages/libs/delegation-cose && pnpm pack \
+  --pack-destination /path/to/mandate/packages/apps/agent
+cd /path/to/mandate && pnpm install
+```
+
 ## Coordinator types
 
-Types under `packages/apps/ui/src/lib/coordinator/types/` are copied from
-`canopy/packages/apps/delegation-coordinator`. Re-sync when coordinator APIs change:
+Types live in `packages/libs/coordinator-types/` (synced from
+`canopy/packages/apps/delegation-coordinator`). Re-sync when coordinator APIs
+change:
 
 ```sh
 pnpm sync:coordinator-types
@@ -117,5 +141,7 @@ pnpm sync:coordinator-types
 
 - [plan-0001 bootstrap](docs/plans/plan-0001-bootstrap.md)
 - [plan-0003 FOR-97 package split](docs/plans/plan-0003-for-97-package-split.md)
+- [plan-0004 FOR-98 agent](docs/plans/plan-0004-for-98-agent.md)
+- [ADR-0002 delegation signer custody](docs/adr/adr-0002-delegation-signer-custody.md)
 - [ADR-0001 auth strategy seams](docs/adr-0001-auth-strategy-seams.md)
 - [canopy plan-0021](https://github.com/forestrie/canopy/blob/main/docs/plans/plan-0021-delegation-coordinator-apis.md)
