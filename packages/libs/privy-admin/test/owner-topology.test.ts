@@ -3,6 +3,7 @@ import {
 	assertMandateIsAdditionalSignerOnly,
 	assertMandateNotWalletOwner,
 	assertOwnerQuorumExcludesMandate,
+	assertWalletIsUserOwned,
 	OwnerTopologyError
 } from '../src/index.js';
 import type { KeyQuorum, Wallet } from '../src/index.js';
@@ -49,12 +50,34 @@ describe('owner topology (I2)', () => {
 		);
 	});
 
-	it('allows m-of-n quorum including mandate when threshold > 1', () => {
+	it('rejects m-of-n owner quorum including mandate (strict I2)', () => {
 		const quorum: KeyQuorum = {
 			id: USER_OWNER,
 			authorization_threshold: 2,
 			members: [{ key_quorum_id: MANDATE_SIGNER }, { authorization_key_id: 'key_user' }]
 		};
-		expect(() => assertOwnerQuorumExcludesMandate(quorum, MANDATE_SIGNER)).not.toThrow();
+		expect(() => assertOwnerQuorumExcludesMandate(quorum, MANDATE_SIGNER)).toThrow(
+			OwnerTopologyError
+		);
+	});
+
+	it('rejects ownerless wallet (operator app-controlled)', () => {
+		expect(() =>
+			assertWalletIsUserOwned(
+				wallet({ owner_id: null, owner: null, additional_signers: [] })
+			)
+		).toThrow(OwnerTopologyError);
+	});
+
+	it('accepts user-owned wallet via owner.user_id', () => {
+		expect(() =>
+			assertWalletIsUserOwned(
+				wallet({
+					owner_id: null,
+					owner: { user_id: 'did:privy:user_abc' },
+					additional_signers: []
+				})
+			)
+		).not.toThrow();
 	});
 });

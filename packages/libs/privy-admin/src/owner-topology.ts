@@ -34,21 +34,35 @@ export function assertMandateIsAdditionalSignerOnly(wallet: Wallet, mandateSigne
 }
 
 /**
- * Reject 1-of-k owner quorums that include mandate (Privy offline-update anti-pattern).
+ * Reject owner quorums that include mandate (ARC-0022 I2 — mandate never in owner set).
  */
 export function assertOwnerQuorumExcludesMandate(quorum: KeyQuorum, mandateSignerId: string): void {
 	const members = quorum.members ?? [];
 	const includesMandate = members.some(
 		(m) => m.key_quorum_id === mandateSignerId || m.authorization_key_id === mandateSignerId
 	);
-	if (!includesMandate) return;
-
-	const threshold = quorum.authorization_threshold ?? members.length;
-	if (threshold <= 1) {
+	if (includesMandate) {
 		throw new OwnerTopologyError(
-			'owner quorum is 1-of-k including mandate signer — prohibited (ARC-0022 §6)'
+			'owner quorum includes mandate signer — prohibited (ARC-0022 I2)'
 		);
 	}
+}
+
+/**
+ * Fail closed when the wallet has no user owner (operator app-controlled / ownerless).
+ */
+export function assertWalletIsUserOwned(wallet: Wallet): void {
+	const ownerId = wallet.owner_id?.trim();
+	if (ownerId) return;
+
+	const owner = wallet.owner;
+	const userId = owner?.user_id?.trim();
+	const publicKey = owner?.public_key?.trim();
+	if (userId || publicKey) return;
+
+	throw new OwnerTopologyError(
+		'wallet is ownerless — Mode C requires a user-owned wallet (ARC-0022 I2)'
+	);
 }
 
 /** Combined topology check for a wallet and optional owner quorum detail. */

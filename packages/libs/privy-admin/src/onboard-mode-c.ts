@@ -1,7 +1,12 @@
 import { createDelegationSigningPolicy } from './policy.js';
 import type { ModeCOnboardOutput } from './mode-c-onboard-output.js';
-import { assertSignerNotOwner, assertMandateIsAdditionalSignerOnly } from './owner-topology.js';
+import {
+	assertSignerNotOwner,
+	assertMandateIsAdditionalSignerOnly,
+	assertWalletIsUserOwned
+} from './owner-topology.js';
 import type { PrivyRestClient } from './privy-rest.js';
+import { PrivyRestError } from './privy-rest-error.js';
 import { getKeyQuorum, getWallet, mergeAdditionalSigner, updateWallet } from './wallet-api.js';
 
 export interface OnboardModeCInput {
@@ -27,14 +32,19 @@ export async function onboardModeCWallet(
 	input: OnboardModeCInput
 ): Promise<ModeCOnboardOutput> {
 	const walletBefore = await getWallet(client, input.walletId);
+	assertWalletIsUserOwned(walletBefore);
 	assertSignerNotOwner(walletBefore, input.mandateSignerId);
 
 	if (walletBefore.owner_id) {
 		try {
 			const ownerQuorum = await getKeyQuorum(client, walletBefore.owner_id);
 			assertSignerNotOwner(walletBefore, input.mandateSignerId, ownerQuorum);
-		} catch {
-			// Non-quorum owner_id (e.g. user) — owner_id mismatch check above suffices.
+		} catch (error) {
+			if (error instanceof PrivyRestError && error.status === 404) {
+				// owner_id references a user, not a key quorum — direct owner_id check suffices.
+			} else {
+				throw error;
+			}
 		}
 	}
 

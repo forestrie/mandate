@@ -24,7 +24,8 @@ export {
 	assertMandateNotWalletOwner,
 	assertMandateIsAdditionalSignerOnly,
 	assertOwnerQuorumExcludesMandate,
-	assertSignerNotOwner
+	assertSignerNotOwner,
+	assertWalletIsUserOwned
 } from './owner-topology.js';
 export {
 	getWallet,
