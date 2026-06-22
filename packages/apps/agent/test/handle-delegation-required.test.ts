@@ -263,4 +263,56 @@ describe('handleDelegationRequired', () => {
 		);
 		expect(response.status).toBe(400);
 	});
+
+	it('returns generic 502 when remote signer fails and clears requestKey reservation', async () => {
+		const root = await generateTestKs256Root();
+		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+		const { privateKey, publicJwk } = await generateWebhookSigningKeyPair();
+		const seenStore = new MemorySeenStore();
+		const signerUrl = 'http://signer.test/v1/sign';
+		const requestKey = 'remote-signer-fail-key';
+
+		const remoteOperatorKeys = JSON.stringify({
+			[TEST_LOG_ID]: {
+				alg: 'KS256',
+				rootSignerAddress: root.rootSignerAddress,
+				kind: 'remote',
+				signerUrl,
+				keyRef: 'remote-key-ref'
+			}
+		});
+
+		const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url === signerUrl) {
+				return new Response('internal signer secret detail', { status: 500 });
+			}
+			throw new Error(`unexpected fetch: ${url}`);
+		});
+
+		const event = buildDelegationRequiredEvent({
+			root,
+			delegatedPublicKeyCbor,
+			requestKey
+		});
+		const eventBody = JSON.stringify(event);
+
+		const response = await handleDelegationRequired(
+			await signedWebhookRequest({ eventBody, privateKey }),
+			{
+				jwksResolver: createJwksResolver(publicJwk),
+				keyRegistry: new KeyRegistry(remoteOperatorKeys),
+				seenStore,
+				...TEST_AGENT_DEPS,
+				fetchImpl,
+				nowSeconds: NOW
+			}
+		);
+
+		expect(response.status).toBe(502);
+		const body = (await response.json()) as { ok?: boolean; error?: string };
+		expect(body).toEqual({ ok: false, error: 'delegation signing failed' });
+		expect(JSON.stringify(body)).not.toContain('secret');
+		expect(await seenStore.has(requestKey)).toBe(false);
+	});
 });

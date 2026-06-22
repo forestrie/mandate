@@ -133,10 +133,10 @@ export async function handleDelegationRequired(
 			delegatedPublicKeyCbor: base64ToBytes(event.delegatedPublicKey),
 			ttlSeconds: 3600
 		});
-	} catch (error) {
+	} catch {
 		await deps.seenStore.clear(event.requestKey);
 		logDelegationOutcome(event, 'signer_failed');
-		throw error;
+		return jsonResponse(502, { ok: false, error: 'delegation signing failed' });
 	}
 
 	try {
