@@ -2,21 +2,25 @@ import {
 	buildDelegationCertificateKs256WithSigner,
 	type DelegationInput
 } from '@canopy/delegation-cose';
+import type { SignRequest } from '@mandate/signer-contract';
 import { base64ToBytes, bytesToBase64, parseEthAddress } from '../bytes.js';
 import type { LogSignerDescriptor } from './log-signer-descriptor.js';
 import type { DelegationSigner } from './delegation-signer.js';
 
 /**
- * Remote KS256 signer: POST sigStructure bytes to signerUrl, receive 65-byte
- * recoverable secp256k1 signature (base64).
+ * Remote KS256 signer: POST ADR-0003 SignRequest to signerUrl with bearer auth.
  */
 export class RemoteKs256Signer implements DelegationSigner {
 	constructor(
 		private readonly descriptor: LogSignerDescriptor,
+		private readonly mandateSignerToken: string,
 		private readonly fetchImpl: typeof fetch = fetch
 	) {
-		if (descriptor.kind !== 'remote' || !descriptor.signerUrl) {
-			throw new Error('RemoteKs256Signer requires kind=remote and signerUrl');
+		if (descriptor.kind !== 'remote' || !descriptor.signerUrl || !descriptor.keyRef) {
+			throw new Error('RemoteKs256Signer requires kind=remote, signerUrl, and keyRef');
+		}
+		if (!mandateSignerToken) {
+			throw new Error('MANDATE_SIGNER_TOKEN is required for remote signing');
 		}
 	}
 
@@ -25,17 +29,24 @@ export class RemoteKs256Signer implements DelegationSigner {
 		return buildDelegationCertificateKs256WithSigner(
 			input,
 			rootSignerAddress,
-			(sigStructureBytes) => this.signRemote(sigStructureBytes)
+			(sigStructureBytes) => this.signRemote(input.logIdHex32, sigStructureBytes)
 		);
 	}
 
-	private async signRemote(sigStructureBytes: Uint8Array): Promise<Uint8Array> {
+	private async signRemote(logIdHex32: string, sigStructureBytes: Uint8Array): Promise<Uint8Array> {
+		const requestBody: SignRequest = {
+			logId: logIdHex32,
+			keyRef: this.descriptor.keyRef!,
+			rootSignerAddress: this.descriptor.rootSignerAddress,
+			sigStructure: bytesToBase64(sigStructureBytes)
+		};
 		const response = await this.fetchImpl(this.descriptor.signerUrl!, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				sigStructure: bytesToBase64(sigStructureBytes)
-			})
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${this.mandateSignerToken}`
+			},
+			body: JSON.stringify(requestBody)
 		});
 		if (!response.ok) {
 			throw new Error(`remote signer failed: ${response.status}`);

@@ -13,9 +13,11 @@ packages/
   apps/
     ui/        @mandate/ui — operator console (Cloudflare Pages)
     agent/     @mandate/agent — webhook receiver + signer (Worker, FOR-98)
+    signer/    @mandate/signer — Privy remote signer (Worker, ADR-0003)
     register/  @mandate/register — instance provisioning (FOR-100)
   libs/
     coordinator-types/  shared coordinator API types (@mandate/coordinator-types)
+    signer-contract/    ADR-0003 SignRequest/SignResponse (@mandate/signer-contract)
 ```
 
 See [docs/plans/plan-0003-for-97-package-split.md](docs/plans/plan-0003-for-97-package-split.md).
@@ -100,6 +102,10 @@ Environments **`dev`** and **`prod`**.
 | `CLOUDFLARE_API_TOKEN`    | yes | yes  |
 | `CLOUDFLARE_ACCOUNT_ID`   | yes | yes  |
 | `COORDINATOR_APP_TOKEN`   | yes | yes  |
+| `MANDATE_SIGNER_TOKEN`    | yes | yes  |
+| `OPERATOR_ROOT_KEYS`      | yes | yes  |
+| `PRIVY_APP_SECRET`        | —   | yes  |
+| `KEY_DIRECTORY`           | —   | yes  |
 | `PUBLIC_PRIVY_APP_ID`     | var | var  |
 | `PUBLIC_PRIVY_CLIENT_ID`  | var | var  |
 | `PUBLIC_DEFAULT_CHAIN_ID` | var | var  |
@@ -108,7 +114,8 @@ Environments **`dev`** and **`prod`**.
 
 Webhook receiver Worker. Receives signed `delegation.required` events, builds
 KS256 delegation certificates via `@canopy/delegation-cose`, submits material to
-the coordinator.
+the coordinator. Production remote signing uses ADR-0003 `SignRequest` against
+`@mandate/signer`.
 
 Local dev:
 
@@ -116,6 +123,31 @@ Local dev:
 cp packages/apps/agent/.dev.vars.example packages/apps/agent/.dev.vars
 pnpm --filter @mandate/agent dev
 ```
+
+## `@mandate/signer` (ADR-0003)
+
+Thin Privy-backed remote signer. Holds vendor secrets; agent calls
+`POST /v1/sign` with bearer `MANDATE_SIGNER_TOKEN`.
+
+Local dev:
+
+```sh
+cp packages/apps/signer/.dev.vars.example packages/apps/signer/.dev.vars
+pnpm --filter @mandate/signer dev
+```
+
+## Workers deploy (FOR-99)
+
+Fork-friendly Cloudflare Workers deploy for **mandate-agent** and
+**mandate-signer**:
+
+1. Run `task repo-init:doppler` (or `task repo-init` with `CLOUDFLARE_API_TOKEN`
+   and `CLOUDFLARE_ACCOUNT_ID`). This provisions KV and writes gitignored
+   `wrangler.env.prod.json` overlays (see [docs/service-secrets.md](docs/service-secrets.md)).
+2. Deploy with merged configs under `.wrangler/deploy/`, or enable CI with
+   repository variable `ENABLE_WORKERS_DEPLOY=true` (workflow runs `task repo-init`
+   with `CICD=true` before deploy).
+3. Bind secrets per [docs/service-secrets.md](docs/service-secrets.md).
 
 `@canopy/delegation-cose` is vendored as
 `packages/apps/agent/canopy-delegation-cose-0.1.0.tgz`. Refresh from a sibling
@@ -142,6 +174,9 @@ pnpm sync:coordinator-types
 - [plan-0001 bootstrap](docs/plans/plan-0001-bootstrap.md)
 - [plan-0003 FOR-97 package split](docs/plans/plan-0003-for-97-package-split.md)
 - [plan-0004 FOR-98 agent](docs/plans/plan-0004-for-98-agent.md)
+- [plan-0005 FOR-104 signer spike](docs/plans/plan-0005-for-104-signer-backend-spike.md)
 - [ADR-0002 delegation signer custody](docs/adr/adr-0002-delegation-signer-custody.md)
+- [ADR-0003 delegation signer backend](docs/adr/adr-0003-delegation-signer-backend.md)
+- [Workers secret catalog](docs/service-secrets.md)
 - [ADR-0001 auth strategy seams](docs/adr-0001-auth-strategy-seams.md)
 - [canopy plan-0021](https://github.com/forestrie/canopy/blob/main/docs/plans/plan-0021-delegation-coordinator-apis.md)

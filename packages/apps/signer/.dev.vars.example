@@ -1,0 +1,5 @@
+# Local dev secrets (copy to .dev.vars; never commit .dev.vars)
+MANDATE_SIGNER_TOKEN=replace-with-signer-bearer-token
+PRIVY_APP_ID=replace-with-privy-app-id
+PRIVY_APP_SECRET=replace-with-privy-app-secret
+KEY_DIRECTORY={"test-key":{"walletId":"replace-wallet-id","rootSignerAddress":"0x0000000000000000000000000000000000000001","logIds":["b2c3d4e5f67890ab1234567890abcdef12"]}}

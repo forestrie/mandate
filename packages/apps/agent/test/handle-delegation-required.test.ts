@@ -15,6 +15,11 @@ import {
 
 const COORDINATOR_ORIGIN = 'http://coordinator.test';
 const NOW = 1_700_000_000;
+const TEST_AGENT_DEPS = {
+	coordinatorUpstreamUrl: COORDINATOR_ORIGIN,
+	coordinatorAppToken: 'test-token',
+	mandateSignerToken: 'test-signer-token'
+} as const;
 
 function createJwksResolver(
 	publicJwk: Awaited<ReturnType<typeof generateWebhookSigningKeyPair>>['publicJwk']
@@ -87,8 +92,7 @@ describe('handleDelegationRequired', () => {
 			jwksResolver: createJwksResolver(publicJwk),
 			keyRegistry: new KeyRegistry(operatorKeysJson(root)),
 			seenStore,
-			coordinatorUpstreamUrl: COORDINATOR_ORIGIN,
-			coordinatorAppToken: 'test-token',
+			...TEST_AGENT_DEPS,
 			fetchImpl,
 			nowSeconds: NOW
 		});
@@ -104,8 +108,7 @@ describe('handleDelegationRequired', () => {
 				jwksResolver: createJwksResolver(publicJwk),
 				keyRegistry: new KeyRegistry(operatorKeysJson(root)),
 				seenStore,
-				coordinatorUpstreamUrl: COORDINATOR_ORIGIN,
-				coordinatorAppToken: 'test-token',
+				...TEST_AGENT_DEPS,
 				fetchImpl,
 				nowSeconds: NOW
 			}
@@ -139,8 +142,7 @@ describe('handleDelegationRequired', () => {
 				jwksResolver: createJwksResolver(publicJwk),
 				keyRegistry: new KeyRegistry(operatorKeysJson(root)),
 				seenStore: new MemorySeenStore(),
-				coordinatorUpstreamUrl: COORDINATOR_ORIGIN,
-				coordinatorAppToken: 'test-token',
+				...TEST_AGENT_DEPS,
 				nowSeconds: NOW
 			}
 		);
@@ -167,8 +169,7 @@ describe('handleDelegationRequired', () => {
 				jwksResolver: createJwksResolver(publicJwk),
 				keyRegistry: new KeyRegistry(operatorKeysJson(root)),
 				seenStore: new MemorySeenStore(),
-				coordinatorUpstreamUrl: COORDINATOR_ORIGIN,
-				coordinatorAppToken: 'test-token',
+				...TEST_AGENT_DEPS,
 				nowSeconds: NOW
 			}
 		);
@@ -191,8 +192,7 @@ describe('handleDelegationRequired', () => {
 				jwksResolver: createJwksResolver(publicJwk),
 				keyRegistry: new KeyRegistry(operatorKeysJson(root)),
 				seenStore: new MemorySeenStore(),
-				coordinatorUpstreamUrl: COORDINATOR_ORIGIN,
-				coordinatorAppToken: 'test-token',
+				...TEST_AGENT_DEPS,
 				nowSeconds: NOW
 			}
 		);
@@ -217,8 +217,7 @@ describe('handleDelegationRequired', () => {
 				jwksResolver: createJwksResolver(publicJwk),
 				keyRegistry: new KeyRegistry(operatorKeysJson(root)),
 				seenStore: new MemorySeenStore(),
-				coordinatorUpstreamUrl: COORDINATOR_ORIGIN,
-				coordinatorAppToken: 'test-token',
+				...TEST_AGENT_DEPS,
 				nowSeconds: NOW
 			}
 		);

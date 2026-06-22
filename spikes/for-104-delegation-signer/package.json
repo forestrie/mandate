@@ -1,0 +1,24 @@
+{
+	"name": "@mandate/spike-for-104-delegation-signer",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"description": "FOR-104 spikes: Privy vs GCP KMS remote KS256 signer backends",
+	"scripts": {
+		"test": "vitest run",
+		"check": "tsc --noEmit",
+		"spike": "node --import tsx src/run-spike.ts",
+		"spike:live": "SPIKE_LIVE=1 node --import tsx src/run-spike.ts"
+	},
+	"dependencies": {
+		"@canopy/delegation-cose": "file:./canopy-delegation-cose-0.1.0.tgz",
+		"@noble/curves": "^1.9.7",
+		"@noble/hashes": "^1.7.1"
+	},
+	"devDependencies": {
+		"@types/node": "^22",
+		"tsx": "^4.21.0",
+		"typescript": "^6.0.2",
+		"vitest": "^4.1.3"
+	}
+}

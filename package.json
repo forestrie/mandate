@@ -15,7 +15,8 @@
 		"format": "prettier --write .",
 		"test": "pnpm -r --filter './packages/**' test",
 		"sync:coordinator-types": "node scripts/sync-coordinator-types.mjs",
-		"audit:client-secrets": "node scripts/audit-client-bundle.mjs"
+		"audit:client-secrets": "node scripts/audit-client-bundle.mjs",
+		"repo-init": "node scripts/repo-init.mjs"
 	},
 	"engines": {
 		"node": ">=22.0.0",

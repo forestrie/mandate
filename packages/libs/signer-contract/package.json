@@ -1,0 +1,19 @@
+{
+	"name": "@mandate/signer-contract",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"description": "ADR-0003 remote signer HTTP contract types",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"build": "tsc --noEmit",
+		"check": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"typescript": "^6.0.2",
+		"vitest": "^4.1.3"
+	}
+}

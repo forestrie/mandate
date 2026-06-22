@@ -1,5 +1,6 @@
 import type { DelegationRequiredEvent } from '@mandate/coordinator-types';
-import { base64ToBytes } from './bytes.js';
+import { verifyDelegationCertificateKs256 } from '@canopy/delegation-cose';
+import { base64ToBytes, parseEthAddress } from './bytes.js';
 import { submitDelegationMaterial } from './coordinator/submit-material.js';
 import type { SeenStore } from './dedup/seen-store.js';
 import type { KeyRegistry } from './signer/key-registry.js';
@@ -14,6 +15,7 @@ export interface AgentDeps {
 	seenStore: SeenStore;
 	coordinatorUpstreamUrl: string;
 	coordinatorAppToken: string;
+	mandateSignerToken: string;
 	fetchImpl?: typeof fetch;
 	nowSeconds?: number;
 }
@@ -95,7 +97,12 @@ export async function handleDelegationRequired(
 
 	let signer;
 	try {
-		signer = resolveSigner(deps.keyRegistry, event.logId, deps.fetchImpl);
+		signer = resolveSigner(
+			deps.keyRegistry,
+			event.logId,
+			deps.mandateSignerToken,
+			deps.fetchImpl
+		);
 	} catch (error) {
 		if (error instanceof UnknownLogSignerError) {
 			return jsonResponse(404, { ok: false, error: error.message });
@@ -110,6 +117,13 @@ export async function handleDelegationRequired(
 		delegatedPublicKeyCbor: base64ToBytes(event.delegatedPublicKey),
 		ttlSeconds: 3600
 	});
+
+	const descriptor = deps.keyRegistry.get(event.logId);
+	const rootSignerAddress = parseEthAddress(descriptor.rootSignerAddress);
+	const verified = await verifyDelegationCertificateKs256(certificate, rootSignerAddress);
+	if (!verified) {
+		return jsonResponse(500, { ok: false, error: 'delegation certificate verification failed' });
+	}
 
 	const submitResponse = await submitDelegationMaterial({
 		materialSubmitUrl: event.materialSubmitUrl,

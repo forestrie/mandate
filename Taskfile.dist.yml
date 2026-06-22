@@ -1,9 +1,29 @@
 version: '3'
 
 vars:
-  DOPPLER_PROJECT: mandate
+  DOPPLER_PROJECT: mandate-forestrie
+  DOPPLER_CONFIG: dev
 
 tasks:
+  repo-init:
+    desc: >-
+      Provision Cloudflare KV and gitignored wrangler.env.prod.json overlays;
+      requires CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID
+    env:
+      CICD: '{{.CICD | default "false"}}'
+    preconditions:
+      - sh: test -n "${CLOUDFLARE_API_TOKEN:-}"
+        msg: CLOUDFLARE_API_TOKEN must be set
+      - sh: test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+        msg: CLOUDFLARE_ACCOUNT_ID must be set
+    cmds:
+      - node scripts/repo-init.mjs
+
+  repo-init:doppler:
+    desc: repo-init with Doppler-injected Cloudflare credentials
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- task repo-init
+
   dev:
     desc: Run Vite dev server (@mandate/ui)
     cmds:

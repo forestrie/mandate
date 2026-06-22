@@ -1,0 +1,10 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "mandate-signer",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-04-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"vars": {
+		"PRIVY_API_BASE": "https://api.privy.io"
+	}
+}

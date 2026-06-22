@@ -1,9 +1,9 @@
 {
-	"name": "@mandate/agent",
+	"name": "@mandate/signer",
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
-	"description": "Delegation webhook receiver and non-custodial signer (FOR-98)",
+	"description": "Privy-backed mandate remote signer Worker (ADR-0003)",
 	"scripts": {
 		"dev": "wrangler dev",
 		"build": "tsc --noEmit",
@@ -11,14 +11,12 @@
 		"test": "vitest run"
 	},
 	"dependencies": {
-		"@canopy/delegation-cose": "file:./canopy-delegation-cose-0.1.0.tgz",
-		"@mandate/coordinator-types": "workspace:*",
-		"@mandate/signer-contract": "workspace:*"
+		"@mandate/signer-contract": "workspace:*",
+		"@noble/curves": "^1.9.7",
+		"@noble/hashes": "^1.7.1"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20260228.0",
-		"@noble/curves": "^1.9.7",
-		"@noble/hashes": "^1.7.1",
 		"@types/node": "^22",
 		"typescript": "^6.0.2",
 		"vitest": "^4.1.3",

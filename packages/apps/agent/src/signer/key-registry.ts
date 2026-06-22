@@ -51,6 +51,9 @@ export class KeyRegistry {
 			if (descriptor.kind === 'remote' && !descriptor.signerUrl) {
 				throw new Error(`signerUrl required for remote signer on log ${logId}`);
 			}
+			if (descriptor.kind === 'remote' && !descriptor.keyRef) {
+				throw new Error(`keyRef required for remote signer on log ${logId}`);
+			}
 			map.set(logId.toLowerCase(), descriptor);
 		}
 		this.cache = map;
