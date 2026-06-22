@@ -1,8 +1,10 @@
 import { PUBLIC_COORDINATOR_BFF_BASE } from '$env/static/public';
 import type {
+	EnabledResponse,
 	MaterialSubmitResponse,
 	PendingListResponse,
 	ProblemDetails,
+	PutEnabledRequest,
 	SubmitMaterialRequest
 } from '@mandate/coordinator-types';
 
@@ -47,6 +49,21 @@ export async function submitDelegationMaterial(
 ): Promise<MaterialSubmitResponse> {
 	return bffFetch<MaterialSubmitResponse>('delegations/material', {
 		method: 'POST',
+		body: JSON.stringify(body)
+	});
+}
+
+export async function getLogDelegationEnabled(logId: string): Promise<EnabledResponse> {
+	return bffFetch<EnabledResponse>(`logs/${encodeURIComponent(logId)}/enabled`);
+}
+
+export async function setLogDelegationEnabled(
+	logId: string,
+	enabled: boolean
+): Promise<EnabledResponse> {
+	const body: PutEnabledRequest = { enabled };
+	return bffFetch<EnabledResponse>(`logs/${encodeURIComponent(logId)}/enabled`, {
+		method: 'PUT',
 		body: JSON.stringify(body)
 	});
 }

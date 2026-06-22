@@ -165,9 +165,10 @@ export async function handleDelegationRequired(
 	if (!submitResponse.ok) {
 		await deps.seenStore.clear(event.requestKey);
 		const detail = await submitResponse.text();
+		console.error('material submit failed', submitResponse.status, detail);
 		return jsonResponse(502, {
 			ok: false,
-			error: `material submit failed: ${submitResponse.status} ${detail}`
+			error: `material submit failed: ${submitResponse.status}`
 		});
 	}
 

@@ -9,6 +9,8 @@ const LOG_ID_PATTERN =
 const ALLOWED_ROUTES: Array<{ method: string; pattern: RegExp }> = [
 	{ method: 'GET', pattern: /^delegations\/pending$/ },
 	{ method: 'POST', pattern: /^delegations\/material$/ },
+	{ method: 'GET', pattern: /^logs\/[^/]+\/enabled$/ },
+	{ method: 'PUT', pattern: /^logs\/[^/]+\/enabled$/ },
 	{ method: 'GET', pattern: /^logs\/[^/]+\/signing-route$/ },
 	{ method: 'POST', pattern: /^logs\/[^/]+\/signing-route$/ },
 	{ method: 'POST', pattern: /^logs\/[^/]+\/custody-keys$/ }

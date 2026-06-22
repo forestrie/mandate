@@ -20,6 +20,12 @@ describe('isAllowedCoordinatorPath', () => {
 		).toBe(true);
 	});
 
+	it('allows delegation enabled GET and PUT', () => {
+		const logId = '550e8400-e29b-41d4-a716-446655440000';
+		expect(isAllowedCoordinatorPath('GET', ['logs', logId, 'enabled'])).toBe(true);
+		expect(isAllowedCoordinatorPath('PUT', ['logs', logId, 'enabled'])).toBe(true);
+	});
+
 	it('rejects unknown paths', () => {
 		expect(isAllowedCoordinatorPath('GET', ['delegations', 'issue'])).toBe(false);
 	});

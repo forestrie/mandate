@@ -5,7 +5,11 @@
 	import Button from '$lib/components/ui/button.svelte';
 	import Card from '$lib/components/ui/card.svelte';
 	import Input from '$lib/components/ui/input.svelte';
-	import { listPendingDelegations, submitDelegationMaterial } from '$lib/coordinator/client.js';
+	import {
+		listPendingDelegations,
+		setLogDelegationEnabled,
+		submitDelegationMaterial
+	} from '$lib/coordinator/client.js';
 	import type { PendingEntry } from '@mandate/coordinator-types';
 	import {
 		getPrivySessionState,
@@ -24,6 +28,8 @@
 	let message = $state<string | null>(null);
 	let error = $state<string | null>(null);
 	let signingId = $state<string | null>(null);
+	let killSwitchLogId = $state('');
+	let killSwitchBusy = $state(false);
 
 	const session = $derived(getPrivySessionState());
 
@@ -58,6 +64,39 @@
 			entries = [];
 		} finally {
 			loading = false;
+		}
+	}
+
+	async function pauseOperatorSigning(logId: string) {
+		killSwitchBusy = true;
+		error = null;
+		message = null;
+		try {
+			await setLogDelegationEnabled(logId, false);
+			message = `Operator signing paused for log ${logId.slice(0, 8)}…`;
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to pause operator signing';
+		} finally {
+			killSwitchBusy = false;
+		}
+	}
+
+	async function resumeOperatorSigning() {
+		const logId = killSwitchLogId.trim();
+		if (!logId) {
+			error = 'Enter a user log ID to resume operator signing';
+			return;
+		}
+		killSwitchBusy = true;
+		error = null;
+		message = null;
+		try {
+			await setLogDelegationEnabled(logId, true);
+			message = `Operator signing resumed for log ${logId.slice(0, 8)}…`;
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to resume operator signing';
+		} finally {
+			killSwitchBusy = false;
 		}
 	}
 
@@ -135,6 +174,25 @@
 		{/if}
 	</Card>
 
+	<Card class="space-y-4 p-6">
+		<h2 class="text-lg font-medium">Kill switch (FOR-114)</h2>
+		<p class="text-sm text-zinc-600">
+			<strong>Coordinator:</strong> pause mandate webhook signing for a user log (stops
+			`delegation.required` delivery). <strong>Privy (Mode C):</strong> remove mandate as an additional
+			signer in your Privy wallet settings to revoke signing access at the custody layer (ARC-0022 I3).
+		</p>
+		<div class="flex flex-col gap-3 sm:flex-row">
+			<Input
+				bind:value={killSwitchLogId}
+				placeholder="User log UUID or 32-char hex"
+				class="flex-1"
+			/>
+			<Button variant="outline" disabled={killSwitchBusy} onclick={() => resumeOperatorSigning()}>
+				Resume operator signing
+			</Button>
+		</div>
+	</Card>
+
 	{#if error}
 		<Alert variant="destructive" title="Error">{error}</Alert>
 	{/if}
@@ -159,6 +217,7 @@
 							<th class="px-4 py-3 font-medium">MMR range</th>
 							<th class="px-4 py-3 font-medium">Requested</th>
 							<th class="px-4 py-3 font-medium"></th>
+							<th class="px-4 py-3 font-medium"></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -174,6 +233,15 @@
 										onclick={() => signAndSubmit(entry)}
 									>
 										{signingId === entry.id ? 'Signing…' : 'Sign & submit'}
+									</Button>
+								</td>
+								<td class="px-4 py-3 text-right">
+									<Button
+										variant="outline"
+										disabled={killSwitchBusy}
+										onclick={() => pauseOperatorSigning(entry.logIdHex32)}
+									>
+										Pause signing
 									</Button>
 								</td>
 							</tr>
