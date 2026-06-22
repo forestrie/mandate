@@ -1,7 +1,7 @@
 import type { SignRequest } from '@mandate/signer-contract';
 import type { Env } from './env.js';
+import { isValidLogIdHex32, MAX_SIG_STRUCTURE_B64_LENGTH, timingSafeEqualString } from './auth.js';
 import { KeyDirectory, KeyDirectoryError } from './key-directory.js';
-import { buildPrivyAuthorizationSignature } from './privy/authorization-signature.js';
 import { privySecp256k1Sign, PrivySignError } from './privy/privy-sign.js';
 import {
 	addressesEqual,
@@ -20,7 +20,7 @@ export interface HandleSignDeps {
 export async function handleSign(request: Request, deps: HandleSignDeps): Promise<Response> {
 	const auth = request.headers.get('Authorization') ?? '';
 	const expected = `Bearer ${deps.env.MANDATE_SIGNER_TOKEN}`;
-	if (!deps.env.MANDATE_SIGNER_TOKEN || auth !== expected) {
+	if (!deps.env.MANDATE_SIGNER_TOKEN || !timingSafeEqualString(auth, expected)) {
 		return jsonResponse(401, { ok: false, error: 'unauthorized' });
 	}
 
@@ -33,6 +33,14 @@ export async function handleSign(request: Request, deps: HandleSignDeps): Promis
 
 	if (!body.logId || !body.keyRef || !body.rootSignerAddress || !body.sigStructure) {
 		return jsonResponse(400, { ok: false, error: 'missing required sign fields' });
+	}
+
+	if (!isValidLogIdHex32(body.logId)) {
+		return jsonResponse(400, { ok: false, error: 'logId must be 32-char hex' });
+	}
+
+	if (body.sigStructure.length > MAX_SIG_STRUCTURE_B64_LENGTH) {
+		return jsonResponse(400, { ok: false, error: 'sigStructure exceeds maximum size' });
 	}
 
 	let sigStructureBytes: Uint8Array;
@@ -53,7 +61,13 @@ export async function handleSign(request: Request, deps: HandleSignDeps): Promis
 		throw error;
 	}
 
-	const authorizationSignature = buildPrivyAuthorizationSignature(deps.env.PRIVY_AUTHORIZATION_KEY);
+	const requiresAuth = entry.requiresAuthorizationSignature === true;
+	if (requiresAuth && !deps.env.PRIVY_AUTHORIZATION_KEY?.trim()) {
+		return jsonResponse(500, {
+			ok: false,
+			error: 'PRIVY_AUTHORIZATION_KEY required for owned-wallet keyRef but not configured'
+		});
+	}
 
 	let signature: Uint8Array;
 	try {
@@ -62,7 +76,7 @@ export async function handleSign(request: Request, deps: HandleSignDeps): Promis
 			appSecret: deps.env.PRIVY_APP_SECRET,
 			walletId: entry.walletId,
 			apiBase: deps.env.PRIVY_API_BASE,
-			authorizationSignature,
+			authorizationKey: requiresAuth ? deps.env.PRIVY_AUTHORIZATION_KEY : undefined,
 			fetchImpl: deps.fetchImpl
 		});
 	} catch (error) {

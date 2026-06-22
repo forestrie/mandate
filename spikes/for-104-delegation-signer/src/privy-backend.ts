@@ -53,7 +53,8 @@ export function createPrivyLiveBackend(config: PrivyBackendConfig): SignerBacken
 			body: JSON.stringify({
 				chain_type: 'ethereum',
 				method: 'secp256k1_sign',
-				params: { hash: hashHex, encoding: 'hex' }
+				// Privy rejects an `encoding` key in secp256k1_sign params (HTTP 400).
+				params: { hash: hashHex }
 			})
 		});
 
@@ -76,9 +77,7 @@ export function createPrivyLiveBackend(config: PrivyBackendConfig): SignerBacken
 
 export function privyEnvConfigured(): boolean {
 	return Boolean(
-		process.env.PRIVY_APP_ID &&
-			process.env.PRIVY_APP_SECRET &&
-			process.env.PRIVY_WALLET_ID
+		process.env.PRIVY_APP_ID && process.env.PRIVY_APP_SECRET && process.env.PRIVY_WALLET_ID
 	);
 }
 

@@ -33,10 +33,11 @@ GitHub Packages requires the npm scope to match the owning GitHub org
    `NODE_AUTH_TOKEN` from `gh auth token` or a PAT with `read:packages`. GitHub
    Packages requires a token even for public packages.
 
-5. **No in-agent pre-submit certificate verify.** The agent previously called
-   `verifyDelegationCertificateKs256` from the same library that builds the
-   certificate, which is not an independent check. Verification remains at the
-   coordinator boundary (and on-chain).
+5. **Agent verify-before-submit.** After building the certificate, the agent
+   calls `verifyDelegationCertificateKs256` and binds parsed payload fields
+   (`logId`, `mmrStart`, `mmrEnd`) to the webhook event before coordinator
+   submit. This is a defense-in-depth check (FOR-110); the coordinator and
+   on-chain paths remain authoritative.
 
 ## Consequences
 

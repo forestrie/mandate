@@ -4,6 +4,8 @@ export interface KeyDirectoryEntry {
 	walletId: string;
 	rootSignerAddress: string;
 	logIds: string[];
+	/** Mode C owned-wallet: require `privy-authorization-signature` on Privy RPC. */
+	requiresAuthorizationSignature?: boolean;
 }
 
 export type KeyDirectoryMap = Record<string, KeyDirectoryEntry>;
@@ -59,6 +61,12 @@ export class KeyDirectory {
 			const entry = value as KeyDirectoryEntry;
 			if (!entry.walletId || !entry.rootSignerAddress || !Array.isArray(entry.logIds)) {
 				throw new Error(`invalid KEY_DIRECTORY entry for ${keyRef}`);
+			}
+			if (
+				entry.requiresAuthorizationSignature !== undefined &&
+				typeof entry.requiresAuthorizationSignature !== 'boolean'
+			) {
+				throw new Error(`invalid requiresAuthorizationSignature for ${keyRef}: must be boolean`);
 			}
 			map[keyRef] = entry;
 		}

@@ -24,6 +24,8 @@ jobs:
         with:
           node-version: 22.14.0
           cache: pnpm
+          registry-url: https://npm.pkg.github.com
+          scope: '@forestrie'
 
       - name: Install
         env:

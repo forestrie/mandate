@@ -152,8 +152,7 @@ Fork-friendly Cloudflare Workers deploy for **mandate-agent** and
 `@forestrie/delegation-cose` is installed from GitHub Packages (exact version pin;
 see [ADR-0004](docs/adr/adr-0004-delegation-cose-distribution.md)). Forks need
 root `.npmrc` and `NODE_AUTH_TOKEN` with `read:packages` (`gh auth token` or a
-PAT; run `gh auth refresh -s read:packages -h github.com` if install returns
-403) before `pnpm install`.
+PAT; run `gh auth refresh -s read:packages -h github.com` if install returns 403) before `pnpm install`.
 
 ## Coordinator types
 

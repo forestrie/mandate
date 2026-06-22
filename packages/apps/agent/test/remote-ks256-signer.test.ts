@@ -3,7 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SignRequest } from '@mandate/signer-contract';
 import { RemoteKs256Signer } from '../src/signer/remote-ks256-signer.js';
 import { base64ToBytes } from '../src/bytes.js';
-import { generateDelegatedPublicKeyCbor, generateTestKs256Root, TEST_LOG_ID } from './test-helpers.js';
+import {
+	generateDelegatedPublicKeyCbor,
+	generateTestKs256Root,
+	TEST_LOG_ID
+} from './test-helpers.js';
 import { keccak_256 } from '@noble/hashes/sha3';
 
 function signRecoverableLowS(hash: Uint8Array, privateKey: Uint8Array): Uint8Array {

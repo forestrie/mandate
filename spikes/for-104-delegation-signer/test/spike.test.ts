@@ -41,10 +41,7 @@ describe('FOR-104 spike harness', () => {
 	it('gcp kms mock backend passes verify gate', async () => {
 		const root = generateTestRoot();
 		const delegated = await generateDelegatedPublicKeyCbor();
-		const { backend, mode } = createGcpKmsBackendFromEnv(
-			root.privateKey,
-			root.rootSignerAddress
-		);
+		const { backend, mode } = createGcpKmsBackendFromEnv(root.privateKey, root.rootSignerAddress);
 		expect(mode).toBe('mock');
 		const result = await verifyBackend(backend, root.rootSignerAddress, delegated);
 		expect(result.ok).toBe(true);

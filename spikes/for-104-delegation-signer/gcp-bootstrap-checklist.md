@@ -66,11 +66,11 @@ gcloud kms keys add-iam-policy-binding operator-root-1 \
 
 Cloudflare Workers **do not** have Application Default Credentials. Options:
 
-| Option | Worker-compat | Ops effort | Notes |
-| ------ | ------------- | ---------- | ----- |
-| **A. Thin Cloud Run signer** | Agent calls HTTPS | Medium | SA on Cloud Run; agent holds no GCP creds. Recommended for KMS. |
-| **B. WIF → short-lived token** | Agent mints OAuth token | High | Custom token broker; complex for forks. |
-| **C. SA JSON in Worker secret** | Direct KMS REST | Low dev / **bad prod** | Anti-pattern; avoid. |
+| Option                          | Worker-compat           | Ops effort             | Notes                                                           |
+| ------------------------------- | ----------------------- | ---------------------- | --------------------------------------------------------------- |
+| **A. Thin Cloud Run signer**    | Agent calls HTTPS       | Medium                 | SA on Cloud Run; agent holds no GCP creds. Recommended for KMS. |
+| **B. WIF → short-lived token**  | Agent mints OAuth token | High                   | Custom token broker; complex for forks.                         |
+| **C. SA JSON in Worker secret** | Direct KMS REST         | Low dev / **bad prod** | Anti-pattern; avoid.                                            |
 
 **Recommendation for KMS path:** deploy a minimal **mandate-kms-signer** Cloud
 Run service in the mandate GCP project implementing the remote-signer HTTP
@@ -78,11 +78,11 @@ contract; agent calls it with a shared bearer secret.
 
 ## 5. Cost (low volume, order-of-magnitude)
 
-| Item | Approximate |
-| ---- | ----------- |
-| HSM key version | ~$1–3 / key version / month (region-dependent) |
-| asymmetricSign | ~$0.03 / 10k ops |
-| Cloud Run (thin signer) | Near-zero at webhook volume |
+| Item                    | Approximate                                    |
+| ----------------------- | ---------------------------------------------- |
+| HSM key version         | ~$1–3 / key version / month (region-dependent) |
+| asymmetricSign          | ~$0.03 / 10k ops                               |
+| Cloud Run (thin signer) | Near-zero at webhook volume                    |
 
 Privy: SaaS pricing per wallet / MAU — typically **lower fixed ops** at pilot
 scale, higher vendor lock-in.
@@ -115,13 +115,13 @@ Confirm `gcp-kms [live] PASS` and address matches registered log root.
 
 ## 8. Effort summary (for decision matrix)
 
-| Task | Time (first mandate env) |
-| ---- | ------------------------ |
-| New GCP project + APIs | 0.5–1 h |
-| KMS HSM key + IAM | 0.5–1 h |
-| Thin Cloud Run signer (PoC) | 4–8 h |
-| CI / Doppler secrets wiring | 1–2 h |
-| **Total GCP path** | **~1–2 days** |
+| Task                        | Time (first mandate env) |
+| --------------------------- | ------------------------ |
+| New GCP project + APIs      | 0.5–1 h                  |
+| KMS HSM key + IAM           | 0.5–1 h                  |
+| Thin Cloud Run signer (PoC) | 4–8 h                    |
+| CI / Doppler secrets wiring | 1–2 h                    |
+| **Total GCP path**          | **~1–2 days**            |
 
 Privy path (server wallet + auth signature wiring): **~0.5–1 day** assuming
 existing Privy app from `@mandate/ui`.

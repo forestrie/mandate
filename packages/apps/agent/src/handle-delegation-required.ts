@@ -1,12 +1,19 @@
 import type { DelegationRequiredEvent } from '@mandate/coordinator-types';
 import { base64ToBytes } from './bytes.js';
 import { submitDelegationMaterial } from './coordinator/submit-material.js';
+import {
+	assertCertificateMatchesEvent,
+	CertificateValidationError
+} from './delegation/validate-certificate.js';
 import type { SeenStore } from './dedup/seen-store.js';
 import type { KeyRegistry } from './signer/key-registry.js';
 import { UnknownLogSignerError } from './signer/key-registry.js';
 import { resolveSigner } from './signer/resolve-signer.js';
 import type { JwksResolver } from './webhook/jwks-resolver.js';
 import { verifyWebhookSignature, WebhookVerificationError } from './webhook/verify-signature.js';
+
+/** Short TTL while signing/submitting; full TTL applied after successful submit. */
+export const REQUEST_KEY_RESERVATION_TTL_SECONDS = 120;
 
 export interface AgentDeps {
 	jwksResolver: JwksResolver;
@@ -94,14 +101,9 @@ export async function handleDelegationRequired(
 		return jsonResponse(200, { ok: true, duplicate: true });
 	}
 
-	let signer;
+	let descriptor;
 	try {
-		signer = resolveSigner(
-			deps.keyRegistry,
-			event.logId,
-			deps.mandateSignerToken,
-			deps.fetchImpl
-		);
+		descriptor = deps.keyRegistry.get(event.logId);
 	} catch (error) {
 		if (error instanceof UnknownLogSignerError) {
 			return jsonResponse(404, { ok: false, error: error.message });
@@ -109,13 +111,44 @@ export async function handleDelegationRequired(
 		throw error;
 	}
 
-	const certificate = await signer.buildCertificate({
-		logIdHex32: event.logId,
-		mmrStart: event.mmrStart,
-		mmrEnd: event.mmrEnd,
-		delegatedPublicKeyCbor: base64ToBytes(event.delegatedPublicKey),
-		ttlSeconds: 3600
-	});
+	const signer = resolveSigner(
+		deps.keyRegistry,
+		event.logId,
+		deps.mandateSignerToken,
+		deps.fetchImpl
+	);
+
+	// Reserve before signing to narrow duplicate-webhook races. KV is eventually
+	// consistent; coordinator idempotency on material submit remains the hard backstop.
+	await deps.seenStore.markSeen(event.requestKey, REQUEST_KEY_RESERVATION_TTL_SECONDS);
+
+	let certificate: Uint8Array;
+	try {
+		certificate = await signer.buildCertificate({
+			logIdHex32: event.logId,
+			mmrStart: event.mmrStart,
+			mmrEnd: event.mmrEnd,
+			delegatedPublicKeyCbor: base64ToBytes(event.delegatedPublicKey),
+			ttlSeconds: 3600
+		});
+	} catch (error) {
+		await deps.seenStore.clear(event.requestKey);
+		throw error;
+	}
+
+	try {
+		await assertCertificateMatchesEvent({
+			certificate,
+			event,
+			rootSignerAddress: descriptor.rootSignerAddress
+		});
+	} catch (error) {
+		await deps.seenStore.clear(event.requestKey);
+		if (error instanceof CertificateValidationError) {
+			return jsonResponse(502, { ok: false, error: error.message });
+		}
+		throw error;
+	}
 
 	const submitResponse = await submitDelegationMaterial({
 		materialSubmitUrl: event.materialSubmitUrl,
@@ -130,6 +163,7 @@ export async function handleDelegationRequired(
 	});
 
 	if (!submitResponse.ok) {
+		await deps.seenStore.clear(event.requestKey);
 		const detail = await submitResponse.text();
 		return jsonResponse(502, {
 			ok: false,

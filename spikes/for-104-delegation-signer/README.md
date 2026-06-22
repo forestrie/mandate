@@ -52,14 +52,14 @@ match the Ethereum address derived from the KMS public key (see
 
 ## Layout
 
-| File | Purpose |
-| ---- | ------- |
-| `src/harness.ts` | `SignerBackend`, `verifyBackend`, test fixtures |
-| `src/privy-backend.ts` | Privy `secp256k1_sign` RPC (mock + live) |
-| `src/gcp-kms-backend.ts` | KMS `asymmetricSign` + DER→recoverable (mock + live) |
-| `src/sig-utils.ts` | keccak256, Privy parse, DER recovery |
-| `src/run-spike.ts` | CLI runner |
-| `gcp-bootstrap-checklist.md` | Mandate-dedicated GCP project bootstrap |
+| File                         | Purpose                                              |
+| ---------------------------- | ---------------------------------------------------- |
+| `src/harness.ts`             | `SignerBackend`, `verifyBackend`, test fixtures      |
+| `src/privy-backend.ts`       | Privy `secp256k1_sign` RPC (mock + live)             |
+| `src/gcp-kms-backend.ts`     | KMS `asymmetricSign` + DER→recoverable (mock + live) |
+| `src/sig-utils.ts`           | keccak256, Privy parse, DER recovery                 |
+| `src/run-spike.ts`           | CLI runner                                           |
+| `gcp-bootstrap-checklist.md` | Mandate-dedicated GCP project bootstrap              |
 
 ## Remote-signer HTTP contract (agent today)
 

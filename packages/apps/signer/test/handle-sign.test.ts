@@ -1,7 +1,10 @@
+import { generateKeyPairSync } from 'node:crypto';
+import { p256 } from '@noble/curves/p256';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { describe, expect, it, vi } from 'vitest';
 import { handleSign } from '../src/handle-sign.js';
 import type { Env } from '../src/env.js';
+import { canonicalizeJson } from '../src/privy/jcs.js';
 import {
 	addressFromUncompressedPubkey,
 	base64ToBytes,
@@ -13,10 +16,15 @@ import {
 	signRecoverableLowS
 } from './test-helpers.js';
 
-const TEST_LOG_ID = 'b2c3d4e5f67890ab1234567890abcdef12';
+const TEST_LOG_ID = 'b2c3d4e5f67890ab1234567890abcdef';
 const SIGNER_TOKEN = 'test-signer-token';
 
-function createEnv(opts: { privateKey: Uint8Array; keyRef?: string; logIds?: string[] }): Env {
+function createEnv(opts: {
+	privateKey: Uint8Array;
+	keyRef?: string;
+	logIds?: string[];
+	requiresAuthorizationSignature?: boolean;
+}): Env {
 	const pub = secp256k1.getPublicKey(opts.privateKey, false);
 	const rootSignerAddress = `0x${Buffer.from(addressFromUncompressedPubkey(pub)).toString('hex')}`;
 	const keyRef = opts.keyRef ?? 'test-key';
@@ -28,7 +36,10 @@ function createEnv(opts: { privateKey: Uint8Array; keyRef?: string; logIds?: str
 			[keyRef]: {
 				walletId: 'wallet-1',
 				rootSignerAddress,
-				logIds: opts.logIds ?? [TEST_LOG_ID]
+				logIds: opts.logIds ?? [TEST_LOG_ID],
+				...(opts.requiresAuthorizationSignature !== undefined
+					? { requiresAuthorizationSignature: opts.requiresAuthorizationSignature }
+					: {})
 			}
 		})
 	};
@@ -101,6 +112,35 @@ describe('handleSign', () => {
 		expect(recovered).toEqual(expected);
 	});
 
+	it('sends Privy secp256k1_sign with only a hash param (no encoding key)', async () => {
+		const privateKey = secp256k1.utils.randomPrivateKey();
+		const env = createEnv({ privateKey });
+		const sigStructure = new Uint8Array([1, 2, 3, 4]);
+		let capturedHeaders: Record<string, string> = {};
+		let capturedBody: { method?: string; params?: Record<string, unknown> } = {};
+		const fetchImpl = vi.fn(async (_url: unknown, init: RequestInit) => {
+			capturedHeaders = Object.fromEntries(new Headers(init.headers).entries());
+			capturedBody = JSON.parse(init.body as string);
+			const hash = hashSigStructure(sigStructure);
+			const sig = signRecoverableLowS(hash, privateKey);
+			const privyStyle = new Uint8Array(sig);
+			privyStyle[64] = privyStyle[64]! + 27;
+			return new Response(
+				JSON.stringify({ data: { signature: `0x${Buffer.from(privyStyle).toString('hex')}` } }),
+				{ status: 200 }
+			);
+		}) as unknown as typeof fetch;
+		const response = await handleSign(signRequest({ privateKey, sigStructure }), {
+			env,
+			fetchImpl
+		});
+		expect(response.status).toBe(200);
+		expect(capturedBody.method).toBe('secp256k1_sign');
+		// Privy returns HTTP 400 invalid_data if params carries an `encoding` key.
+		expect(Object.keys(capturedBody.params ?? {})).toEqual(['hash']);
+		expect(capturedHeaders['privy-authorization-signature']).toBeUndefined();
+	});
+
 	it('normalizes a high-s Privy signature to low-s and still recovers', async () => {
 		const privateKey = secp256k1.utils.randomPrivateKey();
 		const env = createEnv({ privateKey });
@@ -142,6 +182,88 @@ describe('handleSign', () => {
 		expect(response.status).toBe(404);
 	});
 
+	it('rejects invalid logId with 400', async () => {
+		const privateKey = secp256k1.utils.randomPrivateKey();
+		const env = createEnv({ privateKey });
+		const sigStructure = new Uint8Array([1, 2, 3, 4]);
+		const response = await handleSign(signRequest({ privateKey, logId: 'not-hex' }), {
+			env,
+			fetchImpl: mockPrivyFetch(privateKey, sigStructure)
+		});
+		expect(response.status).toBe(400);
+	});
+
+	it('rejects oversized sigStructure with 400', async () => {
+		const privateKey = secp256k1.utils.randomPrivateKey();
+		const env = createEnv({ privateKey });
+		const oversized = 'A'.repeat(90_000);
+		const pub = secp256k1.getPublicKey(privateKey, false);
+		const rootSignerAddress = `0x${Buffer.from(addressFromUncompressedPubkey(pub)).toString('hex')}`;
+		const request = new Request('http://signer.test/v1/sign', {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${SIGNER_TOKEN}`,
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				logId: TEST_LOG_ID,
+				keyRef: 'test-key',
+				rootSignerAddress,
+				sigStructure: oversized
+			})
+		});
+		const response = await handleSign(request, {
+			env,
+			fetchImpl: mockPrivyFetch(privateKey, new Uint8Array([1]))
+		});
+		expect(response.status).toBe(400);
+	});
+
+	it('returns 500 when owned-wallet keyRef requires auth but PRIVY_AUTHORIZATION_KEY is unset', async () => {
+		const privateKey = secp256k1.utils.randomPrivateKey();
+		const env = createEnv({ privateKey, requiresAuthorizationSignature: true });
+		const sigStructure = new Uint8Array([1, 2, 3, 4]);
+		const response = await handleSign(signRequest({ privateKey, sigStructure }), {
+			env,
+			fetchImpl: mockPrivyFetch(privateKey, sigStructure)
+		});
+		expect(response.status).toBe(500);
+		const body = (await response.json()) as { error: string };
+		expect(body.error).toContain('PRIVY_AUTHORIZATION_KEY');
+	});
+
+	it('omits privy-authorization-signature when global key is set but keyRef does not require it', async () => {
+		const privateKey = secp256k1.utils.randomPrivateKey();
+		const { privateKey: authPrivateKey } = generateKeyPairSync('ec', {
+			namedCurve: 'P-256',
+			privateKeyEncoding: { type: 'pkcs8', format: 'der' },
+			publicKeyEncoding: { type: 'spki', format: 'der' }
+		});
+		const env: Env = {
+			...createEnv({ privateKey, requiresAuthorizationSignature: false }),
+			PRIVY_AUTHORIZATION_KEY: `wallet-auth:${Buffer.from(authPrivateKey).toString('base64')}`
+		};
+		const sigStructure = new Uint8Array([1, 2, 3, 4]);
+		let capturedHeaders: Record<string, string> = {};
+		const fetchImpl = vi.fn(async (_url: unknown, init: RequestInit) => {
+			capturedHeaders = Object.fromEntries(new Headers(init.headers).entries());
+			const hash = hashSigStructure(sigStructure);
+			const sig = signRecoverableLowS(hash, privateKey);
+			const privyStyle = new Uint8Array(sig);
+			privyStyle[64] = privyStyle[64]! + 27;
+			return new Response(
+				JSON.stringify({ data: { signature: `0x${Buffer.from(privyStyle).toString('hex')}` } }),
+				{ status: 200 }
+			);
+		}) as unknown as typeof fetch;
+		const response = await handleSign(signRequest({ privateKey, sigStructure }), {
+			env,
+			fetchImpl
+		});
+		expect(response.status).toBe(200);
+		expect(capturedHeaders['privy-authorization-signature']).toBeUndefined();
+	});
+
 	it('rejects unknown logId with 404', async () => {
 		const privateKey = secp256k1.utils.randomPrivateKey();
 		const env = createEnv({ privateKey });
@@ -167,18 +289,76 @@ describe('handleSign', () => {
 		expect(body.error).toContain('recovered signer address');
 	});
 
-	it('fails closed when PRIVY_AUTHORIZATION_KEY is set (owned wallets unsupported)', async () => {
+	it('sends privy-authorization-signature when keyRef requires owned-wallet auth', async () => {
 		const privateKey = secp256k1.utils.randomPrivateKey();
+		const { privateKey: authPrivateKey, publicKey: authPublicKey } = generateKeyPairSync('ec', {
+			namedCurve: 'P-256',
+			privateKeyEncoding: { type: 'pkcs8', format: 'der' },
+			publicKeyEncoding: { type: 'spki', format: 'der' }
+		});
 		const env: Env = {
-			...createEnv({ privateKey }),
-			PRIVY_AUTHORIZATION_KEY: 'wallet-auth:placeholder'
+			...createEnv({ privateKey, requiresAuthorizationSignature: true }),
+			PRIVY_AUTHORIZATION_KEY: `wallet-auth:${Buffer.from(authPrivateKey).toString('base64')}`
 		};
 		const sigStructure = new Uint8Array([1, 2, 3, 4]);
-		await expect(
-			handleSign(signRequest({ privateKey, sigStructure }), {
-				env,
-				fetchImpl: mockPrivyFetch(privateKey, sigStructure)
-			})
-		).rejects.toThrow(/owned-wallet authorization/i);
+		const before = Math.floor(Date.now() / 1000);
+		let capturedUrl = '';
+		let capturedHeaders: Record<string, string> = {};
+		let capturedBody: Record<string, unknown> = {};
+		const fetchImpl = vi.fn(async (url: unknown, init: RequestInit) => {
+			capturedUrl = String(url);
+			capturedHeaders = Object.fromEntries(new Headers(init.headers).entries());
+			capturedBody = JSON.parse(init.body as string);
+			const hash = hashSigStructure(sigStructure);
+			const sig = signRecoverableLowS(hash, privateKey);
+			const privyStyle = new Uint8Array(sig);
+			privyStyle[64] = privyStyle[64]! + 27;
+			return new Response(
+				JSON.stringify({ data: { signature: `0x${Buffer.from(privyStyle).toString('hex')}` } }),
+				{ status: 200 }
+			);
+		}) as unknown as typeof fetch;
+
+		const response = await handleSign(signRequest({ privateKey, sigStructure }), {
+			env,
+			fetchImpl
+		});
+		const after = Math.floor(Date.now() / 1000);
+		expect(response.status).toBe(200);
+
+		const authHeader = capturedHeaders['privy-authorization-signature'];
+		expect(authHeader).toBeTruthy();
+		const expiry = Number(capturedHeaders['privy-request-expiry']);
+		expect(expiry).toBeGreaterThanOrEqual(before + 60);
+		expect(expiry).toBeLessThanOrEqual(after + 60);
+
+		const payload = {
+			version: 1,
+			method: 'POST',
+			url: capturedUrl,
+			body: capturedBody,
+			headers: {
+				'privy-app-id': env.PRIVY_APP_ID,
+				'privy-request-expiry': capturedHeaders['privy-request-expiry']
+			}
+		};
+		const jcsBytes = new TextEncoder().encode(canonicalizeJson(payload));
+		const publicKey = await crypto.subtle.importKey(
+			'spki',
+			new Uint8Array(authPublicKey),
+			{ name: 'ECDSA', namedCurve: 'P-256' },
+			false,
+			['verify']
+		);
+		const der = new Uint8Array(Buffer.from(authHeader!, 'base64'));
+		const raw = p256.Signature.fromDER(der).toCompactRawBytes();
+		expect(
+			await crypto.subtle.verify(
+				{ name: 'ECDSA', hash: 'SHA-256' },
+				publicKey,
+				new Uint8Array(raw),
+				jcsBytes
+			)
+		).toBe(true);
 	});
 });

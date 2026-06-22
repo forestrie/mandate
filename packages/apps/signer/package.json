@@ -8,12 +8,15 @@
 		"dev": "wrangler dev",
 		"build": "tsc --noEmit",
 		"check": "tsc --noEmit",
-		"test": "vitest run"
+		"test": "vitest run",
+		"test:live": "vitest run test/handle-sign.live.test.ts",
+		"test:live:owned": "vitest run test/handle-sign.owned-wallet.live.test.ts"
 	},
 	"dependencies": {
 		"@mandate/signer-contract": "workspace:*",
 		"@noble/curves": "^1.9.7",
-		"@noble/hashes": "^1.7.1"
+		"@noble/hashes": "^1.7.1",
+		"canonicalize": "^2.1.0"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20260228.0",

@@ -61,9 +61,7 @@ function parseWranglerJson(output) {
 		const start = trimmed.indexOf('[');
 		const end = trimmed.lastIndexOf(']');
 		if (start === -1 || end === -1 || end < start) {
-			throw new Error(
-				`wrangler output did not contain JSON array: ${trimmed.slice(0, 200)}`
-			);
+			throw new Error(`wrangler output did not contain JSON array: ${trimmed.slice(0, 200)}`);
 		}
 		return JSON.parse(trimmed.slice(start, end + 1));
 	}
@@ -117,9 +115,7 @@ function injectId(configPath, placeholder, id) {
 			console.log(`[ensure-kv] ${configPath} already pinned to ${id}`);
 			return;
 		}
-		throw new Error(
-			`[ensure-kv] placeholder "${placeholder}" not found in ${configPath}`
-		);
+		throw new Error(`[ensure-kv] placeholder "${placeholder}" not found in ${configPath}`);
 	}
 	const updated = original.replaceAll(placeholder, id);
 	writeFileSync(absPath, updated, 'utf8');

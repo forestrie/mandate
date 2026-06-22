@@ -40,11 +40,10 @@ export function generateTestRoot(): TestRoot {
 }
 
 export async function generateDelegatedPublicKeyCbor(): Promise<Uint8Array> {
-	const keyPair = (await crypto.subtle.generateKey(
-		{ name: 'ECDSA', namedCurve: 'P-256' },
-		true,
-		['sign', 'verify']
-	)) as CryptoKeyPair;
+	const keyPair = (await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, [
+		'sign',
+		'verify'
+	])) as CryptoKeyPair;
 	const raw = new Uint8Array(
 		(await crypto.subtle.exportKey('raw', keyPair.publicKey)) as ArrayBuffer
 	);

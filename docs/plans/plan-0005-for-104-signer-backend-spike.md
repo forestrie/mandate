@@ -24,11 +24,11 @@ with a finalized remote-signer HTTP contract.
 
 ## PoC results (mock, 2026-06-22)
 
-| Backend | Mode | verifyBackend | Latency (mock) |
-| ------- | ---- | ------------- | -------------- |
-| local-secp (control) | mock | PASS | ~8 ms |
-| Privy | mock | PASS | ~3 ms |
-| GCP KMS | mock | PASS | ~7 ms |
+| Backend              | Mode | verifyBackend | Latency (mock) |
+| -------------------- | ---- | ------------- | -------------- |
+| local-secp (control) | mock | PASS          | ~8 ms          |
+| Privy                | mock | PASS          | ~3 ms          |
+| GCP KMS              | mock | PASS          | ~7 ms          |
 
 All pass `buildDelegationCertificateKs256WithSigner` +
 `verifyDelegationCertificateKs256` against a random test root.
@@ -38,25 +38,25 @@ README).
 
 ## Resolved spike questions
 
-| Question | Privy | GCP KMS |
-| -------- | ----- | ------- |
-| Hash input | `keccak256(sigStructure)` via `secp256k1_sign` | Same digest in `digest.sha256` |
-| Output shape | 65-byte recoverable (`v` 27/28) | DER → recoverable + `v` recovery |
-| Address match | Wallet address = `rootSignerAddress` | KMS pubkey → Ethereum address |
-| Authorization | `privy-authorization-signature` when wallet has owner | OAuth bearer / thin service |
-| Worker direct? | **Yes** (`fetch` to api.privy.io) | **No** (needs thin signer or token broker) |
+| Question       | Privy                                                 | GCP KMS                                    |
+| -------------- | ----------------------------------------------------- | ------------------------------------------ |
+| Hash input     | `keccak256(sigStructure)` via `secp256k1_sign`        | Same digest in `digest.sha256`             |
+| Output shape   | 65-byte recoverable (`v` 27/28)                       | DER → recoverable + `v` recovery           |
+| Address match  | Wallet address = `rootSignerAddress`                  | KMS pubkey → Ethereum address              |
+| Authorization  | `privy-authorization-signature` when wallet has owner | OAuth bearer / thin service                |
+| Worker direct? | **Yes** (`fetch` to api.privy.io)                     | **No** (needs thin signer or token broker) |
 
 ## Decision matrix
 
-| Criterion | Weight | Privy | GCP KMS |
-| --------- | ------ | ----- | ------- |
-| **Setup effort (mandate-specific GCP vs Privy)** | **Primary** | Lower (~0.5–1 d) | Higher (~1–2 d + thin signer) |
-| Fork-friendliness | High | Good (Privy app per operator) | Heavy (GCP project + HSM + service) |
-| Custody / compliance | High | MPC/TEE (vendor) | HSM FIPS-friendly |
-| Worker compatibility | High | Direct | Thin Cloud Run signer |
-| Latency (expected live) | Medium | ~100–400 ms | ~70–200 ms (+ service hop) |
-| Low-volume cost | Medium | SaaS wallet pricing | ~$1–3/mo HSM + per-op |
-| Implementation complexity | Medium | Low (hex parse) | Medium (DER + `v`) |
+| Criterion                                        | Weight      | Privy                         | GCP KMS                             |
+| ------------------------------------------------ | ----------- | ----------------------------- | ----------------------------------- |
+| **Setup effort (mandate-specific GCP vs Privy)** | **Primary** | Lower (~0.5–1 d)              | Higher (~1–2 d + thin signer)       |
+| Fork-friendliness                                | High        | Good (Privy app per operator) | Heavy (GCP project + HSM + service) |
+| Custody / compliance                             | High        | MPC/TEE (vendor)              | HSM FIPS-friendly                   |
+| Worker compatibility                             | High        | Direct                        | Thin Cloud Run signer               |
+| Latency (expected live)                          | Medium      | ~100–400 ms                   | ~70–200 ms (+ service hop)          |
+| Low-volume cost                                  | Medium      | SaaS wallet pricing           | ~$1–3/mo HSM + per-op               |
+| Implementation complexity                        | Medium      | Low (hex parse)               | Medium (DER + `v`)                  |
 
 ## Recommendation
 
