@@ -7,7 +7,7 @@ import {
 } from '../src/privy/authorization-signature.js';
 import { canonicalizeJson } from '../src/privy/jcs.js';
 
-const REQUEST_EXPIRY = 1_700_000_060;
+const REQUEST_EXPIRY_MS = 1_700_000_060_000;
 
 function testAuthorizationKey(): string {
 	const { privateKey } = generateKeyPairSync('ec', {
@@ -49,7 +49,7 @@ describe('buildPrivyAuthorizationSignature', () => {
 			body: { method: 'secp256k1_sign' },
 			appId: 'app-id',
 			authorizationKey: undefined,
-			requestExpirySeconds: REQUEST_EXPIRY
+			requestExpiryMs: REQUEST_EXPIRY_MS
 		});
 		expect(result).toBeUndefined();
 	});
@@ -75,7 +75,7 @@ describe('buildPrivyAuthorizationSignature', () => {
 			body,
 			appId,
 			authorizationKey,
-			requestExpirySeconds: REQUEST_EXPIRY
+			requestExpiryMs: REQUEST_EXPIRY_MS
 		});
 
 		expect(signature).toBeTruthy();
@@ -86,7 +86,7 @@ describe('buildPrivyAuthorizationSignature', () => {
 			body,
 			headers: {
 				'privy-app-id': appId,
-				'privy-request-expiry': String(REQUEST_EXPIRY)
+				'privy-request-expiry': String(REQUEST_EXPIRY_MS)
 			}
 		};
 		expect(await verifyAuthorizationSignature(signature!, payload, publicKey)).toBe(true);
@@ -99,14 +99,14 @@ describe('buildPrivyAuthorizationSignature', () => {
 			publicKeyEncoding: { type: 'spki', format: 'der' }
 		});
 		const authorizationKey = `wallet-auth:${Buffer.from(privateKey).toString('base64')}`;
-		const expiry = 1_800_000_000;
+		const expiry = 1_800_000_000_000;
 		const signature = await buildPrivyAuthorizationSignature({
 			method: 'POST',
 			url: 'https://api.privy.io/v1/wallets/w1/rpc',
 			body: { method: 'secp256k1_sign', params: { hash: '0x1' } },
 			appId: 'app-id',
 			authorizationKey,
-			requestExpirySeconds: expiry
+			requestExpiryMs: expiry
 		});
 		const payload = {
 			version: 1,
@@ -137,7 +137,7 @@ describe('buildPrivyAuthorizationSignature', () => {
 			body: {},
 			appId,
 			authorizationKey,
-			requestExpirySeconds: REQUEST_EXPIRY
+			requestExpiryMs: REQUEST_EXPIRY_MS
 		});
 
 		const payload = {
@@ -147,7 +147,7 @@ describe('buildPrivyAuthorizationSignature', () => {
 			body: '',
 			headers: {
 				'privy-app-id': appId,
-				'privy-request-expiry': String(REQUEST_EXPIRY)
+				'privy-request-expiry': String(REQUEST_EXPIRY_MS)
 			}
 		};
 		expect(await verifyAuthorizationSignature(signature!, payload, publicKey)).toBe(true);
@@ -168,7 +168,7 @@ describe('buildPrivyAuthorizationSignature', () => {
 			body,
 			appId: 'app-id',
 			authorizationKey,
-			requestExpirySeconds: REQUEST_EXPIRY
+			requestExpiryMs: REQUEST_EXPIRY_MS
 		});
 
 		const payload = {
@@ -178,7 +178,7 @@ describe('buildPrivyAuthorizationSignature', () => {
 			body,
 			headers: {
 				'privy-app-id': 'app-id',
-				'privy-request-expiry': String(REQUEST_EXPIRY)
+				'privy-request-expiry': String(REQUEST_EXPIRY_MS)
 			}
 		};
 		expect(await verifyAuthorizationSignature(signature!, payload, publicKey)).toBe(true);
@@ -192,7 +192,7 @@ describe('buildPrivyAuthorizationSignature', () => {
 			body: { chain_type: 'ethereum', method: 'secp256k1_sign', params: { hash: '0x1' } },
 			appId: 'app-id',
 			authorizationKey,
-			requestExpirySeconds: REQUEST_EXPIRY
+			requestExpiryMs: REQUEST_EXPIRY_MS
 		});
 		expect(signature).toMatch(/^[A-Za-z0-9+/]+=*$/);
 	});
@@ -206,7 +206,7 @@ describe('buildPrivyAuthorizationSignature', () => {
 			body: { method: 'secp256k1_sign', params: { hash: '0x1' } },
 			appId: 'app-id',
 			authorizationKey,
-			requestExpirySeconds: REQUEST_EXPIRY
+			requestExpiryMs: REQUEST_EXPIRY_MS
 		};
 		const first = await buildPrivyAuthorizationSignature(input);
 		const second = await buildPrivyAuthorizationSignature(input);

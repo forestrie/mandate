@@ -2,7 +2,7 @@ import canonicalize from 'canonicalize';
 import { describe, expect, it } from 'vitest';
 import { canonicalizeJson, normalizePrivyAuthorizationBody } from '../src/privy/jcs.js';
 
-const REQUEST_EXPIRY = 1_700_000_060;
+const REQUEST_EXPIRY_MS = 1_700_000_060_000;
 
 /**
  * Mirrors @privy-io/node `formatRequestForAuthorizationSignature` (authorization.mjs).
@@ -39,7 +39,7 @@ function buildPrivyRpcPayload(appId: string, walletId: string, hashHex: string) 
 		body,
 		headers: {
 			'privy-app-id': appId,
-			'privy-request-expiry': String(REQUEST_EXPIRY)
+			'privy-request-expiry': String(REQUEST_EXPIRY_MS)
 		}
 	};
 }
@@ -68,7 +68,7 @@ describe('JCS Privy conformance', () => {
 			body: {} as Record<string, never>,
 			headers: {
 				'privy-app-id': 'app-id',
-				'privy-request-expiry': String(REQUEST_EXPIRY)
+				'privy-request-expiry': String(REQUEST_EXPIRY_MS)
 			}
 		};
 		const privyBytes = privyFormatRequestForAuthorizationSignature(input);

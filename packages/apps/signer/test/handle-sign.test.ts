@@ -301,7 +301,7 @@ describe('handleSign', () => {
 			PRIVY_AUTHORIZATION_KEY: `wallet-auth:${Buffer.from(authPrivateKey).toString('base64')}`
 		};
 		const sigStructure = new Uint8Array([1, 2, 3, 4]);
-		const before = Math.floor(Date.now() / 1000);
+		const before = Date.now();
 		let capturedUrl = '';
 		let capturedHeaders: Record<string, string> = {};
 		let capturedBody: Record<string, unknown> = {};
@@ -323,14 +323,14 @@ describe('handleSign', () => {
 			env,
 			fetchImpl
 		});
-		const after = Math.floor(Date.now() / 1000);
+		const after = Date.now();
 		expect(response.status).toBe(200);
 
 		const authHeader = capturedHeaders['privy-authorization-signature'];
 		expect(authHeader).toBeTruthy();
 		const expiry = Number(capturedHeaders['privy-request-expiry']);
-		expect(expiry).toBeGreaterThanOrEqual(before + 60);
-		expect(expiry).toBeLessThanOrEqual(after + 60);
+		expect(expiry).toBeGreaterThanOrEqual(before + 60_000);
+		expect(expiry).toBeLessThanOrEqual(after + 60_000);
 
 		const payload = {
 			version: 1,

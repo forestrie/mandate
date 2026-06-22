@@ -100,7 +100,8 @@ production path.
 - **Owned-wallet path (S3, FOR-110):** per `KEY_DIRECTORY` entry with
   `requiresAuthorizationSignature: true`, `privy-sign` attaches
   `privy-authorization-signature` (RFC 8785 via the `canonicalize` package, ECDSA
-  P-256 DER base64) and `privy-request-expiry` over the exact RPC body sent to
+  P-256 DER base64) and `privy-request-expiry` (Unix **milliseconds**) over the
+  exact RPC body sent to
   `POST /v1/wallets/{id}/rpc`. App-controlled operator entries omit the flag (or
   set `false`); signer fails closed if the flag is set but
   `PRIVY_AUTHORIZATION_KEY` is unset.
