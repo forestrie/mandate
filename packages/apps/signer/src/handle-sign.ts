@@ -53,20 +53,7 @@ export async function handleSign(request: Request, deps: HandleSignDeps): Promis
 		throw error;
 	}
 
-	const apiBase = deps.env.PRIVY_API_BASE ?? 'https://api.privy.io';
-	const rpcUrl = `${apiBase.replace(/\/$/, '')}/v1/wallets/${entry.walletId}/rpc`;
-	const rpcBody = JSON.stringify({
-		chain_type: 'ethereum',
-		method: 'secp256k1_sign',
-		params: {
-			hash: `0x${Buffer.from(hashSigStructure(sigStructureBytes)).toString('hex')}`,
-			encoding: 'hex'
-		}
-	});
-	const authorizationSignature = await buildPrivyAuthorizationSignature(
-		deps.env.PRIVY_AUTHORIZATION_KEY,
-		{ method: 'POST', url: rpcUrl, body: rpcBody }
-	);
+	const authorizationSignature = buildPrivyAuthorizationSignature(deps.env.PRIVY_AUTHORIZATION_KEY);
 
 	let signature: Uint8Array;
 	try {
@@ -74,7 +61,7 @@ export async function handleSign(request: Request, deps: HandleSignDeps): Promis
 			appId: deps.env.PRIVY_APP_ID,
 			appSecret: deps.env.PRIVY_APP_SECRET,
 			walletId: entry.walletId,
-			apiBase,
+			apiBase: deps.env.PRIVY_API_BASE,
 			authorizationSignature,
 			fetchImpl: deps.fetchImpl
 		});

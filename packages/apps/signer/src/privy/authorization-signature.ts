@@ -1,31 +1,32 @@
 /**
- * Optional Privy owned-wallet authorization signature.
- * App-controlled wallets omit this header (Basic auth only).
+ * Privy owned-wallet authorization signature.
+ *
+ * ADR-0003 v1 uses Privy app-controlled wallets, which authorize with Basic auth
+ * + the `privy-app-id` header only and MUST NOT send a
+ * `privy-authorization-signature`. Owned/user-controlled wallets require that
+ * header, but the correct construction is not implemented here yet, so we fail
+ * closed rather than send an invalid signature (which Privy would reject).
+ *
+ * Correct scheme to implement when owned wallets are needed (see Privy docs and
+ * `@privy-io/node` `formatRequestForAuthorizationSignature` /
+ * `generateAuthorizationSignature`):
+ *   1. Build the payload object
+ *      `{ version: 1, method, url, body, headers: { 'privy-app-id': <id> } }`
+ *      (omit `body` when empty; include only `privy-`-prefixed headers).
+ *   2. Canonicalize per RFC 8785 (JSON Canonicalization Scheme) and encode UTF-8.
+ *   3. Sign ECDSA P-256 over SHA-256 of those bytes; DER-encode; base64.
+ *   4. The auth key is base64 PKCS#8 with a `wallet-auth:` prefix that must be
+ *      stripped before import.
+ * The current implementation in production produced `METHOD\nURL\nBODY` signed as
+ * raw P1363, which does not match this scheme; failing closed prevents silent
+ * use of that incorrect form.
  */
-export async function buildPrivyAuthorizationSignature(
-	authorizationKeyPem: string | undefined,
-	request: { method: string; url: string; body: string }
-): Promise<string | undefined> {
-	if (!authorizationKeyPem?.trim()) return undefined;
-
-	const pem = authorizationKeyPem.trim();
-	const pemBody = pem
-		.replace(/-----BEGIN [^-]+-----/g, '')
-		.replace(/-----END [^-]+-----/g, '')
-		.replace(/\s+/g, '');
-	const der = Uint8Array.from(Buffer.from(pemBody, 'base64'));
-	const key = await crypto.subtle.importKey(
-		'pkcs8',
-		der,
-		{ name: 'ECDSA', namedCurve: 'P-256' },
-		false,
-		['sign']
+export function buildPrivyAuthorizationSignature(
+	authorizationKey: string | undefined
+): string | undefined {
+	if (!authorizationKey?.trim()) return undefined;
+	throw new Error(
+		'Privy owned-wallet authorization signatures are not yet supported; ADR-0003 ' +
+			'v1 uses app-controlled wallets (leave PRIVY_AUTHORIZATION_KEY unset)'
 	);
-
-	const payload = new TextEncoder().encode(
-		`${request.method.toUpperCase()}\n${request.url}\n${request.body}`
-	);
-	const digest = await crypto.subtle.digest('SHA-256', payload);
-	const signature = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, digest);
-	return Buffer.from(new Uint8Array(signature)).toString('base64');
 }

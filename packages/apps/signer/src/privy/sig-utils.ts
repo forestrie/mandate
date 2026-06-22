@@ -46,13 +46,33 @@ export function parsePrivyRecoverableSignature(hex: string): Uint8Array {
 		out[i] = parseInt(stripped.slice(i * 2, i * 2 + 2), 16);
 	}
 	if (out[64]! >= 27) out[64] = out[64]! - 27;
+	// Normalize to low-s. Privy is not guaranteed to canonicalize s, but the rest
+	// of the system (canopy local signer) signs low-s; matching avoids signature
+	// malleability and stays robust to verifiers that reject (r, n - s).
+	const n = secp256k1.CURVE.n;
+	const s = bytesToBigIntBE(out.subarray(32, 64));
+	if (s > n >> 1n) {
+		writeBigIntBE(n - s, out, 32, 32);
+		out[64] = out[64]! ^ 1;
+	}
 	return out;
 }
 
-export function recoverAddressFromSignature(
-	hash: Uint8Array,
-	signature: Uint8Array
-): Uint8Array {
+function bytesToBigIntBE(bytes: Uint8Array): bigint {
+	let value = 0n;
+	for (const byte of bytes) value = (value << 8n) | BigInt(byte);
+	return value;
+}
+
+function writeBigIntBE(value: bigint, out: Uint8Array, offset: number, length: number): void {
+	let v = value;
+	for (let i = length - 1; i >= 0; i--) {
+		out[offset + i] = Number(v & 0xffn);
+		v >>= 8n;
+	}
+}
+
+export function recoverAddressFromSignature(hash: Uint8Array, signature: Uint8Array): Uint8Array {
 	const recovery = signature[64]!;
 	const compact = signature.slice(0, 64);
 	const sig = secp256k1.Signature.fromCompact(compact).addRecoveryBit(recovery);
