@@ -31,7 +31,7 @@ jobs:
           PRIVY_APP_ID: ${{ secrets.PRIVY_APP_ID }}
           PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
           PRIVY_WALLET_ID: ${{ secrets.PRIVY_WALLET_ID }}
-          PRIVY_AUTHORIZATION_KEY: ${{ secrets.PRIVY_AUTHORIZATION_KEY }}
+          PRIVY_AUTHORIZATION_KEY: ${{ secrets.PRIVY_AUTHORIZATION_KEY || secrets.PRIVY_WALLET_SIGNER }}
           PRIVY_WALLET_ADDRESS: ${{ secrets.PRIVY_WALLET_ADDRESS }}
         run: pnpm --filter @mandate/signer test:live:owned
 
@@ -60,7 +60,7 @@ jobs:
           PRIVY_APP_ID: ${{ secrets.PRIVY_APP_ID }}
           PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
           PRIVY_WALLET_ID: ${{ secrets.PRIVY_WALLET_ID }}
-          PRIVY_AUTHORIZATION_KEY: ${{ secrets.PRIVY_AUTHORIZATION_KEY }}
+          PRIVY_AUTHORIZATION_KEY: ${{ secrets.PRIVY_AUTHORIZATION_KEY || secrets.PRIVY_WALLET_SIGNER }}
           PRIVY_WALLET_ADDRESS: ${{ secrets.PRIVY_WALLET_ADDRESS }}
         run: pnpm --filter @mandate/agent test:live:hands-off
 
@@ -68,7 +68,7 @@ jobs:
     name: Mode C onboarding live test
     runs-on: ubuntu-latest
     environment: live-signer
-    continue-on-error: true
+    needs: live-owned
     steps:
       - uses: actions/checkout@v4
 
@@ -88,7 +88,7 @@ jobs:
         env:
           PRIVY_APP_ID: ${{ secrets.PRIVY_APP_ID }}
           PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
-          PRIVY_AUTHORIZATION_KEY: ${{ secrets.PRIVY_AUTHORIZATION_KEY }}
+          PRIVY_AUTHORIZATION_KEY: ${{ secrets.PRIVY_AUTHORIZATION_KEY || secrets.PRIVY_WALLET_SIGNER }}
           PRIVY_MODE_C_WALLET_ID: ${{ secrets.PRIVY_MODE_C_WALLET_ID }}
           PRIVY_MANDATE_SIGNER_ID: ${{ secrets.PRIVY_MANDATE_SIGNER_ID }}
           PRIVY_OWNER_AUTHORIZATION_KEY: ${{ secrets.PRIVY_OWNER_AUTHORIZATION_KEY }}

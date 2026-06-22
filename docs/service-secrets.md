@@ -272,9 +272,23 @@ Configure GitHub Environment `live-signer` (or repository secrets) with:
 | `PRIVY_MODE_C_WALLET_ID`        | Dedicated wallet for onboarding live tests (FOR-112) |
 | `PRIVY_MANDATE_SIGNER_ID`       | Mandate key quorum id                                |
 | `PRIVY_OWNER_AUTHORIZATION_KEY` | User owner key for wallet PATCH                      |
+| `MANDATE_SIGNER_URL`            | Deployed `@mandate/signer` `POST /v1/sign` URL       |
 
-Doppler project `mandate-forestrie` stores the auth key as `PRIVY_WALLET_SIGNER`;
-map it to `PRIVY_AUTHORIZATION_KEY` when running tests or syncing GitHub secrets.
+Doppler project `mandate-forestrie` stores the mandate additional-signer key as
+`PRIVY_WALLET_SIGNER`. Live tests and CI expect `PRIVY_AUTHORIZATION_KEY`
+(`wallet-auth:` + base64 PKCS#8 DER). Map locally before running gated tests:
+
+```sh
+export PRIVY_AUTHORIZATION_KEY="${PRIVY_AUTHORIZATION_KEY:-$PRIVY_WALLET_SIGNER}"
+```
+
+CI workflow falls back to `PRIVY_WALLET_SIGNER` when `PRIVY_AUTHORIZATION_KEY` is
+unset. Prefer setting both GitHub secrets to the same value for clarity.
+
+Until `PRIVY_MODE_C_WALLET_ID`, `PRIVY_MANDATE_SIGNER_ID`, and
+`PRIVY_OWNER_AUTHORIZATION_KEY` are configured in the `live-signer` environment,
+`@mandate/privy-admin test:live` skips via `describe.skipIf` (job stays green).
+Once configured, the onboarding job runs after `live-owned` and fails on regressions.
 
 Local signer live test:
 
