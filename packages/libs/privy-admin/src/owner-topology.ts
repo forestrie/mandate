@@ -42,9 +42,7 @@ export function assertOwnerQuorumExcludesMandate(quorum: KeyQuorum, mandateSigne
 		(m) => m.key_quorum_id === mandateSignerId || m.authorization_key_id === mandateSignerId
 	);
 	if (includesMandate) {
-		throw new OwnerTopologyError(
-			'owner quorum includes mandate signer — prohibited (ARC-0022 I2)'
-		);
+		throw new OwnerTopologyError('owner quorum includes mandate signer — prohibited (ARC-0022 I2)');
 	}
 }
 

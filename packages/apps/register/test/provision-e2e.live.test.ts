@@ -41,6 +41,7 @@ const WALLET_ID = process.env.PRIVY_MODE_C_WALLET_ID ?? process.env.PRIVY_WALLET
 const AUTH_KEY = process.env.PRIVY_AUTHORIZATION_KEY ?? process.env.PRIVY_WALLET_SIGNER;
 const MANDATE_SIGNER_ID = process.env.PRIVY_MANDATE_SIGNER_ID;
 const OWNER_AUTH_KEY = process.env.PRIVY_OWNER_AUTHORIZATION_KEY;
+const DELEGATION_POLICY_ID = process.env.PRIVY_DELEGATION_POLICY_ID;
 const SIGNER_URL = process.env.MANDATE_SIGNER_URL;
 const API_BASE = (process.env.PRIVY_API_BASE ?? 'https://api.privy.io').replace(/\/$/, '');
 
@@ -149,7 +150,8 @@ describe.skipIf(!LIVE)('provision + hands-off seal (live)', () => {
 				mandateSignerId: MANDATE_SIGNER_ID!,
 				ownerAuthorizationKey: OWNER_AUTH_KEY!,
 				signerUrl: SIGNER_URL!,
-				keyRef: 'provision-live'
+				keyRef: 'provision-live',
+				policyId: DELEGATION_POLICY_ID
 			}
 		});
 
@@ -198,6 +200,9 @@ describe.skipIf(!LIVE)('provision + hands-off seal (live)', () => {
 				throw new Error(`unexpected fetch: ${url}`);
 			});
 
+			const coordinatorOrigin = new URL(COORDINATOR_URL!).origin;
+			const materialSubmitUrl = `${COORDINATOR_URL!.replace(/\/$/, '')}/api/delegations/material`;
+
 			const event = buildDelegationRequiredEvent({
 				root: {
 					privateKeyHex: '00',
@@ -205,7 +210,8 @@ describe.skipIf(!LIVE)('provision + hands-off seal (live)', () => {
 					rootSignerAddressBytes
 				},
 				delegatedPublicKeyCbor,
-				requestKey: `provision-live-${randomBytes(8).toString('hex')}`
+				requestKey: `provision-live-${randomBytes(8).toString('hex')}`,
+				materialSubmitUrl
 			});
 			event.logId = logId;
 			event.authLogId = logId;
@@ -216,7 +222,7 @@ describe.skipIf(!LIVE)('provision + hands-off seal (live)', () => {
 					jwksResolver: createJwksResolver(publicJwk),
 					keyRegistry: new KeyRegistry(operatorKeysJson),
 					seenStore: new MemorySeenStore(),
-					coordinatorUpstreamUrl: COORDINATOR_URL!,
+					coordinatorUpstreamUrl: coordinatorOrigin,
 					coordinatorAppToken: AGENT_TOKEN,
 					mandateSignerToken: SIGNER_TOKEN,
 					fetchImpl,

@@ -1,33 +1,42 @@
 import { describe, expect, it } from 'vitest';
 import {
 	buildDelegationSigningPolicy,
-	DELEGATION_SIGN_METHOD,
-	DENIED_MODE_C_POLICY_METHODS
+	DELEGATION_POLICY_ALLOW_METHOD,
+	DENIED_MODE_C_POLICY_METHODS,
+	ETHEREUM_POLICY_DENY_CHAIN_IDS
 } from '../src/index.js';
 
 describe('buildDelegationSigningPolicy', () => {
-	it('allows secp256k1_sign and denies high-risk wallet methods', () => {
+	it('allows delegation signing via wildcard and denies high-risk wallet methods', () => {
 		const policy = buildDelegationSigningPolicy();
 
 		expect(policy.version).toBe('1.0');
 		expect(policy.chain_type).toBe('ethereum');
 		expect(policy.name).toBe('Mandate Mode C delegation signing');
 
-		const allowRule = policy.rules.find((r) => r.method === DELEGATION_SIGN_METHOD);
+		const allowRule = policy.rules.find((r) => r.method === DELEGATION_POLICY_ALLOW_METHOD);
 		expect(allowRule).toMatchObject({
 			action: 'ALLOW',
 			conditions: []
 		});
 
 		for (const method of DENIED_MODE_C_POLICY_METHODS) {
-			const denyRule = policy.rules.find((r) => r.method === method);
-			expect(denyRule, `missing DENY rule for ${method}`).toMatchObject({
-				action: 'DENY',
-				conditions: []
-			});
+			const denyRules = policy.rules.filter((r) => r.method === method);
+			expect(denyRules.length, `missing DENY rule for ${method}`).toBeGreaterThan(0);
+			for (const denyRule of denyRules) {
+				expect(denyRule.action).toBe('DENY');
+			}
 		}
 
-		expect(policy.rules).toHaveLength(1 + DENIED_MODE_C_POLICY_METHODS.length);
+		const typedDataDenies = policy.rules.filter((r) => r.method === 'eth_signTypedData_v4');
+		expect(typedDataDenies).toHaveLength(ETHEREUM_POLICY_DENY_CHAIN_IDS.length);
+
+		const sendDeny = policy.rules.find((r) => r.method === 'eth_sendTransaction');
+		expect(sendDeny?.conditions[0]).toMatchObject({
+			field_source: 'ethereum_transaction',
+			field: 'chain_id',
+			operator: 'in'
+		});
 	});
 
 	it('uses a custom policy name when provided', () => {

@@ -63,9 +63,7 @@ describe('owner topology (I2)', () => {
 
 	it('rejects ownerless wallet (operator app-controlled)', () => {
 		expect(() =>
-			assertWalletIsUserOwned(
-				wallet({ owner_id: null, owner: null, additional_signers: [] })
-			)
+			assertWalletIsUserOwned(wallet({ owner_id: null, owner: null, additional_signers: [] }))
 		).toThrow(OwnerTopologyError);
 	});
 

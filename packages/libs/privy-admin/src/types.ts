@@ -1,7 +1,9 @@
 export type { PolicyAction } from './policy-action.js';
 export {
-	DELEGATION_SIGN_METHOD,
+	DELEGATION_POLICY_ALLOW_METHOD,
+	DELEGATION_SIGN_RPC_METHOD,
 	DENIED_MODE_C_POLICY_METHODS,
+	ETHEREUM_POLICY_DENY_CHAIN_IDS,
 	type DeniedModeCPolicyMethod
 } from './policy-method.js';
 export type { PolicyCondition, PolicyRule } from './policy-rule.js';
