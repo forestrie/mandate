@@ -5,12 +5,22 @@
 	"type": "module",
 	"description": "Delegation webhook receiver and non-custodial signer (FOR-98)",
 	"scripts": {
+		"dev": "wrangler dev",
 		"build": "tsc --noEmit",
 		"check": "tsc --noEmit",
 		"test": "vitest run"
 	},
+	"dependencies": {
+		"@canopy/delegation-cose": "file:./canopy-delegation-cose-0.1.0.tgz",
+		"@mandate/coordinator-types": "workspace:*"
+	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20260228.0",
+		"@noble/curves": "^1.9.7",
+		"@noble/hashes": "^1.7.1",
+		"@types/node": "^22",
 		"typescript": "^6.0.2",
-		"vitest": "^4.1.3"
+		"vitest": "^4.1.3",
+		"wrangler": "^4.81.0"
 	}
 }

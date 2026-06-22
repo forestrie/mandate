@@ -1,0 +1,17 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "mandate-agent",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-04-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"vars": {
+		"COORDINATOR_UPSTREAM_URL": "http://localhost:8793"
+	},
+	"kv_namespaces": [
+		{
+			"binding": "REQUEST_KEYS",
+			"id": "local-request-keys",
+			"preview_id": "local-request-keys"
+		}
+	]
+}

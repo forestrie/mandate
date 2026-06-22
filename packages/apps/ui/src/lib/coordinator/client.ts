@@ -4,7 +4,7 @@ import type {
 	PendingListResponse,
 	ProblemDetails,
 	SubmitMaterialRequest
-} from './types/responses.js';
+} from '@mandate/coordinator-types';
 
 function bffBase(): string {
 	return (PUBLIC_COORDINATOR_BFF_BASE || '/api/coordinator').replace(/\/$/, '');

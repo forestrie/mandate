@@ -112,7 +112,7 @@ flowchart LR
 **Handler flow (implement against FOR-93 contract):**
 
 1. Read raw body; parse `DelegationRequiredEvent` (`type`, `version`, `requestKey`, `logId`, `authLogId`, `mmrStart`, `mmrEnd`, `delegatedPublicKey` base64, `materialSubmitUrl`, `requestedAt`).
-2. Verify `X-Forestrie-Webhook-Signature` over `{timestamp}.{rawBody}` using ES256 public key from coordinator `GET /api/coordinator/webhook-signing-key` (cache JWK in Worker memory with short TTL).
+2. Verify `X-Forestrie-Webhook-Signature` over `{timestamp}.{rawBody}` using ES256 public key from coordinator `GET /.well-known/forestrie-webhook-jwks.json` (cache JWKS in Worker memory with short TTL).
 3. **Dedup:** if `requestKey` exists in KV → return `200 { ok: true, duplicate: true }`.
 4. Decode `delegatedPublicKey` from base64 → CBOR bytes.
 5. Build certificate via `@canopy/delegation-cose`:

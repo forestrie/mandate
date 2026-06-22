@@ -6,7 +6,7 @@
 	import Card from '$lib/components/ui/card.svelte';
 	import Input from '$lib/components/ui/input.svelte';
 	import { listPendingDelegations, submitDelegationMaterial } from '$lib/coordinator/client.js';
-	import type { PendingEntry } from '$lib/coordinator/types/responses.js';
+	import type { PendingEntry } from '@mandate/coordinator-types';
 	import {
 		getPrivySessionState,
 		initPrivySession,
