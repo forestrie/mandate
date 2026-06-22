@@ -26,8 +26,10 @@ GitHub Packages requires the npm scope to match the owning GitHub org
 
 3. **CI read auth** uses the workflow default `GITHUB_TOKEN` with
    `permissions: packages: read` and `NODE_AUTH_TOKEN` at `pnpm install`. If
-   cross-repo read returns 403, fall back to an org GitHub App or PAT with
-   `read:packages`.
+   cross-repo read returns 403 or tarball fetch returns 405, the agent pins
+   `@forestrie/delegation-cose` from the canopy git tag
+   `delegation-cose-v0.1.0` (`path:packages/libs/delegation-cose`) until
+   GitHub Packages tarball URLs are reliable in CI (FOR-109).
 
 4. **Forks and local dev** configure root `.npmrc` and supply
    `NODE_AUTH_TOKEN` from `gh auth token` or a PAT with `read:packages`. GitHub
