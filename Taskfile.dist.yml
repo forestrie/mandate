@@ -82,3 +82,10 @@ tasks:
       requires PRIVY_* and MANDATE_SIGNER_URL in Doppler
     cmds:
       - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- pnpm --filter @mandate/register exec mandate-register privy onboard-mode-c {{.CLI_ARGS}}
+
+  provision:
+    desc: >-
+      Provision forest instance via onboard token + genesis ?webhookUrl=;
+      emits KEY_DIRECTORY + OPERATOR_ROOT_KEYS (FOR-100)
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- pnpm --filter @mandate/register exec mandate-register provision {{.CLI_ARGS}}

@@ -1,17 +1,24 @@
 /** Operator inputs for instance provisioning (FOR-100). */
-export interface RegisterConfig {
-	/** Minted canopy onboard bearer for payment-authoritative genesis. */
-	onboardToken: string;
-	/** Canopy SCRAPI base URL (e.g. https://api-a.example.dev). */
-	canopyBaseUrl: string;
-	/** Delegation coordinator base URL. */
-	coordinatorBaseUrl: string;
-	/** Public URL of the delegation agent webhook (FOR-92 registration). */
-	agentWebhookUrl?: string;
-}
+export type {
+	ProvisionConfig,
+	ModeCProvisionInputs,
+	ModeBProvisionInputs
+} from './provision-config.js';
+export type { ProvisionResult } from './provision-result.js';
+export type { DelegationMode } from './delegation-mode.js';
+export type { KeyDirectoryEntry } from './key-directory-entry.js';
+export type { OperatorRootKeyEntry } from './operator-root-key-entry.js';
+export type { GenesisRegistrationResponse } from './genesis-registration-response.js';
+export type { CoordinatorRegistrationStatus } from './coordinator-registration-status.js';
+export type { GenesisCborInput } from './genesis-cbor-input.js';
 
-/** Scaffold placeholder — FOR-100 implements full canopy genesis provisioning. */
-export const REGISTER_PACKAGE = '@mandate/register';
+export { REGISTER_PACKAGE } from './register-package.js';
+export { buildGenesisCborBody } from './genesis-request.js';
+export { postGenesis } from './genesis-client.js';
+export { GenesisClientError } from './genesis-client-error.js';
+export { logIdFromR, rFromLogIdHex32, normalizeForestR } from './log-id.js';
+export { provisionInstance } from './provision.js';
+export { mintOnboardToken } from './mint-onboard-token.js';
 
 export {
 	onboardModeCWallet,

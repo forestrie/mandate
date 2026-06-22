@@ -311,18 +311,66 @@ doppler run --project mandate-forestrie --config dev -- \
   pnpm --filter @mandate/privy-admin test:live
 ```
 
-### Full live-canopy hands-off seal (runbook / FOR-101)
+### Full live-canopy provisioning e2e (FOR-100 / FOR-101)
 
-Deferred until dev canopy coordinator + onboard token are available (FOR-100).
-When ready:
+`@mandate/register provision` consumes a canopy onboard bearer + URLs, calls
+`POST /api/forest/{R}/genesis?webhookUrl=` (canopy brokers coordinator
+`public-root` + webhook registration), and emits `KEY_DIRECTORY` +
+`OPERATOR_ROOT_KEYS` for worker secrets.
 
-1. **Genesis:** `POST /api/forest/{R}/genesis` with canopy onboard bearer.
-2. **Webhook:** `PUT /api/logs/{logId}/webhook` → mandate agent public URL.
-3. **Mode C onboard:** `task privy:onboard:mode-c` with `--log-id` from genesis;
-   bind `KEY_DIRECTORY` + `OPERATOR_ROOT_KEYS` worker secrets.
-4. **Trigger:** enqueue or wait for `delegation.required` for an MMR window.
-5. **Verify:** coordinator accepts material; receipt/cert verifies against the
-   log's registered `publicRoot` (wallet address for Mode C).
+#### Mint onboard token (ops admin)
+
+```sh
+# From canopy checkout with Doppler (project canopy, config dev):
+curl -sS -X POST "$CANOPY_API_URL/api/payments/onboard-tokens" \
+  -H "Authorization: Bearer $CANOPY_OPS_ADMIN_TOKEN" \
+  -H "Content-Type: application/cbor" \
+  --data-binary @<(node -e "const {encode}=require('cbor-x');process.stdout.write(encode(new Map([[1,'mandate-dev']])))")
+```
+
+Store the returned `token` as `CANOPY_PAYMENTS_ONBOARD_TOKEN` in Doppler
+`mandate-forestrie/dev`.
+
+#### Provision (Mode C)
+
+```sh
+doppler run --project mandate-forestrie --config dev -- task provision \
+  --onboard-token "$CANOPY_PAYMENTS_ONBOARD_TOKEN" \
+  --canopy-url "$CANOPY_API_URL" \
+  --coordinator-url "$DELEGATION_COORDINATOR_URL" \
+  --webhook-url "https://mandate-agent-prod.<account>.workers.dev/webhooks/delegation-required" \
+  --univocity-addr "$CANOPY_UNIVOCITY_ADDR" \
+  --chain-id "$CANOPY_CHAIN_ID"
+```
+
+Paste the JSON `descriptors` into `wrangler secret put KEY_DIRECTORY` /
+`OPERATOR_ROOT_KEYS` on signer and agent Workers.
+
+#### Gated live e2e (FOR-101)
+
+Requires dev canopy + coordinator + Privy Mode C wallet. Skips when env is
+incomplete (`describe.skipIf`).
+
+| Env                                   | Purpose                                                                            |
+| ------------------------------------- | ---------------------------------------------------------------------------------- |
+| `CANOPY_API_URL` or `CANOPY_BASE_URL` | Canopy SCRAPI base                                                                 |
+| `CANOPY_PAYMENTS_ONBOARD_TOKEN`       | Onboard bearer for genesis (or mint via `CANOPY_OPS_ADMIN_TOKEN`)                  |
+| `CANOPY_UNIVOCITY_ADDR`               | 40-hex Univocity contract                                                          |
+| `CANOPY_CHAIN_ID`                     | EIP-155 chain id (default `84532`)                                                 |
+| `DELEGATION_COORDINATOR_URL`          | Coordinator origin                                                                 |
+| `MANDATE_AGENT_WEBHOOK_URL`           | Agent webhook URL for genesis forward (may be placeholder for in-process seal leg) |
+| `PRIVY_MODE_C_WALLET_ID`              | User-owned wallet                                                                  |
+| `PRIVY_MANDATE_SIGNER_ID`             | Mandate key quorum id                                                              |
+| `PRIVY_OWNER_AUTHORIZATION_KEY`       | Owner key for wallet PATCH                                                         |
+| `MANDATE_SIGNER_URL`                  | Deployed signer `POST /v1/sign` URL                                                |
+
+```sh
+doppler run --project mandate-forestrie --config dev -- \
+  pnpm --filter @mandate/register test:live:provision
+```
+
+Acceptance run (deployed agent receiving real `delegation.required` webhooks) is
+documented in canopy `byok-mode-c-webhook-seal.spec.ts` (`E2E_MODE_C_WEBHOOK_STRETCH=1`).
 
 CI sets `CICD=true` so `repo-init` always refreshes overlays from examples before
 deploy (ephemeral checkout).

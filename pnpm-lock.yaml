@@ -84,7 +84,13 @@ importers:
       '@mandate/privy-admin':
         specifier: workspace:*
         version: link:../../libs/privy-admin
+      cbor-x:
+        specifier: ^1.6.4
+        version: 1.6.4
     devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20260228.0
+        version: 4.20260524.1
       '@types/node':
         specifier: ^22
         version: 22.19.19
