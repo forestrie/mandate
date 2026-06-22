@@ -7,8 +7,8 @@ export interface PrivyAuthorizationSignatureInput {
 	body: Record<string, unknown>;
 	appId: string;
 	authorizationKey: string | undefined;
-	/** Unix seconds for `privy-request-expiry` (signed and sent on the HTTP request). */
-	requestExpirySeconds: number;
+	/** Unix milliseconds for `privy-request-expiry` (signed and sent on the HTTP request). */
+	requestExpiryMs: number;
 }
 
 const importedKeyCache = new Map<string, CryptoKey>();
@@ -35,7 +35,7 @@ export async function buildPrivyAuthorizationSignature(
 
 	const headers: Record<string, string> = {
 		'privy-app-id': input.appId,
-		'privy-request-expiry': String(input.requestExpirySeconds)
+		'privy-request-expiry': String(input.requestExpiryMs)
 	};
 
 	const payload: Record<string, unknown> = {

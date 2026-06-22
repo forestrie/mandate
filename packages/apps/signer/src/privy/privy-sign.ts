@@ -8,13 +8,14 @@ export interface PrivySignConfig {
 	apiBase?: string;
 	/** `wallet-auth:`-prefixed base64 PKCS#8 P-256 key for owned-wallet RPC. */
 	authorizationKey?: string;
-	/** Seconds added to now for `privy-request-expiry` (default 60). */
-	requestExpirySkewSeconds?: number;
-	nowSeconds?: number;
+	/** Milliseconds added to now for `privy-request-expiry` (default 60_000). */
+	requestExpirySkewMs?: number;
+	/** Fixed clock for tests (ms since epoch). */
+	nowMs?: number;
 	fetchImpl?: typeof fetch;
 }
 
-const DEFAULT_REQUEST_EXPIRY_SKEW_SECONDS = 60;
+const DEFAULT_REQUEST_EXPIRY_SKEW_MS = 60_000;
 
 export async function privySecp256k1Sign(
 	sigStructureBytes: Uint8Array,
@@ -34,9 +35,9 @@ export async function privySecp256k1Sign(
 		params: { hash: hashHex }
 	};
 
-	const nowSeconds = config.nowSeconds ?? Math.floor(Date.now() / 1000);
-	const requestExpirySeconds =
-		nowSeconds + (config.requestExpirySkewSeconds ?? DEFAULT_REQUEST_EXPIRY_SKEW_SECONDS);
+	const nowMs = config.nowMs ?? Date.now();
+	const requestExpiryMs =
+		nowMs + (config.requestExpirySkewMs ?? DEFAULT_REQUEST_EXPIRY_SKEW_MS);
 
 	const authorizationSignature = await buildPrivyAuthorizationSignature({
 		method: 'POST',
@@ -44,7 +45,7 @@ export async function privySecp256k1Sign(
 		body: rpcBody,
 		appId: config.appId,
 		authorizationKey: config.authorizationKey,
-		requestExpirySeconds
+		requestExpiryMs
 	});
 
 	const headers: Record<string, string> = {
@@ -54,7 +55,7 @@ export async function privySecp256k1Sign(
 	};
 	if (authorizationSignature) {
 		headers['privy-authorization-signature'] = authorizationSignature;
-		headers['privy-request-expiry'] = String(requestExpirySeconds);
+		headers['privy-request-expiry'] = String(requestExpiryMs);
 	}
 
 	const response = await fetchImpl(url, {
