@@ -82,7 +82,7 @@ describe.skipIf(!LIVE)('Mode C onboarding (live Privy)', () => {
 	);
 
 	it(
-		'allows secp256k1_sign and denies eth_sendTransaction under policy',
+		'allows secp256k1_sign and denies high-risk rpc methods under policy',
 		async () => {
 			const hash = `0x${Buffer.from(randomBytes(32)).toString('hex')}`;
 			const signResult = await walletRpcAttempt(client, {
@@ -93,20 +93,62 @@ describe.skipIf(!LIVE)('Mode C onboarding (live Privy)', () => {
 			});
 			expect(signResult.ok, signResult.body).toBe(true);
 
-			const txResult = await walletRpcAttempt(client, {
-				walletId: WALLET_ID!,
-				method: 'eth_sendTransaction',
-				params: {
-					transaction: {
-						to: '0x0000000000000000000000000000000000000001',
-						value: '0x0',
-						chain_id: 1
+			// exportPrivateKey/exportSeedPhrase are owner-only (I2), not rpc-routed for
+			// additional signers — policy DENY entries are belt-and-braces; live matrix
+			// covers rpc methods mandate could otherwise invoke.
+			const deniedMethods: Array<{ method: string; params: Record<string, unknown> }> = [
+				{
+					method: 'eth_sendTransaction',
+					params: {
+						transaction: {
+							to: '0x0000000000000000000000000000000000000001',
+							value: '0x0',
+							chain_id: 1
+						}
 					}
 				},
-				authorizationKey: AUTH_KEY
-			});
-			expect(txResult.ok).toBe(false);
-			expect(txResult.status).toBeGreaterThanOrEqual(400);
+				{
+					method: 'personal_sign',
+					params: {
+						message: '0x68656c6c6f',
+						encoding: 'hex'
+					}
+				},
+				{
+					method: 'eth_signTypedData_v4',
+					params: {
+						typed_data: {
+							types: {
+								EIP712Domain: [
+									{ name: 'name', type: 'string' },
+									{ name: 'version', type: 'string' },
+									{ name: 'chainId', type: 'uint256' },
+									{ name: 'verifyingContract', type: 'address' }
+								]
+							},
+							primaryType: 'EIP712Domain',
+							domain: {
+								name: 'Mandate Mode C live deny test',
+								version: '1',
+								chainId: 1,
+								verifyingContract: '0x0000000000000000000000000000000000000001'
+							},
+							message: {}
+						}
+					}
+				}
+			];
+
+			for (const denied of deniedMethods) {
+				const result = await walletRpcAttempt(client, {
+					walletId: WALLET_ID!,
+					method: denied.method,
+					params: denied.params,
+					authorizationKey: AUTH_KEY
+				});
+				expect(result.ok, `${denied.method}: ${result.body}`).toBe(false);
+				expect(result.status).toBeGreaterThanOrEqual(400);
+			}
 		},
 		TIMEOUT_MS
 	);
