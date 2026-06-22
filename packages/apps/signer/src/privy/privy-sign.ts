@@ -36,8 +36,7 @@ export async function privySecp256k1Sign(
 	};
 
 	const nowMs = config.nowMs ?? Date.now();
-	const requestExpiryMs =
-		nowMs + (config.requestExpirySkewMs ?? DEFAULT_REQUEST_EXPIRY_SKEW_MS);
+	const requestExpiryMs = nowMs + (config.requestExpirySkewMs ?? DEFAULT_REQUEST_EXPIRY_SKEW_MS);
 
 	const authorizationSignature = await buildPrivyAuthorizationSignature({
 		method: 'POST',
