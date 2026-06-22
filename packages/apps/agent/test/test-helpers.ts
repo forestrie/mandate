@@ -1,4 +1,3 @@
-import { encode } from 'cbor-x';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
 import {
@@ -122,10 +121,4 @@ export async function assertCertificateVerifies(
 	const certificate = Uint8Array.from(atob(certificateB64), (c) => c.charCodeAt(0));
 	const ok = await verifyDelegationCertificateKs256(certificate, rootSignerAddressBytes);
 	if (!ok) throw new Error('certificate verification failed');
-}
-
-/** cbor-x encode helper for tests that need raw CBOR without importing from agent src. */
-export function encodeCbor(value: unknown): Uint8Array {
-	const encoded = encode(value);
-	return encoded instanceof Uint8Array ? encoded : new Uint8Array(encoded as ArrayLike<number>);
 }
