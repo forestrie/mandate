@@ -1,5 +1,9 @@
 # FOR-104 spike — delegation signer backends
 
+> **Superseded** by production `@mandate/signer` (`packages/apps/signer/`). This
+> spike remains for historical Privy vs GCP KMS comparison only; do not extend it
+> for Mode C S3 authorization signatures — use the signer Worker instead.
+
 Runnable PoCs comparing **Privy server wallets** vs **GCP Cloud KMS** as the
 production KS256 remote signer for `@mandate/agent`.
 

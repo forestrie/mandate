@@ -5,6 +5,7 @@ import {
 } from '@forestrie/delegation-cose';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
+import { bytesToBase64 } from '../src/bytes.js';
 import {
 	assertCertificateMatchesEvent,
 	CertificateValidationError
@@ -50,10 +51,41 @@ describe('assertCertificateMatchesEvent', () => {
 		await expect(
 			assertCertificateMatchesEvent({
 				certificate,
-				event: { logId: TEST_LOG_ID, mmrStart: 1, mmrEnd: 8 },
+				event: {
+					logId: TEST_LOG_ID,
+					mmrStart: 1,
+					mmrEnd: 8,
+					delegatedPublicKey: bytesToBase64(delegatedPublicKeyCbor)
+				},
 				rootSignerAddress: root.rootSignerAddress
 			})
 		).resolves.toBeUndefined();
+	});
+
+	it('rejects when event delegatedPublicKey does not match certificate', async () => {
+		const root = testRoot();
+		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+		const otherDelegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+		const input: DelegationInput = {
+			logIdHex32: TEST_LOG_ID,
+			mmrStart: 1,
+			mmrEnd: 8,
+			delegatedPublicKeyCbor,
+			ttlSeconds: 3600
+		};
+		const certificate = await buildTestCertificate(root, input);
+		await expect(
+			assertCertificateMatchesEvent({
+				certificate,
+				event: {
+					logId: TEST_LOG_ID,
+					mmrStart: 1,
+					mmrEnd: 8,
+					delegatedPublicKey: bytesToBase64(otherDelegatedPublicKeyCbor)
+				},
+				rootSignerAddress: root.rootSignerAddress
+			})
+		).rejects.toThrow(CertificateValidationError);
 	});
 
 	it('rejects when event mmrEnd does not match certificate', async () => {
@@ -70,7 +102,12 @@ describe('assertCertificateMatchesEvent', () => {
 		await expect(
 			assertCertificateMatchesEvent({
 				certificate,
-				event: { logId: TEST_LOG_ID, mmrStart: 1, mmrEnd: 99 },
+				event: {
+					logId: TEST_LOG_ID,
+					mmrStart: 1,
+					mmrEnd: 99,
+					delegatedPublicKey: bytesToBase64(delegatedPublicKeyCbor)
+				},
 				rootSignerAddress: root.rootSignerAddress
 			})
 		).rejects.toThrow(CertificateValidationError);

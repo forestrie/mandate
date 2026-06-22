@@ -13,7 +13,8 @@
 	"dependencies": {
 		"@forestrie/delegation-cose": "github:forestrie/canopy#delegation-cose-v0.1.0&path:packages/libs/delegation-cose",
 		"@mandate/coordinator-types": "workspace:*",
-		"@mandate/signer-contract": "workspace:*"
+		"@mandate/signer-contract": "workspace:*",
+		"cbor-x": "^1.6.4"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20260228.0",
