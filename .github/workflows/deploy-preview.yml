@@ -4,6 +4,10 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  packages: read
+
 concurrency:
   group: pages-preview-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -23,6 +27,8 @@ jobs:
           node-version: 22.14.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Build
         env:
           CF_PAGES: '1'
@@ -43,6 +49,7 @@ jobs:
       contents: read
       deployments: write
       pull-requests: write
+      packages: read
     steps:
       - uses: actions/checkout@v4
 
@@ -56,6 +63,8 @@ jobs:
           cache: pnpm
 
       - name: Install
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm install --frozen-lockfile
 
       - name: Build

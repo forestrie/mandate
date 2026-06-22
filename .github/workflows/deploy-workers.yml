@@ -17,6 +17,7 @@ jobs:
     permissions:
       contents: read
       deployments: write
+      packages: read
     steps:
       - uses: actions/checkout@v4
 
@@ -35,6 +36,8 @@ jobs:
           version: 3.x
 
       - name: Install
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm install --frozen-lockfile
 
       - name: Init Workers infra

@@ -9,7 +9,7 @@ import {
 	COSE_Y,
 	verifyDelegationCertificateKs256,
 	encodeIntKeyCbor
-} from '@canopy/delegation-cose';
+} from '@forestrie/delegation-cose';
 import type { DelegationRequiredEvent } from '@mandate/coordinator-types';
 import { bytesToBase64 } from '../src/bytes.js';
 import type { WebhookJwk } from '../src/webhook/jwks-resolver.js';

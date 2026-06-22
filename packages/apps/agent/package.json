@@ -11,7 +11,7 @@
 		"test": "vitest run"
 	},
 	"dependencies": {
-		"@canopy/delegation-cose": "file:./canopy-delegation-cose-0.1.0.tgz",
+		"@forestrie/delegation-cose": "0.1.0",
 		"@mandate/coordinator-types": "workspace:*",
 		"@mandate/signer-contract": "workspace:*"
 	},

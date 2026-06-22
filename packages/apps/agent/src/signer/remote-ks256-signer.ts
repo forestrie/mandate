@@ -1,7 +1,7 @@
 import {
 	buildDelegationCertificateKs256WithSigner,
 	type DelegationInput
-} from '@canopy/delegation-cose';
+} from '@forestrie/delegation-cose';
 import type { SignRequest } from '@mandate/signer-contract';
 import { base64ToBytes, bytesToBase64, parseEthAddress } from '../bytes.js';
 import type { LogSignerDescriptor } from './log-signer-descriptor.js';

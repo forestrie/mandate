@@ -1,4 +1,4 @@
-import type { DelegationInput } from '@canopy/delegation-cose';
+import type { DelegationInput } from '@forestrie/delegation-cose';
 
 /** Signs delegation certificates for a configured operator forest root. */
 export interface DelegationSigner {

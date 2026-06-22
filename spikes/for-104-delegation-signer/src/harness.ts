@@ -9,7 +9,7 @@ import {
 	COSE_X,
 	COSE_Y,
 	type DelegationInput
-} from '@canopy/delegation-cose';
+} from '@forestrie/delegation-cose';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
 import {

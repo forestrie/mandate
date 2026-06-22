@@ -11,7 +11,7 @@
 		"spike:live": "SPIKE_LIVE=1 node --import tsx src/run-spike.ts"
 	},
 	"dependencies": {
-		"@canopy/delegation-cose": "file:./canopy-delegation-cose-0.1.0.tgz",
+		"@forestrie/delegation-cose": "0.1.0",
 		"@noble/curves": "^1.9.7",
 		"@noble/hashes": "^1.7.1"
 	},

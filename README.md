@@ -113,7 +113,7 @@ Environments **`dev`** and **`prod`**.
 ## `@mandate/agent` (FOR-98)
 
 Webhook receiver Worker. Receives signed `delegation.required` events, builds
-KS256 delegation certificates via `@canopy/delegation-cose`, submits material to
+KS256 delegation certificates via `@forestrie/delegation-cose`, submits material to
 the coordinator. Production remote signing uses ADR-0003 `SignRequest` against
 `@mandate/signer`.
 
@@ -149,15 +149,11 @@ Fork-friendly Cloudflare Workers deploy for **mandate-agent** and
    with `CICD=true` before deploy).
 3. Bind secrets per [docs/service-secrets.md](docs/service-secrets.md).
 
-`@canopy/delegation-cose` is vendored as
-`packages/apps/agent/canopy-delegation-cose-0.1.0.tgz`. Refresh from a sibling
-`canopy` checkout:
-
-```sh
-cd ../canopy/packages/libs/delegation-cose && pnpm pack \
-  --pack-destination /path/to/mandate/packages/apps/agent
-cd /path/to/mandate && pnpm install
-```
+`@forestrie/delegation-cose` is installed from GitHub Packages (exact version pin;
+see [ADR-0004](docs/adr/adr-0004-delegation-cose-distribution.md)). Forks need
+root `.npmrc` and `NODE_AUTH_TOKEN` with `read:packages` (`gh auth token` or a
+PAT; run `gh auth refresh -s read:packages -h github.com` if install returns
+403) before `pnpm install`.
 
 ## Coordinator types
 

@@ -50,12 +50,24 @@ Example remote descriptor entry:
 
 ## Fork deploy checklist
 
-1. Run `task repo-init` (or `task repo-init:doppler`) with `CLOUDFLARE_API_TOKEN`
+1. Configure GitHub Packages read auth at the repo root (committed `.npmrc` uses
+   `NODE_AUTH_TOKEN`). Export a token with `read:packages` before install:
+
+   ```sh
+   export NODE_AUTH_TOKEN="$(gh auth token)"   # needs read:packages scope
+   # if 403: gh auth refresh -s read:packages -h github.com
+   pnpm install
+   ```
+
+   CI uses the workflow `GITHUB_TOKEN` with `packages: read`. If install fails
+   with 403, use an org GitHub App or PAT (see ADR-0004).
+
+2. Run `task repo-init` (or `task repo-init:doppler`) with `CLOUDFLARE_API_TOKEN`
    and `CLOUDFLARE_ACCOUNT_ID` set. This creates gitignored `wrangler.env.prod.json`
    overlays, ensures KV namespace `mandate-agent-prod-request-keys`, and writes
    merged deploy configs under `.wrangler/deploy/`.
-2. Copy `.dev.vars.example` → `.dev.vars` for agent and signer; fill secrets locally.
-3. Set GitHub Environment `prod` secrets (or deploy manually):
+3. Copy `.dev.vars.example` → `.dev.vars` for agent and signer; fill secrets locally.
+4. Set GitHub Environment `prod` secrets (or deploy manually):
 
    ```sh
    task repo-init
@@ -65,9 +77,9 @@ Example remote descriptor entry:
      --config ../../../.wrangler/deploy/signer.wrangler.jsonc
    ```
 
-4. Bind secrets with `wrangler secret put` (see workflow
+5. Bind secrets with `wrangler secret put` (see workflow
    `.github/workflows/deploy-workers.yml`).
-5. Set repository variable `ENABLE_WORKERS_DEPLOY=true` to enable CI deploy on `main`.
+6. Set repository variable `ENABLE_WORKERS_DEPLOY=true` to enable CI deploy on `main`.
 
 CI sets `CICD=true` so `repo-init` always refreshes overlays from examples before
 deploy (ephemeral checkout).

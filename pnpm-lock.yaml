@@ -44,9 +44,9 @@ importers:
 
   packages/apps/agent:
     dependencies:
-      '@canopy/delegation-cose':
-        specifier: file:./canopy-delegation-cose-0.1.0.tgz
-        version: file:packages/apps/agent/canopy-delegation-cose-0.1.0.tgz
+      '@forestrie/delegation-cose':
+        specifier: 0.1.0
+        version: 0.1.0
       '@mandate/coordinator-types':
         specifier: workspace:*
         version: link:../../libs/coordinator-types
@@ -211,10 +211,6 @@ packages:
 
   '@adraffy/ens-normalize@1.11.1':
     resolution: {integrity: sha512-nhCBV3quEgesuf7c7KYfperqSS14T8bYuvJ8PcLJp6znkZpFc0AuW4qBtr8eKVyPPe/8RSr7sglCWPU5eaxwKQ==}
-
-  '@canopy/delegation-cose@file:packages/apps/agent/canopy-delegation-cose-0.1.0.tgz':
-    resolution: {integrity: sha512-LppLHaY+6q0BdlMse0kaNaSLKzjJwiiejOuDUOrVPwS+in2PXoxFvurV+WOLwGd7JeB7YF3+wX52CKaaHMZ7og==, tarball: file:packages/apps/agent/canopy-delegation-cose-0.1.0.tgz}
-    version: 0.1.0
 
   '@cbor-extract/cbor-extract-darwin-arm64@2.2.2':
     resolution: {integrity: sha512-ZKZ/F8US7JR92J4DMct6cLW/Y66o2K576+zjlEN/MevH70bFIsB10wkZEQPLzl2oNh2SMGy55xpJ9JoBRl5DOA==}
@@ -664,6 +660,10 @@ packages:
   '@eslint/plugin-kit@0.7.1':
     resolution: {integrity: sha512-rZAP3aVgB9ds9KOeUSL+zZ21hPmo8dh6fnIFwRQj5EAZl9gzR7wxYbYXYysAM8CTqGmUGyp2S4kUdV17MnGuWQ==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
+
+  '@forestrie/delegation-cose@0.1.0':
+    resolution: {integrity: sha512-SUbjyWY40LLn0XF/6A1R7FZkg0oOMykQd/Ekr3oPPTeY1uHWA4cGs1tW7yEYrlOMxb49KIhf3KEX8wQ8RckR5g==, tarball: https://npm.pkg.github.com/download/@forestrie/delegation-cose/0.1.0/sha512-SUbjyWY40LLn0XF/6A1R7FZkg0oOMykQd/Ekr3oPPTeY1uHWA4cGs1tW7yEYrlOMxb49KIhf3KEX8wQ8RckR5g==}
+    version: 0.1.0
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -2366,12 +2366,6 @@ snapshots:
 
   '@adraffy/ens-normalize@1.11.1': {}
 
-  '@canopy/delegation-cose@file:packages/apps/agent/canopy-delegation-cose-0.1.0.tgz':
-    dependencies:
-      '@noble/curves': 1.9.7
-      '@noble/hashes': 1.8.0
-      cbor-x: 1.6.4
-
   '@cbor-extract/cbor-extract-darwin-arm64@2.2.2':
     optional: true
 
@@ -2630,6 +2624,12 @@ snapshots:
     dependencies:
       '@eslint/core': 1.2.1
       levn: 0.4.1
+
+  '@forestrie/delegation-cose@0.1.0':
+    dependencies:
+      '@noble/curves': 1.9.7
+      '@noble/hashes': 1.8.0
+      cbor-x: 1.6.4
 
   '@humanfs/core@0.19.2':
     dependencies:

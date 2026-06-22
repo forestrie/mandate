@@ -2,7 +2,7 @@
 
 Implements [FOR-98](https://linear.app/forestrie/issue/FOR-98): webhook receiver
 
-- non-custodial signer on `@canopy/delegation-cose`.
+- non-custodial signer on `@forestrie/delegation-cose`.
 
 ## Scope delivered
 
@@ -27,7 +27,7 @@ Implements [FOR-98](https://linear.app/forestrie/issue/FOR-98): webhook receiver
 
 - [FOR-104](https://linear.app/forestrie/issue/FOR-104) — Delegation signer backend: Privy vs GCP KMS
 - [FOR-105](https://linear.app/forestrie/issue/FOR-105) — ES256 signer + algorithm-by-root
-- [FOR-106](https://linear.app/forestrie/issue/FOR-106) — Publish `@canopy/delegation-cose` to npm
+- [FOR-106](https://linear.app/forestrie/issue/FOR-106) — Publish `@forestrie/delegation-cose` to GitHub Packages (ADR-0004)
 
 See [ADR-0002](../adr/adr-0002-delegation-signer-custody.md) and
 [CONTEXT.md](../../CONTEXT.md).

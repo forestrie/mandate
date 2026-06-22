@@ -7,6 +7,7 @@ production KS256 remote signer for `@mandate/agent`.
 
 ```sh
 cd spikes/for-104-delegation-signer
+export NODE_AUTH_TOKEN="$(gh auth token)"   # needs read:packages
 pnpm install --ignore-workspace
 pnpm test
 pnpm spike

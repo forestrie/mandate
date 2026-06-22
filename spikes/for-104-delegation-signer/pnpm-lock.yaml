@@ -8,9 +8,9 @@ importers:
 
   .:
     dependencies:
-      '@canopy/delegation-cose':
-        specifier: file:./canopy-delegation-cose-0.1.0.tgz
-        version: file:canopy-delegation-cose-0.1.0.tgz
+      '@forestrie/delegation-cose':
+        specifier: 0.1.0
+        version: 0.1.0
       '@noble/curves':
         specifier: ^1.9.7
         version: 1.9.7
@@ -33,8 +33,8 @@ importers:
 
 packages:
 
-  '@canopy/delegation-cose@file:canopy-delegation-cose-0.1.0.tgz':
-    resolution: {integrity: sha512-LppLHaY+6q0BdlMse0kaNaSLKzjJwiiejOuDUOrVPwS+in2PXoxFvurV+WOLwGd7JeB7YF3+wX52CKaaHMZ7og==, tarball: file:canopy-delegation-cose-0.1.0.tgz}
+  '@forestrie/delegation-cose@0.1.0':
+    resolution: {integrity: sha512-SUbjyWY40LLn0XF/6A1R7FZkg0oOMykQd/Ekr3oPPTeY1uHWA4cGs1tW7yEYrlOMxb49KIhf3KEX8wQ8RckR5g==, tarball: https://npm.pkg.github.com/download/@forestrie/delegation-cose/0.1.0/sha512-SUbjyWY40LLn0XF/6A1R7FZkg0oOMykQd/Ekr3oPPTeY1uHWA4cGs1tW7yEYrlOMxb49KIhf3KEX8wQ8RckR5g==}
     version: 0.1.0
 
   '@cbor-extract/cbor-extract-darwin-arm64@2.2.2':
@@ -682,7 +682,7 @@ packages:
 
 snapshots:
 
-  '@canopy/delegation-cose@file:canopy-delegation-cose-0.1.0.tgz':
+  '@forestrie/delegation-cose@0.1.0':
     dependencies:
       '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
