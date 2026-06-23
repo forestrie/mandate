@@ -22,9 +22,7 @@ async function bffFetch<T>(
 ): Promise<T> {
 	const url = `${bffBase()}/${path.replace(/^\//, '')}`;
 	const authHeaders =
-		authLogId && scopes?.length
-			? await controlPlaneAuthHeaders(authLogId, scopes)
-			: {};
+		authLogId && scopes?.length ? await controlPlaneAuthHeaders(authLogId, scopes) : {};
 	const response = await fetch(url, {
 		...init,
 		headers: {
@@ -53,12 +51,9 @@ export async function listPendingDelegations(
 	const params = new URLSearchParams({ authLogId });
 	if (opts?.offset !== undefined) params.set('offset', String(opts.offset));
 	if (opts?.limit !== undefined) params.set('limit', String(opts.limit));
-	return bffFetch<PendingListResponse>(
-		`delegations/pending?${params}`,
-		undefined,
-		authLogId,
-		['delegations:read']
-	);
+	return bffFetch<PendingListResponse>(`delegations/pending?${params}`, undefined, authLogId, [
+		'delegations:read'
+	]);
 }
 
 export async function submitDelegationCertificate(
@@ -74,12 +69,9 @@ export async function submitDelegationCertificate(
 export const submitDelegationMaterial = submitDelegationCertificate;
 
 export async function getLogDelegationEnabled(logId: string): Promise<EnabledResponse> {
-	return bffFetch<EnabledResponse>(
-		`logs/${encodeURIComponent(logId)}/enabled`,
-		undefined,
-		logId,
-		['logs:enabled:read']
-	);
+	return bffFetch<EnabledResponse>(`logs/${encodeURIComponent(logId)}/enabled`, undefined, logId, [
+		'logs:enabled:read'
+	]);
 }
 
 export async function setLogDelegationEnabled(

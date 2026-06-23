@@ -21,8 +21,7 @@ export class WalletChallengeStrategy implements CoordinatorAuthStrategy {
 	private readonly broker = new AppTokenBffStrategy();
 
 	async authHeaders(request: Request, context: AuthContext): Promise<HeadersInit> {
-		const session =
-			context.controlPlaneSession?.trim() || sessionFromRequest(request) || undefined;
+		const session = context.controlPlaneSession?.trim() || sessionFromRequest(request) || undefined;
 		if (session) {
 			return { Authorization: `Bearer ${session}` };
 		}

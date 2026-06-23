@@ -14,11 +14,11 @@ commits.
 
 ## Scope (future)
 
-| Component | Change |
-| --------- | ------ |
-| canopy-api genesis broker | Accept signed wcc-1 envelope with `onboard:bind` scope over candidate key material in genesis body |
-| mandate `mandate-register` / provision | Sign PoP envelope with user wallet before calling genesis |
-| coordinator | No session required — PoP verified at canopy-api boundary |
+| Component                              | Change                                                                                             |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| canopy-api genesis broker              | Accept signed wcc-1 envelope with `onboard:bind` scope over candidate key material in genesis body |
+| mandate `mandate-register` / provision | Sign PoP envelope with user wallet before calling genesis                                          |
+| coordinator                            | No session required — PoP verified at canopy-api boundary                                          |
 
 ## Non-goals
 

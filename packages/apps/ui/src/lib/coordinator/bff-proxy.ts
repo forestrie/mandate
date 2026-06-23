@@ -2,10 +2,7 @@ import { env } from '$env/dynamic/private';
 import { AuthStrategyNotImplementedError } from '$lib/auth/coordinator-auth.js';
 import type { CoordinatorAuthStrategy } from '$lib/auth/coordinator-auth.js';
 import type { AuthContext } from '$lib/auth/coordinator-auth.js';
-import {
-	isAllowedCoordinatorPath,
-	isPublicCoordinatorPath
-} from './bff-allowlist.js';
+import { isAllowedCoordinatorPath, isPublicCoordinatorPath } from './bff-allowlist.js';
 
 export { isAllowedCoordinatorPath, isPublicCoordinatorPath } from './bff-allowlist.js';
 

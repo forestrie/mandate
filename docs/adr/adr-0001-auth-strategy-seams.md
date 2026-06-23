@@ -23,11 +23,11 @@ service paths, **no bearer** for certificate submit and public reads.
 
 Implement **`CoordinatorAuthStrategy`** in Mandate with three modes:
 
-| Mode               | Env default   | Implementation                                   | Coordinator dependency                    |
-| ------------------ | ------------- | ------------------------------------------------ | ----------------------------------------- |
+| Mode               | Env default    | Implementation                                   | Coordinator dependency                  |
+| ------------------ | -------------- | ------------------------------------------------ | --------------------------------------- |
 | `wallet_challenge` | **v1 default** | Forward `Bearer <control-plane-session>`         | `POST /api/auth/challenge` + `/session` |
-| `app_token_bff`    | transitional  | Server injects `Bearer ${COORDINATOR_APP_TOKEN}` | None                                      |
-| `issuer_token`     | deprecated    | Per-log `issuerToken` for **service** paths only | Issuance/webhook (not UX)                 |
+| `app_token_bff`    | transitional   | Server injects `Bearer ${COORDINATOR_APP_TOKEN}` | None                                    |
+| `issuer_token`     | deprecated     | Per-log `issuerToken` for **service** paths only | Issuance/webhook (not UX)               |
 
 Select mode via `COORDINATOR_AUTH_MODE` (default **`wallet_challenge`** in
 `wrangler.jsonc`).
@@ -85,11 +85,11 @@ management endpoints. `IssuerTokenStrategy` is retained as a stub for tests.
 
 Separate from coordinator auth:
 
-| Backend           | Status | Notes                                       |
-| ----------------- | ------ | ------------------------------------------- |
-| `PrivyEoaBackend` | v1     | `secp256k1_sign` for delegation cert hashes |
+| Backend           | Status | Notes                                                                                                                         |
+| ----------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `PrivyEoaBackend` | v1     | `secp256k1_sign` for delegation cert hashes                                                                                   |
 | Control-plane     | v1     | `personal_sign` on wcc-1 UTF-8 message (EIP-191); verified with `recoverMessageAddress` in coordinator and Mandate unit tests |
-| `SafeBackend`     | stub   | Requires Safe SDK + plan-0029 ERC-1271 path   |
+| `SafeBackend`     | stub   | Requires Safe SDK + plan-0029 ERC-1271 path                                                                                   |
 
 ## Consequences
 

@@ -11,9 +11,7 @@ const ALLOWED_ROUTES: Array<{ method: string; pattern: RegExp }> = [
 ];
 
 export function isPublicCoordinatorPath(method: string, pathSegments: string[]): boolean {
-	return (
-		method.toUpperCase() === 'POST' && pathSegments.join('/') === 'delegations/certificate'
-	);
+	return method.toUpperCase() === 'POST' && pathSegments.join('/') === 'delegations/certificate';
 }
 
 export function isAllowedCoordinatorPath(method: string, pathSegments: string[]): boolean {

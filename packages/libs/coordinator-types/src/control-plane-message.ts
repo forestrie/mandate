@@ -6,8 +6,7 @@ import type { WalletChallengeEnvelope } from './wallet-challenge-envelope.js';
  */
 export function buildKs256ControlPlaneMessage(envelope: WalletChallengeEnvelope): string {
 	const scopes = envelope.scopes.join(' ');
-	const chainLine =
-		envelope.chainId !== undefined ? `Chain ID: ${envelope.chainId}\n` : '';
+	const chainLine = envelope.chainId !== undefined ? `Chain ID: ${envelope.chainId}\n` : '';
 	return [
 		`${envelope.domain} wants you to authorize delegation control-plane access:`,
 		`Auth log: ${envelope.authLogId}`,

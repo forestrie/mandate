@@ -113,7 +113,8 @@ export function buildDelegationRequiredEvent(opts: {
 		mmrEnd: 8,
 		delegatedPublicKey,
 		requestedAt: 1_700_000_000,
-		materialSubmitUrl: opts.materialSubmitUrl ?? 'http://coordinator.test/api/delegations/certificate',
+		materialSubmitUrl:
+			opts.materialSubmitUrl ?? 'http://coordinator.test/api/delegations/certificate',
 		certificateSubmitUrl:
 			opts.certificateSubmitUrl ??
 			opts.materialSubmitUrl ??

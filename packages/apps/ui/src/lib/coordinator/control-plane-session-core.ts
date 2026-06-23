@@ -22,18 +22,17 @@ export interface ControlPlaneSessionDeps {
 	nowMs?: () => number;
 }
 
-const defaultDeps: Pick<ControlPlaneSessionDeps, 'fetch' | 'challengePath' | 'sessionPath' | 'nowMs'> =
-	{
-		fetch,
-		challengePath: '/api/auth/challenge',
-		sessionPath: '/api/auth/session',
-		nowMs: () => Date.now()
-	};
+const defaultDeps: Pick<
+	ControlPlaneSessionDeps,
+	'fetch' | 'challengePath' | 'sessionPath' | 'nowMs'
+> = {
+	fetch,
+	challengePath: '/api/auth/challenge',
+	sessionPath: '/api/auth/session',
+	nowMs: () => Date.now()
+};
 
-export function controlPlaneCacheKey(
-	authLogId: string,
-	scopes: ControlPlaneScope[]
-): string {
+export function controlPlaneCacheKey(authLogId: string, scopes: ControlPlaneScope[]): string {
 	return `${authLogId}:${[...scopes].sort().join(',')}`;
 }
 

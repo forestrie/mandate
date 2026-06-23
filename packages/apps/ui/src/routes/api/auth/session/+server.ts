@@ -1,8 +1,5 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import {
-	proxyCoordinatorAuth,
-	walletChallengeAuthEnabled
-} from '$lib/coordinator/auth-proxy.js';
+import { proxyCoordinatorAuth, walletChallengeAuthEnabled } from '$lib/coordinator/auth-proxy.js';
 
 export const POST: RequestHandler = async ({ request }) => {
 	if (!walletChallengeAuthEnabled()) {

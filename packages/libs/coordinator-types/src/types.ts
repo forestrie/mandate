@@ -18,10 +18,7 @@ export type { PutEnabledRequest } from './put-enabled-request.js';
 export type { WebhookConfigResponse } from './webhook-config-response.js';
 export type { EnabledResponse } from './enabled-response.js';
 export type { ControlPlaneScope } from './control-plane-scope.js';
-export {
-	CONTROL_PLANE_SCOPE_VALUES,
-	WALLET_CHALLENGE_VERSION
-} from './control-plane-scope.js';
+export { CONTROL_PLANE_SCOPE_VALUES, WALLET_CHALLENGE_VERSION } from './control-plane-scope.js';
 export type { ChallengeRequest } from './challenge-request.js';
 export type { ChallengeResponse } from './challenge-response.js';
 export type { WalletChallengeEnvelope } from './wallet-challenge-envelope.js';
