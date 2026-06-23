@@ -3,7 +3,8 @@ export interface AuthContext {
 	authLogId?: string;
 	logId?: string;
 	issuerToken?: string;
-	walletChallengeProof?: string;
+	/** Short-lived control-plane session (v1.… bearer). */
+	controlPlaneSession?: string;
 }
 
 /** Server-side strategy for upstream coordinator Authorization headers. */

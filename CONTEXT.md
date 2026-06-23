@@ -78,3 +78,30 @@ A synthetic **user-owned** Privy wallet used only in live integration tests
 delegation policy; the wallet is never revoked so `test:live:owned` and the
 hands-off success path stay stable. Distinct from the Mode C kill-switch wallet
 (`E2E_MODE_C_USER_*`). See [service-secrets.md](docs/service-secrets.md).
+
+## delegation control plane
+
+HTTP management APIs on the delegation-coordinator (`pending`, `material`,
+`enabled`, `signing-route`). Authenticated via wallet-challenge sessions in v1.
+See devdocs [ARC-0023](../devdocs/arc/arc-0023-wallet-challenge-control-plane-auth.md).
+
+## control-plane session
+
+Short-lived bearer after a wallet proves control of an authority log root key.
+Used by the mandate UI BFF when calling coordinator UX APIs.
+
+## authority log
+
+The log identified by `authLogId` whose registered `publicRoot` anchors
+control-plane authorization. In BYOK single-hop mode, `authLogId` equals the
+user log id.
+
+## registered publicRoot
+
+Root key material on the coordinator for a log; same anchor as delegation
+certificate verification (ARC-0022 I5).
+
+## proof-of-possession
+
+Wallet signature over a challenge using a candidate root key before genesis
+registers that key on the coordinator.

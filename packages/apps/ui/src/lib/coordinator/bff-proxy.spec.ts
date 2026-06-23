@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { isAllowedCoordinatorPath } from './bff-proxy.js';
+import { isAllowedCoordinatorPath, isPublicCoordinatorPath } from './bff-allowlist.js';
 
 describe('isAllowedCoordinatorPath', () => {
 	it('allows pending list GET', () => {
 		expect(isAllowedCoordinatorPath('GET', ['delegations', 'pending'])).toBe(true);
 	});
 
-	it('allows material submit POST', () => {
-		expect(isAllowedCoordinatorPath('POST', ['delegations', 'material'])).toBe(true);
+	it('allows certificate submit POST', () => {
+		expect(isAllowedCoordinatorPath('POST', ['delegations', 'certificate'])).toBe(true);
+	});
+
+	it('marks certificate submit as public', () => {
+		expect(isPublicCoordinatorPath('POST', ['delegations', 'certificate'])).toBe(true);
 	});
 
 	it('allows signing route for uuid log id', () => {
@@ -30,7 +34,7 @@ describe('isAllowedCoordinatorPath', () => {
 		expect(isAllowedCoordinatorPath('GET', ['delegations', 'issue'])).toBe(false);
 	});
 
-	it('rejects custody keys by default', () => {
+	it('rejects custody keys (operator-only)', () => {
 		expect(
 			isAllowedCoordinatorPath('POST', [
 				'logs',

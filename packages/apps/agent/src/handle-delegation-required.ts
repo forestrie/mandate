@@ -1,6 +1,6 @@
 import type { DelegationRequiredEvent } from '@mandate/coordinator-types';
 import { base64ToBytes } from './bytes.js';
-import { submitDelegationMaterial } from './coordinator/submit-material.js';
+import { submitDelegationCertificate } from './coordinator/submit-certificate.js';
 import {
 	assertCertificateMatchesEvent,
 	CertificateValidationError
@@ -43,17 +43,18 @@ function parseEvent(rawBody: string): DelegationRequiredEvent {
 	if (event.type !== 'delegation.required' || event.version !== 1) {
 		throw new BadRequestError('unsupported delegation.required event');
 	}
+	const submitUrl = event.certificateSubmitUrl ?? event.materialSubmitUrl;
 	if (
 		!event.requestKey ||
 		!event.logId ||
 		event.mmrStart === undefined ||
 		event.mmrEnd === undefined ||
 		!event.delegatedPublicKey ||
-		!event.materialSubmitUrl
+		!submitUrl
 	) {
 		throw new BadRequestError('missing required delegation.required fields');
 	}
-	return event;
+	return { ...event, certificateSubmitUrl: submitUrl };
 }
 
 export class BadRequestError extends Error {
@@ -154,10 +155,9 @@ export async function handleDelegationRequired(
 		throw error;
 	}
 
-	const submitResponse = await submitDelegationMaterial({
-		materialSubmitUrl: event.materialSubmitUrl,
+	const submitResponse = await submitDelegationCertificate({
+		certificateSubmitUrl: event.certificateSubmitUrl,
 		coordinatorUpstreamUrl: deps.coordinatorUpstreamUrl,
-		coordinatorAppToken: deps.coordinatorAppToken,
 		logId: event.logId,
 		mmrStart: event.mmrStart,
 		mmrEnd: event.mmrEnd,
@@ -169,13 +169,13 @@ export async function handleDelegationRequired(
 	if (!submitResponse.ok) {
 		await deps.seenStore.clear(event.requestKey);
 		const detail = await submitResponse.text();
-		console.error('material submit failed', submitResponse.status, detail);
+		console.error('certificate submit failed', submitResponse.status, detail);
 		logDelegationOutcome(event, 'coordinator_rejected', {
 			status: submitResponse.status
 		});
 		return jsonResponse(502, {
 			ok: false,
-			error: `material submit failed: ${submitResponse.status}`
+			error: `certificate submit failed: ${submitResponse.status}`
 		});
 	}
 

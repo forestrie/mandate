@@ -74,11 +74,11 @@ describe('handleDelegationRequired', () => {
 
 		const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 			const url = String(input);
-			if (url.endsWith('/api/delegations/material')) {
+			if (url.endsWith('/api/delegations/certificate')) {
 				const body = JSON.parse(String(init?.body)) as { certificate: string };
 				submittedCertificate = body.certificate;
 				await assertCertificateVerifies(body.certificate, root.rootSignerAddressBytes);
-				return new Response(JSON.stringify({ ok: true, materialKey: 'mk' }), { status: 200 });
+				return new Response(JSON.stringify({ ok: true, certificateKey: 'ck' }), { status: 200 });
 			}
 			throw new Error(`unexpected fetch: ${url}`);
 		});
@@ -130,7 +130,7 @@ describe('handleDelegationRequired', () => {
 
 		const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
 			const url = String(input);
-			if (url.endsWith('/api/delegations/material')) {
+			if (url.endsWith('/api/delegations/certificate')) {
 				reservedBeforeSubmit = await seenStore.has('reserve-key');
 				return new Response(JSON.stringify({ ok: true }), { status: 200 });
 			}
