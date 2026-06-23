@@ -53,11 +53,11 @@ Doppler config **`e2e`** only. GitHub **`live-signer`** only.
 
 Three wallet topologies; see CONTEXT.md and ADR-0005 §7.
 
-| Role                           | Env vars                                            | Topology                                       | Mutated by tests?                  |
-| ------------------------------ | --------------------------------------------------- | ---------------------------------------------- | ---------------------------------- |
-| Operator payment-authoritative | _(operational `KEY_DIRECTORY` only; not `E2E\__`)\* | Ownerless app-controlled; no additional signer | No                                 |
-| Signer test wallet             | `E2E_SIGNER_TEST_*`                                 | User-owned; mandate = additional signer        | **No** — stable success path       |
-| Mode C kill-switch wallet      | `E2E_MODE_C_USER_*`                                 | User-owned; mandate = additional signer        | **Yes** — onboard, revoke, restore |
+| Role                           | Env vars                                             | Topology                                       | Mutated by tests?                  |
+| ------------------------------ | ---------------------------------------------------- | ---------------------------------------------- | ---------------------------------- |
+| Operator payment-authoritative | \_(operational `KEY_DIRECTORY` only; not `E2E\__`)\* | Ownerless app-controlled; no additional signer | No                                 |
+| Signer test wallet             | `E2E_SIGNER_TEST_*`                                  | User-owned; mandate = additional signer        | **No** — stable success path       |
+| Mode C kill-switch wallet      | `E2E_MODE_C_USER_*`                                  | User-owned; mandate = additional signer        | **Yes** — onboard, revoke, restore |
 
 The retired `mandate-forestrie` wallet (ownerless + mandate additional signer)
 matched neither role and must not be referenced.
