@@ -18,6 +18,7 @@ import {
 
 const TEST_LOG_ID = 'b2c3d4e5f67890ab1234567890abcdef';
 const SIGNER_TOKEN = 'test-signer-token';
+const TEST_PRIVY_API_BASE = 'https://privy.test';
 
 function createEnv(opts: {
 	privateKey: Uint8Array;
@@ -30,8 +31,9 @@ function createEnv(opts: {
 	const keyRef = opts.keyRef ?? 'test-key';
 	return {
 		MANDATE_SIGNER_TOKEN: SIGNER_TOKEN,
-		PRIVY_APP_ID: 'app-id',
-		PRIVY_APP_SECRET: 'app-secret',
+		MANDATE_PRIVY_APP_ID: 'app-id',
+		MANDATE_PRIVY_APP_SECRET: 'app-secret',
+		MANDATE_PRIVY_API_BASE: TEST_PRIVY_API_BASE,
 		KEY_DIRECTORY: JSON.stringify({
 			[keyRef]: {
 				walletId: 'wallet-1',
@@ -219,7 +221,7 @@ describe('handleSign', () => {
 		expect(response.status).toBe(400);
 	});
 
-	it('returns 500 when owned-wallet keyRef requires auth but PRIVY_AUTHORIZATION_KEY is unset', async () => {
+	it('returns 500 when owned-wallet keyRef requires auth but MANDATE_PRIVY_AUTHORIZATION_KEY is unset', async () => {
 		const privateKey = secp256k1.utils.randomPrivateKey();
 		const env = createEnv({ privateKey, requiresAuthorizationSignature: true });
 		const sigStructure = new Uint8Array([1, 2, 3, 4]);
@@ -229,7 +231,7 @@ describe('handleSign', () => {
 		});
 		expect(response.status).toBe(500);
 		const body = (await response.json()) as { error: string };
-		expect(body.error).toContain('PRIVY_AUTHORIZATION_KEY');
+		expect(body.error).toContain('MANDATE_PRIVY_AUTHORIZATION_KEY');
 	});
 
 	it('omits privy-authorization-signature when global key is set but keyRef does not require it', async () => {
@@ -241,7 +243,7 @@ describe('handleSign', () => {
 		});
 		const env: Env = {
 			...createEnv({ privateKey, requiresAuthorizationSignature: false }),
-			PRIVY_AUTHORIZATION_KEY: `wallet-auth:${Buffer.from(authPrivateKey).toString('base64')}`
+			MANDATE_PRIVY_AUTHORIZATION_KEY: `wallet-auth:${Buffer.from(authPrivateKey).toString('base64')}`
 		};
 		const sigStructure = new Uint8Array([1, 2, 3, 4]);
 		let capturedHeaders: Record<string, string> = {};
@@ -298,7 +300,7 @@ describe('handleSign', () => {
 		});
 		const env: Env = {
 			...createEnv({ privateKey, requiresAuthorizationSignature: true }),
-			PRIVY_AUTHORIZATION_KEY: `wallet-auth:${Buffer.from(authPrivateKey).toString('base64')}`
+			MANDATE_PRIVY_AUTHORIZATION_KEY: `wallet-auth:${Buffer.from(authPrivateKey).toString('base64')}`
 		};
 		const sigStructure = new Uint8Array([1, 2, 3, 4]);
 		const before = Date.now();
@@ -338,7 +340,7 @@ describe('handleSign', () => {
 			url: capturedUrl,
 			body: capturedBody,
 			headers: {
-				'privy-app-id': env.PRIVY_APP_ID,
+				'privy-app-id': env.MANDATE_PRIVY_APP_ID,
 				'privy-request-expiry': capturedHeaders['privy-request-expiry']
 			}
 		};

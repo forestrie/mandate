@@ -22,36 +22,38 @@ import { mintOnboardToken, provisionInstance } from '../src/index.js';
  * coordinator webhook forward, then seals hands-off in-process.
  *
  *   doppler run --project mandate-forestrie --config dev -- \
+ *   doppler run --project mandate-forestrie --config e2e -- \
  *     pnpm --filter @mandate/register test:live:provision
  */
 
-const CANOPY_BASE = process.env.CANOPY_API_URL ?? process.env.CANOPY_BASE_URL;
-const COORDINATOR_URL = process.env.DELEGATION_COORDINATOR_URL;
-const ONBOARD_TOKEN = process.env.CANOPY_PAYMENTS_ONBOARD_TOKEN;
-const OPS_ADMIN = process.env.CANOPY_OPS_ADMIN_TOKEN;
-const UNIVOCITY_ADDR = process.env.CANOPY_UNIVOCITY_ADDR;
-const CHAIN_ID = process.env.CANOPY_CHAIN_ID ?? '84532';
-const WEBHOOK_URL =
-	process.env.MANDATE_AGENT_WEBHOOK_URL ??
-	'https://mandate-agent-prod.example.workers.dev/webhooks/delegation-required';
+const CANOPY_BASE = process.env.E2E_CANOPY_API_URL;
+const COORDINATOR_URL = process.env.E2E_DELEGATION_COORDINATOR_URL;
+const ONBOARD_TOKEN = process.env.E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN;
+const OPS_ADMIN = process.env.E2E_CANOPY_OPS_ADMIN_TOKEN;
+const UNIVOCITY_ADDR = process.env.E2E_CANOPY_UNIVOCITY_ADDR;
+const CHAIN_ID = process.env.E2E_CANOPY_CHAIN_ID;
+const WEBHOOK_URL = process.env.E2E_MANDATE_AGENT_WEBHOOK_URL;
 
-const APP_ID = process.env.PRIVY_APP_ID;
-const APP_SECRET = process.env.PRIVY_APP_SECRET;
-const WALLET_ID = process.env.PRIVY_MODE_C_WALLET_ID ?? process.env.PRIVY_WALLET_ID;
-const AUTH_KEY = process.env.PRIVY_AUTHORIZATION_KEY ?? process.env.PRIVY_WALLET_SIGNER;
-const MANDATE_SIGNER_ID = process.env.PRIVY_MANDATE_SIGNER_ID;
-const OWNER_AUTH_KEY = process.env.PRIVY_OWNER_AUTHORIZATION_KEY;
-const DELEGATION_POLICY_ID = process.env.PRIVY_DELEGATION_POLICY_ID;
+const APP_ID = process.env.MANDATE_PRIVY_APP_ID;
+const APP_SECRET = process.env.MANDATE_PRIVY_APP_SECRET;
+const WALLET_ID = process.env.E2E_MODE_C_USER_PRIVY_WALLET_ID;
+const AUTH_KEY = process.env.MANDATE_PRIVY_AUTHORIZATION_KEY;
+const MANDATE_SIGNER_ID = process.env.MANDATE_PRIVY_SIGNER_ID;
+const OWNER_AUTH_KEY = process.env.E2E_MODE_C_PRIVY_OWNER_AUTH_KEY;
+const DELEGATION_POLICY_ID = process.env.E2E_MODE_C_PRIVY_POLICY_ID;
 const SIGNER_URL = process.env.MANDATE_SIGNER_URL;
-const API_BASE = (process.env.PRIVY_API_BASE ?? 'https://api.privy.io').replace(/\/$/, '');
+const API_BASE = process.env.MANDATE_PRIVY_API_BASE?.replace(/\/$/, '');
 
 const LIVE = Boolean(
 	CANOPY_BASE &&
 	COORDINATOR_URL &&
 	UNIVOCITY_ADDR &&
+	CHAIN_ID &&
+	WEBHOOK_URL &&
 	(ONBOARD_TOKEN || OPS_ADMIN) &&
 	APP_ID &&
 	APP_SECRET &&
+	API_BASE &&
 	WALLET_ID &&
 	AUTH_KEY &&
 	MANDATE_SIGNER_ID &&
@@ -65,7 +67,7 @@ const NOW = Math.floor(Date.now() / 1000);
 const TIMEOUT_MS = 120_000;
 
 async function resolveWalletAddress(): Promise<string> {
-	const provided = process.env.PRIVY_WALLET_ADDRESS?.trim();
+	const provided = process.env.E2E_MODE_C_USER_WALLET_ADDRESS?.trim();
 	if (provided) return provided;
 	const basicAuth = Buffer.from(`${APP_ID}:${APP_SECRET}`).toString('base64');
 	const response = await fetch(`${API_BASE}/v1/wallets/${WALLET_ID}`, {
@@ -113,10 +115,10 @@ describe.skipIf(!LIVE)('provision + hands-off seal (live)', () => {
 		walletAddress = await resolveWalletAddress();
 		signerEnv = {
 			MANDATE_SIGNER_TOKEN: SIGNER_TOKEN,
-			PRIVY_APP_ID: APP_ID!,
-			PRIVY_APP_SECRET: APP_SECRET!,
-			PRIVY_API_BASE: API_BASE,
-			PRIVY_AUTHORIZATION_KEY: AUTH_KEY,
+			MANDATE_PRIVY_APP_ID: APP_ID!,
+			MANDATE_PRIVY_APP_SECRET: APP_SECRET!,
+			MANDATE_PRIVY_API_BASE: API_BASE!,
+			MANDATE_PRIVY_AUTHORIZATION_KEY: AUTH_KEY,
 			KEY_DIRECTORY: JSON.stringify({
 				'provision-live': {
 					walletId: WALLET_ID!,
@@ -138,14 +140,14 @@ describe.skipIf(!LIVE)('provision + hands-off seal (live)', () => {
 			onboardToken,
 			canopyBaseUrl: CANOPY_BASE!,
 			coordinatorBaseUrl: COORDINATOR_URL!,
-			agentWebhookUrl: WEBHOOK_URL,
+			agentWebhookUrl: WEBHOOK_URL!,
 			mode: 'C',
 			univocityAddr: UNIVOCITY_ADDR!,
-			chainId: CHAIN_ID,
+			chainId: CHAIN_ID!,
 			modeC: {
 				appId: APP_ID!,
 				appSecret: APP_SECRET!,
-				apiBase: API_BASE,
+				apiBase: API_BASE!,
 				walletId: WALLET_ID!,
 				mandateSignerId: MANDATE_SIGNER_ID!,
 				ownerAuthorizationKey: OWNER_AUTH_KEY!,

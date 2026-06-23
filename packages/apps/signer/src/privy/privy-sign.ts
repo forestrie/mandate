@@ -5,7 +5,7 @@ export interface PrivySignConfig {
 	appId: string;
 	appSecret: string;
 	walletId: string;
-	apiBase?: string;
+	apiBase: string;
 	/** `wallet-auth:`-prefixed base64 PKCS#8 P-256 key for owned-wallet RPC. */
 	authorizationKey?: string;
 	/** Milliseconds added to now for `privy-request-expiry` (default 60_000). */
@@ -25,7 +25,10 @@ export async function privySecp256k1Sign(
 	const hash = hashSigStructure(sigStructureBytes);
 	const hashHex = `0x${Buffer.from(hash).toString('hex')}`;
 	const basicAuth = Buffer.from(`${config.appId}:${config.appSecret}`).toString('base64');
-	const apiBase = (config.apiBase ?? 'https://api.privy.io').replace(/\/$/, '');
+	if (!config.apiBase?.trim()) {
+		throw new PrivySignError('MANDATE_PRIVY_API_BASE is required');
+	}
+	const apiBase = config.apiBase.trim().replace(/\/$/, '');
 	const url = `${apiBase}/v1/wallets/${config.walletId}/rpc`;
 	const rpcBody = {
 		chain_type: 'ethereum',

@@ -2,6 +2,6 @@
 export interface PrivyAdminConfig {
 	appId: string;
 	appSecret: string;
-	apiBase?: string;
+	apiBase: string;
 	fetchImpl?: typeof fetch;
 }

@@ -4,7 +4,6 @@ import { buildPrivyAuthorizationSignature } from './authorization-signature.js';
 import type { PrivyAdminConfig } from './privy-config.js';
 import { PrivyRestError } from './privy-rest-error.js';
 
-const DEFAULT_API_BASE = 'https://api.privy.io';
 const DEFAULT_REQUEST_EXPIRY_SKEW_MS = 60_000;
 
 export interface PrivyAuthorizedRequestOptions {
@@ -21,7 +20,10 @@ export class PrivyRestClient {
 	private readonly fetchImpl: typeof fetch;
 
 	constructor(private readonly config: PrivyAdminConfig) {
-		this.apiBase = (config.apiBase ?? DEFAULT_API_BASE).replace(/\/$/, '');
+		if (!config.apiBase?.trim()) {
+			throw new PrivyRestError('MANDATE_PRIVY_API_BASE is required', 0);
+		}
+		this.apiBase = config.apiBase.trim().replace(/\/$/, '');
 		this.fetchImpl = config.fetchImpl ?? fetch;
 	}
 

@@ -54,7 +54,7 @@ Extend the FOR-98 minimal contract:
 
 **Auth (agent → signer):** `Authorization: Bearer <MANDATE_SIGNER_TOKEN>` on
 the thin signer (Privy credentials stay on signer, not in the agent). For direct
-Privy-from-agent (dev only), agent holds `PRIVY_APP_SECRET` — not fork
+Privy-from-agent (dev only), agent holds `MANDATE_PRIVY_APP_SECRET` — not fork
 production path.
 
 ### 3. Agent behaviour
@@ -104,7 +104,7 @@ production path.
   exact RPC body sent to
   `POST /v1/wallets/{id}/rpc`. App-controlled operator entries omit the flag (or
   set `false`); signer fails closed if the flag is set but
-  `PRIVY_AUTHORIZATION_KEY` is unset.
+  `MANDATE_PRIVY_AUTHORIZATION_KEY` is unset.
 - GCP path deferred unless HSM required; checklist documents ~1–2 day bootstrap.
 - ES256 backends unchanged ([FOR-105](https://linear.app/forestrie/issue/FOR-105)).
 

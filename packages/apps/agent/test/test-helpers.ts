@@ -98,14 +98,17 @@ export function buildDelegationRequiredEvent(opts: {
 	delegatedPublicKeyCbor: Uint8Array;
 	materialSubmitUrl?: string;
 	requestKey?: string;
+	logId?: string;
+	authLogId?: string;
 }): DelegationRequiredEvent {
 	const delegatedPublicKey = bytesToBase64(opts.delegatedPublicKeyCbor);
+	const logId = opts.logId ?? TEST_LOG_ID;
 	return {
 		requestKey: opts.requestKey ?? 'test-request-key',
 		type: 'delegation.required',
 		version: 1,
-		logId: TEST_LOG_ID,
-		authLogId: TEST_LOG_ID,
+		logId,
+		authLogId: opts.authLogId ?? logId,
 		mmrStart: 1,
 		mmrEnd: 8,
 		delegatedPublicKey,

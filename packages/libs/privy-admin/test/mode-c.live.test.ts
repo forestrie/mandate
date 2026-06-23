@@ -6,39 +6,45 @@ import {
 	getWallet,
 	onboardModeCWallet,
 	PrivyRestClient,
+	revokeModeCWallet,
 	walletRpcAttempt
 } from '../src/index.js';
 
 /**
  * Live Mode C onboarding validation (FOR-112 + FOR-116).
  *
- * Uses a dedicated wallet (`PRIVY_MODE_C_WALLET_ID`) so the existing
- * `PRIVY_WALLET_ID` live signer test wallet is not mutated.
+ * Uses a dedicated wallet (`E2E_MODE_C_USER_PRIVY_WALLET_ID`) so the existing
+ * `E2E_SIGNER_TEST_PRIVY_WALLET_ID` live signer test wallet is not mutated.
  *
- * Required env (via Doppler mandate-forestrie/dev):
- * - PRIVY_APP_ID, PRIVY_APP_SECRET
- * - PRIVY_AUTHORIZATION_KEY (mandate additional-signer key)
- * - PRIVY_MANDATE_SIGNER_ID (key quorum id for mandate signer)
- * - PRIVY_MODE_C_WALLET_ID (user-owned wallet for onboarding tests)
- * - PRIVY_OWNER_AUTHORIZATION_KEY (owner key for wallet PATCH)
+ * Required env (Doppler dev + e2e):
+ * - MANDATE_PRIVY_APP_ID, MANDATE_PRIVY_APP_SECRET
+ * - MANDATE_PRIVY_AUTHORIZATION_KEY (mandate additional-signer key)
+ * - MANDATE_PRIVY_SIGNER_ID (key quorum id for mandate signer)
+ * - E2E_MODE_C_USER_PRIVY_WALLET_ID (user-owned wallet for onboarding tests)
+ * - E2E_MODE_C_PRIVY_OWNER_AUTH_KEY (owner key for wallet PATCH)
  */
 
-const APP_ID = process.env.PRIVY_APP_ID;
-const APP_SECRET = process.env.PRIVY_APP_SECRET;
-const AUTH_KEY = process.env.PRIVY_AUTHORIZATION_KEY;
-const MANDATE_SIGNER_ID = process.env.PRIVY_MANDATE_SIGNER_ID;
-const WALLET_ID = process.env.PRIVY_MODE_C_WALLET_ID;
-const OWNER_AUTH_KEY = process.env.PRIVY_OWNER_AUTHORIZATION_KEY;
-const API_BASE = (process.env.PRIVY_API_BASE ?? 'https://api.privy.io').replace(/\/$/, '');
+const APP_ID = process.env.MANDATE_PRIVY_APP_ID;
+const APP_SECRET = process.env.MANDATE_PRIVY_APP_SECRET;
+const AUTH_KEY = process.env.MANDATE_PRIVY_AUTHORIZATION_KEY;
+const MANDATE_SIGNER_ID = process.env.MANDATE_PRIVY_SIGNER_ID;
+const WALLET_ID = process.env.E2E_MODE_C_USER_PRIVY_WALLET_ID;
+const OWNER_AUTH_KEY = process.env.E2E_MODE_C_PRIVY_OWNER_AUTH_KEY;
+const API_BASE = process.env.MANDATE_PRIVY_API_BASE?.replace(/\/$/, '');
+const SIGNER_URL = process.env.MANDATE_SIGNER_URL;
 
 const LIVE = Boolean(
-	APP_ID && APP_SECRET && AUTH_KEY && MANDATE_SIGNER_ID && WALLET_ID && OWNER_AUTH_KEY
+	APP_ID &&
+	APP_SECRET &&
+	API_BASE &&
+	AUTH_KEY &&
+	MANDATE_SIGNER_ID &&
+	WALLET_ID &&
+	OWNER_AUTH_KEY &&
+	SIGNER_URL
 );
-
 const LOG_ID = 'c3d4e5f67890abcdef1234567890abcdef';
 const KEY_REF = 'mode-c-live-key';
-const SIGNER_URL =
-	process.env.MANDATE_SIGNER_URL ?? 'https://mandate-signer-prod.example.workers.dev/v1/sign';
 const TIMEOUT_MS = 90_000;
 
 describe.skipIf(!LIVE)('Mode C onboarding (live Privy)', () => {
@@ -48,7 +54,7 @@ describe.skipIf(!LIVE)('Mode C onboarding (live Privy)', () => {
 		client = new PrivyRestClient({
 			appId: APP_ID!,
 			appSecret: APP_SECRET!,
-			apiBase: API_BASE
+			apiBase: API_BASE!
 		});
 	}, TIMEOUT_MS);
 
@@ -66,7 +72,7 @@ describe.skipIf(!LIVE)('Mode C onboarding (live Privy)', () => {
 				mandateSignerId: MANDATE_SIGNER_ID!,
 				keyRef: KEY_REF,
 				logId: LOG_ID,
-				signerUrl: SIGNER_URL,
+				signerUrl: SIGNER_URL!,
 				ownerAuthorizationKey: OWNER_AUTH_KEY!,
 				policyId: policy.id
 			});
@@ -149,6 +155,54 @@ describe.skipIf(!LIVE)('Mode C onboarding (live Privy)', () => {
 				expect(result.ok, `${denied.method}: ${result.body}`).toBe(false);
 				expect(result.status).toBeGreaterThanOrEqual(400);
 			}
+		},
+		TIMEOUT_MS
+	);
+
+	it(
+		'revokes mandate additional signer and denies secp256k1_sign, then restores',
+		async () => {
+			const policyId =
+				process.env.E2E_MODE_C_PRIVY_POLICY_ID?.trim() ??
+				(await createDelegationSigningPolicy(client, `Mandate Mode C revoke restore ${Date.now()}`))
+					.id;
+
+			await revokeModeCWallet(client, {
+				walletId: WALLET_ID!,
+				ownerAuthorizationKey: OWNER_AUTH_KEY!,
+				mandateSignerId: MANDATE_SIGNER_ID!
+			});
+
+			const hash = `0x${Buffer.from(randomBytes(32)).toString('hex')}`;
+			const deniedSign = await walletRpcAttempt(client, {
+				walletId: WALLET_ID!,
+				method: 'secp256k1_sign',
+				params: { hash },
+				authorizationKey: AUTH_KEY
+			});
+			expect(deniedSign.ok, deniedSign.body).toBe(false);
+			expect(deniedSign.status).toBeGreaterThanOrEqual(400);
+
+			await onboardModeCWallet(client, {
+				walletId: WALLET_ID!,
+				mandateSignerId: MANDATE_SIGNER_ID!,
+				keyRef: KEY_REF,
+				logId: LOG_ID,
+				signerUrl: SIGNER_URL!,
+				ownerAuthorizationKey: OWNER_AUTH_KEY!,
+				policyId
+			});
+
+			const walletBody = await getWallet(client, WALLET_ID!);
+			assertMandateIsAdditionalSignerOnly(walletBody, MANDATE_SIGNER_ID!);
+
+			const restoredSign = await walletRpcAttempt(client, {
+				walletId: WALLET_ID!,
+				method: 'secp256k1_sign',
+				params: { hash: `0x${Buffer.from(randomBytes(32)).toString('hex')}` },
+				authorizationKey: AUTH_KEY
+			});
+			expect(restoredSign.ok, restoredSign.body).toBe(true);
 		},
 		TIMEOUT_MS
 	);

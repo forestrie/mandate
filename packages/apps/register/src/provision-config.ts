@@ -22,7 +22,7 @@ export interface ProvisionConfig {
 export interface ModeCProvisionInputs {
 	appId: string;
 	appSecret: string;
-	apiBase?: string;
+	apiBase: string;
 	walletId: string;
 	mandateSignerId: string;
 	ownerAuthorizationKey: string;

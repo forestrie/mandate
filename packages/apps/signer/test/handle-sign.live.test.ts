@@ -12,34 +12,27 @@ import {
 } from './test-helpers.js';
 
 /**
- * Live integration test against a real Privy server wallet.
+ * Live integration test against a real Privy server wallet (app-controlled path).
  *
- * Skipped unless PRIVY_APP_ID, PRIVY_APP_SECRET, and PRIVY_WALLET_ID are all
- * present, so CI and ordinary local runs are unaffected. Run it locally with
- * Doppler-injected secrets (never a repo-root .env):
+ * Skipped unless MANDATE_PRIVY_APP_ID, MANDATE_PRIVY_APP_SECRET, and
+ * E2E_SIGNER_TEST_PRIVY_WALLET_ID are set.
  *
  *   doppler run --project mandate-forestrie --config dev -- \
  *     pnpm --filter @mandate/signer test:live
- *
- * Requires a server wallet provisioned in the Privy app. Provide its Ethereum
- * address via PRIVY_WALLET_ADDRESS, or leave it unset to resolve it from
- * GET /v1/wallets/{id}. The app must allow app-controlled-wallet signing with
- * Basic auth + privy-app-id only (ADR-0003 v1); if it requires an authorization
- * key/quorum this test will surface that as a Privy 4xx/5xx.
  */
 
-const APP_ID = process.env.PRIVY_APP_ID;
-const APP_SECRET = process.env.PRIVY_APP_SECRET;
-const WALLET_ID = process.env.PRIVY_WALLET_ID;
-const API_BASE = (process.env.PRIVY_API_BASE ?? 'https://api.privy.io').replace(/\/$/, '');
-const LIVE = Boolean(APP_ID && APP_SECRET && WALLET_ID);
+const APP_ID = process.env.MANDATE_PRIVY_APP_ID;
+const APP_SECRET = process.env.MANDATE_PRIVY_APP_SECRET;
+const WALLET_ID = process.env.E2E_SIGNER_TEST_PRIVY_WALLET_ID;
+const API_BASE = process.env.MANDATE_PRIVY_API_BASE?.replace(/\/$/, '');
+const LIVE = Boolean(APP_ID && APP_SECRET && WALLET_ID && API_BASE);
 
 const LOG_ID = 'b2c3d4e5f67890ab1234567890abcdef';
 const SIGNER_TOKEN = 'live-signer-token';
 const PRIVY_TIMEOUT_MS = 60_000;
 
 async function resolveWalletAddress(): Promise<string> {
-	const provided = process.env.PRIVY_WALLET_ADDRESS?.trim();
+	const provided = process.env.E2E_SIGNER_TEST_WALLET_ADDRESS?.trim();
 	if (provided) return provided;
 	const basicAuth = Buffer.from(`${APP_ID}:${APP_SECRET}`).toString('base64');
 	const response = await fetch(`${API_BASE}/v1/wallets/${WALLET_ID}`, {
@@ -48,7 +41,7 @@ async function resolveWalletAddress(): Promise<string> {
 	if (!response.ok) {
 		throw new Error(
 			`failed to resolve wallet ${WALLET_ID}: ${response.status} ${await response.text()} ` +
-				'(set PRIVY_WALLET_ADDRESS to skip this lookup)'
+				'(set E2E_SIGNER_TEST_WALLET_ADDRESS to skip this lookup)'
 		);
 	}
 	const body = (await response.json()) as { address?: string };
@@ -64,9 +57,9 @@ describe.skipIf(!LIVE)('handleSign (live Privy)', () => {
 		walletAddress = await resolveWalletAddress();
 		env = {
 			MANDATE_SIGNER_TOKEN: SIGNER_TOKEN,
-			PRIVY_APP_ID: APP_ID!,
-			PRIVY_APP_SECRET: APP_SECRET!,
-			PRIVY_API_BASE: API_BASE,
+			MANDATE_PRIVY_APP_ID: APP_ID!,
+			MANDATE_PRIVY_APP_SECRET: APP_SECRET!,
+			MANDATE_PRIVY_API_BASE: API_BASE!,
 			KEY_DIRECTORY: JSON.stringify({
 				'live-key': {
 					walletId: WALLET_ID!,
@@ -102,11 +95,9 @@ describe.skipIf(!LIVE)('handleSign (live Privy)', () => {
 			const signature = base64ToBytes(body.signature);
 			expect(signature.length).toBe(65);
 
-			// S1 invariant: the signer normalizes Privy output to low-s.
 			const s = bytesToBigIntBE(signature.slice(32, 64));
 			expect(s <= secp256k1.CURVE.n >> 1n).toBe(true);
 
-			// Core invariant: signature recovers to the Privy wallet's address.
 			const recovered = recoverAddressFromSignature(hashSigStructure(sigStructure), signature);
 			expect(`0x${Buffer.from(recovered).toString('hex')}`.toLowerCase()).toBe(
 				walletAddress.toLowerCase()

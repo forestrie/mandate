@@ -44,7 +44,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          PUBLIC_PRIVY_APP_ID: ${{ vars.PUBLIC_PRIVY_APP_ID }}
+          PUBLIC_MANDATE_PRIVY_APP_ID: ${{ vars.PUBLIC_MANDATE_PRIVY_APP_ID }}
           CICD: 'true'
         run: task -t Taskfile.dist.yml repo-init
 
@@ -80,14 +80,14 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           MANDATE_SIGNER_TOKEN: ${{ secrets.MANDATE_SIGNER_TOKEN }}
-          PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
+          MANDATE_PRIVY_APP_SECRET: ${{ secrets.MANDATE_PRIVY_APP_SECRET }}
           KEY_DIRECTORY: ${{ secrets.KEY_DIRECTORY }}
-          PRIVY_AUTHORIZATION_KEY: ${{ secrets.PRIVY_AUTHORIZATION_KEY }}
+          MANDATE_PRIVY_AUTHORIZATION_KEY: ${{ secrets.MANDATE_PRIVY_AUTHORIZATION_KEY }}
         working-directory: packages/apps/signer
         run: |
           printf '%s' "$MANDATE_SIGNER_TOKEN" | pnpm exec wrangler secret put MANDATE_SIGNER_TOKEN --env prod --config ../../../.wrangler/deploy/signer.wrangler.jsonc
-          printf '%s' "$PRIVY_APP_SECRET" | pnpm exec wrangler secret put PRIVY_APP_SECRET --env prod --config ../../../.wrangler/deploy/signer.wrangler.jsonc
+          printf '%s' "$MANDATE_PRIVY_APP_SECRET" | pnpm exec wrangler secret put MANDATE_PRIVY_APP_SECRET --env prod --config ../../../.wrangler/deploy/signer.wrangler.jsonc
           printf '%s' "$KEY_DIRECTORY" | pnpm exec wrangler secret put KEY_DIRECTORY --env prod --config ../../../.wrangler/deploy/signer.wrangler.jsonc
-          if [ -n "$PRIVY_AUTHORIZATION_KEY" ]; then
-            printf '%s' "$PRIVY_AUTHORIZATION_KEY" | pnpm exec wrangler secret put PRIVY_AUTHORIZATION_KEY --env prod --config ../../../.wrangler/deploy/signer.wrangler.jsonc
+          if [ -n "$MANDATE_PRIVY_AUTHORIZATION_KEY" ]; then
+            printf '%s' "$MANDATE_PRIVY_AUTHORIZATION_KEY" | pnpm exec wrangler secret put MANDATE_PRIVY_AUTHORIZATION_KEY --env prod --config ../../../.wrangler/deploy/signer.wrangler.jsonc
           fi

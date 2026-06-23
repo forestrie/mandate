@@ -7,10 +7,71 @@ permissions:
   contents: read
 
 jobs:
+  live-secrets-check:
+    name: Verify live-signer secrets present
+    runs-on: ubuntu-latest
+    environment: live-signer
+    steps:
+      - name: Fail if required secrets are empty
+        env:
+          MANDATE_PRIVY_APP_ID: ${{ secrets.MANDATE_PRIVY_APP_ID }}
+          MANDATE_PRIVY_APP_SECRET: ${{ secrets.MANDATE_PRIVY_APP_SECRET }}
+          MANDATE_PRIVY_API_BASE: ${{ secrets.MANDATE_PRIVY_API_BASE }}
+          MANDATE_PRIVY_AUTHORIZATION_KEY: ${{ secrets.MANDATE_PRIVY_AUTHORIZATION_KEY }}
+          MANDATE_PRIVY_SIGNER_ID: ${{ secrets.MANDATE_PRIVY_SIGNER_ID }}
+          MANDATE_SIGNER_URL: ${{ secrets.MANDATE_SIGNER_URL }}
+          E2E_SIGNER_TEST_PRIVY_WALLET_ID: ${{ secrets.E2E_SIGNER_TEST_PRIVY_WALLET_ID }}
+          E2E_SIGNER_TEST_WALLET_ADDRESS: ${{ secrets.E2E_SIGNER_TEST_WALLET_ADDRESS }}
+          E2E_MODE_C_USER_PRIVY_WALLET_ID: ${{ secrets.E2E_MODE_C_USER_PRIVY_WALLET_ID }}
+          E2E_MODE_C_USER_WALLET_ADDRESS: ${{ secrets.E2E_MODE_C_USER_WALLET_ADDRESS }}
+          E2E_MODE_C_PRIVY_OWNER_AUTH_KEY: ${{ secrets.E2E_MODE_C_PRIVY_OWNER_AUTH_KEY }}
+          E2E_MODE_C_PRIVY_POLICY_ID: ${{ secrets.E2E_MODE_C_PRIVY_POLICY_ID }}
+          E2E_CANOPY_API_URL: ${{ secrets.E2E_CANOPY_API_URL }}
+          E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN: ${{ secrets.E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN }}
+          E2E_CANOPY_OPS_ADMIN_TOKEN: ${{ secrets.E2E_CANOPY_OPS_ADMIN_TOKEN }}
+          E2E_CANOPY_UNIVOCITY_ADDR: ${{ secrets.E2E_CANOPY_UNIVOCITY_ADDR }}
+          E2E_CANOPY_CHAIN_ID: ${{ secrets.E2E_CANOPY_CHAIN_ID }}
+          E2E_DELEGATION_COORDINATOR_URL: ${{ secrets.E2E_DELEGATION_COORDINATOR_URL }}
+          E2E_MANDATE_AGENT_WEBHOOK_URL: ${{ secrets.E2E_MANDATE_AGENT_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+          missing=0
+          check() {
+            if [ -z "${1:-}" ]; then
+              echo "missing required secret: $2" >&2
+              missing=1
+            fi
+          }
+          check "$MANDATE_PRIVY_APP_ID" MANDATE_PRIVY_APP_ID
+          check "$MANDATE_PRIVY_APP_SECRET" MANDATE_PRIVY_APP_SECRET
+          check "$MANDATE_PRIVY_API_BASE" MANDATE_PRIVY_API_BASE
+          check "$MANDATE_PRIVY_AUTHORIZATION_KEY" MANDATE_PRIVY_AUTHORIZATION_KEY
+          check "$MANDATE_PRIVY_SIGNER_ID" MANDATE_PRIVY_SIGNER_ID
+          check "$MANDATE_SIGNER_URL" MANDATE_SIGNER_URL
+          check "$E2E_SIGNER_TEST_PRIVY_WALLET_ID" E2E_SIGNER_TEST_PRIVY_WALLET_ID
+          check "$E2E_SIGNER_TEST_WALLET_ADDRESS" E2E_SIGNER_TEST_WALLET_ADDRESS
+          check "$E2E_MODE_C_USER_PRIVY_WALLET_ID" E2E_MODE_C_USER_PRIVY_WALLET_ID
+          check "$E2E_MODE_C_USER_WALLET_ADDRESS" E2E_MODE_C_USER_WALLET_ADDRESS
+          check "$E2E_MODE_C_PRIVY_OWNER_AUTH_KEY" E2E_MODE_C_PRIVY_OWNER_AUTH_KEY
+          check "$E2E_MODE_C_PRIVY_POLICY_ID" E2E_MODE_C_PRIVY_POLICY_ID
+          check "$E2E_CANOPY_API_URL" E2E_CANOPY_API_URL
+          check "$E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN" E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN
+          check "$E2E_CANOPY_OPS_ADMIN_TOKEN" E2E_CANOPY_OPS_ADMIN_TOKEN
+          check "$E2E_CANOPY_UNIVOCITY_ADDR" E2E_CANOPY_UNIVOCITY_ADDR
+          check "$E2E_CANOPY_CHAIN_ID" E2E_CANOPY_CHAIN_ID
+          check "$E2E_DELEGATION_COORDINATOR_URL" E2E_DELEGATION_COORDINATOR_URL
+          check "$E2E_MANDATE_AGENT_WEBHOOK_URL" E2E_MANDATE_AGENT_WEBHOOK_URL
+          if [ "$missing" -ne 0 ]; then
+            echo "Sync Doppler mandate-forestrie (dev + e2e) to GitHub live-signer" >&2
+            exit 1
+          fi
+          echo "live-signer secrets preflight ok"
+
   live-owned:
     name: Privy owned-wallet live test
     runs-on: ubuntu-latest
     environment: live-signer
+    needs: live-secrets-check
     steps:
       - uses: actions/checkout@v4
 
@@ -28,18 +89,19 @@ jobs:
 
       - name: Run owned-wallet live test
         env:
-          PRIVY_APP_ID: ${{ secrets.PRIVY_APP_ID }}
-          PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
-          PRIVY_WALLET_ID: ${{ secrets.PRIVY_WALLET_ID }}
-          PRIVY_AUTHORIZATION_KEY: ${{ secrets.PRIVY_AUTHORIZATION_KEY || secrets.PRIVY_WALLET_SIGNER }}
-          PRIVY_WALLET_ADDRESS: ${{ secrets.PRIVY_WALLET_ADDRESS }}
+          MANDATE_PRIVY_APP_ID: ${{ secrets.MANDATE_PRIVY_APP_ID }}
+          MANDATE_PRIVY_APP_SECRET: ${{ secrets.MANDATE_PRIVY_APP_SECRET }}
+          MANDATE_PRIVY_API_BASE: ${{ secrets.MANDATE_PRIVY_API_BASE }}
+          E2E_SIGNER_TEST_PRIVY_WALLET_ID: ${{ secrets.E2E_SIGNER_TEST_PRIVY_WALLET_ID }}
+          MANDATE_PRIVY_AUTHORIZATION_KEY: ${{ secrets.MANDATE_PRIVY_AUTHORIZATION_KEY }}
+          E2E_SIGNER_TEST_WALLET_ADDRESS: ${{ secrets.E2E_SIGNER_TEST_WALLET_ADDRESS }}
         run: pnpm --filter @mandate/signer test:live:owned
 
   live-hands-off:
     name: Agent hands-off sealing live test
     runs-on: ubuntu-latest
     environment: live-signer
-    needs: live-owned
+    needs: [live-secrets-check, live-owned]
     steps:
       - uses: actions/checkout@v4
 
@@ -57,18 +119,24 @@ jobs:
 
       - name: Run agent hands-off live test
         env:
-          PRIVY_APP_ID: ${{ secrets.PRIVY_APP_ID }}
-          PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
-          PRIVY_WALLET_ID: ${{ secrets.PRIVY_WALLET_ID }}
-          PRIVY_AUTHORIZATION_KEY: ${{ secrets.PRIVY_AUTHORIZATION_KEY || secrets.PRIVY_WALLET_SIGNER }}
-          PRIVY_WALLET_ADDRESS: ${{ secrets.PRIVY_WALLET_ADDRESS }}
+          MANDATE_PRIVY_APP_ID: ${{ secrets.MANDATE_PRIVY_APP_ID }}
+          MANDATE_PRIVY_APP_SECRET: ${{ secrets.MANDATE_PRIVY_APP_SECRET }}
+          MANDATE_PRIVY_API_BASE: ${{ secrets.MANDATE_PRIVY_API_BASE }}
+          E2E_SIGNER_TEST_PRIVY_WALLET_ID: ${{ secrets.E2E_SIGNER_TEST_PRIVY_WALLET_ID }}
+          MANDATE_PRIVY_AUTHORIZATION_KEY: ${{ secrets.MANDATE_PRIVY_AUTHORIZATION_KEY }}
+          E2E_SIGNER_TEST_WALLET_ADDRESS: ${{ secrets.E2E_SIGNER_TEST_WALLET_ADDRESS }}
+          E2E_MODE_C_USER_PRIVY_WALLET_ID: ${{ secrets.E2E_MODE_C_USER_PRIVY_WALLET_ID }}
+          E2E_MODE_C_PRIVY_OWNER_AUTH_KEY: ${{ secrets.E2E_MODE_C_PRIVY_OWNER_AUTH_KEY }}
+          MANDATE_PRIVY_SIGNER_ID: ${{ secrets.MANDATE_PRIVY_SIGNER_ID }}
+          E2E_MODE_C_PRIVY_POLICY_ID: ${{ secrets.E2E_MODE_C_PRIVY_POLICY_ID }}
+          MANDATE_SIGNER_URL: ${{ secrets.MANDATE_SIGNER_URL }}
         run: pnpm --filter @mandate/agent test:live:hands-off
 
-  live-mode-c-onboard:
-    name: Mode C onboarding live test
+  live-mode-c:
+    name: Mode C onboarding + revoke live test
     runs-on: ubuntu-latest
     environment: live-signer
-    needs: live-owned
+    needs: [live-secrets-check, live-owned, live-provision]
     steps:
       - uses: actions/checkout@v4
 
@@ -86,12 +154,14 @@ jobs:
 
       - name: Run Mode C onboarding live test
         env:
-          PRIVY_APP_ID: ${{ secrets.PRIVY_APP_ID }}
-          PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
-          PRIVY_AUTHORIZATION_KEY: ${{ secrets.PRIVY_AUTHORIZATION_KEY || secrets.PRIVY_WALLET_SIGNER }}
-          PRIVY_MODE_C_WALLET_ID: ${{ secrets.PRIVY_MODE_C_WALLET_ID }}
-          PRIVY_MANDATE_SIGNER_ID: ${{ secrets.PRIVY_MANDATE_SIGNER_ID }}
-          PRIVY_OWNER_AUTHORIZATION_KEY: ${{ secrets.PRIVY_OWNER_AUTHORIZATION_KEY }}
+          MANDATE_PRIVY_APP_ID: ${{ secrets.MANDATE_PRIVY_APP_ID }}
+          MANDATE_PRIVY_APP_SECRET: ${{ secrets.MANDATE_PRIVY_APP_SECRET }}
+          MANDATE_PRIVY_API_BASE: ${{ secrets.MANDATE_PRIVY_API_BASE }}
+          MANDATE_PRIVY_AUTHORIZATION_KEY: ${{ secrets.MANDATE_PRIVY_AUTHORIZATION_KEY }}
+          E2E_MODE_C_USER_PRIVY_WALLET_ID: ${{ secrets.E2E_MODE_C_USER_PRIVY_WALLET_ID }}
+          MANDATE_PRIVY_SIGNER_ID: ${{ secrets.MANDATE_PRIVY_SIGNER_ID }}
+          E2E_MODE_C_PRIVY_OWNER_AUTH_KEY: ${{ secrets.E2E_MODE_C_PRIVY_OWNER_AUTH_KEY }}
+          E2E_MODE_C_PRIVY_POLICY_ID: ${{ secrets.E2E_MODE_C_PRIVY_POLICY_ID }}
           MANDATE_SIGNER_URL: ${{ secrets.MANDATE_SIGNER_URL }}
         run: pnpm --filter @mandate/privy-admin test:live
 
@@ -99,7 +169,7 @@ jobs:
     name: Provision + hands-off seal live e2e (FOR-101)
     runs-on: ubuntu-latest
     environment: live-signer
-    needs: live-owned
+    needs: [live-secrets-check, live-owned]
     steps:
       - uses: actions/checkout@v4
 
@@ -117,19 +187,20 @@ jobs:
 
       - name: Run provision live e2e
         env:
-          CANOPY_API_URL: ${{ secrets.CANOPY_API_URL }}
-          CANOPY_PAYMENTS_ONBOARD_TOKEN: ${{ secrets.CANOPY_PAYMENTS_ONBOARD_TOKEN }}
-          CANOPY_OPS_ADMIN_TOKEN: ${{ secrets.CANOPY_OPS_ADMIN_TOKEN }}
-          CANOPY_UNIVOCITY_ADDR: ${{ secrets.CANOPY_UNIVOCITY_ADDR }}
-          CANOPY_CHAIN_ID: ${{ secrets.CANOPY_CHAIN_ID }}
-          DELEGATION_COORDINATOR_URL: ${{ secrets.DELEGATION_COORDINATOR_URL }}
-          MANDATE_AGENT_WEBHOOK_URL: ${{ secrets.MANDATE_AGENT_WEBHOOK_URL }}
-          PRIVY_APP_ID: ${{ secrets.PRIVY_APP_ID }}
-          PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
-          PRIVY_MODE_C_WALLET_ID: ${{ secrets.PRIVY_MODE_C_WALLET_ID }}
-          PRIVY_WALLET_ID: ${{ secrets.PRIVY_WALLET_ID }}
-          PRIVY_AUTHORIZATION_KEY: ${{ secrets.PRIVY_AUTHORIZATION_KEY || secrets.PRIVY_WALLET_SIGNER }}
-          PRIVY_MANDATE_SIGNER_ID: ${{ secrets.PRIVY_MANDATE_SIGNER_ID }}
-          PRIVY_OWNER_AUTHORIZATION_KEY: ${{ secrets.PRIVY_OWNER_AUTHORIZATION_KEY }}
+          E2E_CANOPY_API_URL: ${{ secrets.E2E_CANOPY_API_URL }}
+          E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN: ${{ secrets.E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN }}
+          E2E_CANOPY_OPS_ADMIN_TOKEN: ${{ secrets.E2E_CANOPY_OPS_ADMIN_TOKEN }}
+          E2E_CANOPY_UNIVOCITY_ADDR: ${{ secrets.E2E_CANOPY_UNIVOCITY_ADDR }}
+          E2E_CANOPY_CHAIN_ID: ${{ secrets.E2E_CANOPY_CHAIN_ID }}
+          E2E_DELEGATION_COORDINATOR_URL: ${{ secrets.E2E_DELEGATION_COORDINATOR_URL }}
+          E2E_MANDATE_AGENT_WEBHOOK_URL: ${{ secrets.E2E_MANDATE_AGENT_WEBHOOK_URL }}
+          MANDATE_PRIVY_APP_ID: ${{ secrets.MANDATE_PRIVY_APP_ID }}
+          MANDATE_PRIVY_APP_SECRET: ${{ secrets.MANDATE_PRIVY_APP_SECRET }}
+          MANDATE_PRIVY_API_BASE: ${{ secrets.MANDATE_PRIVY_API_BASE }}
+          E2E_MODE_C_USER_PRIVY_WALLET_ID: ${{ secrets.E2E_MODE_C_USER_PRIVY_WALLET_ID }}
+          MANDATE_PRIVY_AUTHORIZATION_KEY: ${{ secrets.MANDATE_PRIVY_AUTHORIZATION_KEY }}
+          MANDATE_PRIVY_SIGNER_ID: ${{ secrets.MANDATE_PRIVY_SIGNER_ID }}
+          E2E_MODE_C_PRIVY_OWNER_AUTH_KEY: ${{ secrets.E2E_MODE_C_PRIVY_OWNER_AUTH_KEY }}
           MANDATE_SIGNER_URL: ${{ secrets.MANDATE_SIGNER_URL }}
+          E2E_MODE_C_PRIVY_POLICY_ID: ${{ secrets.E2E_MODE_C_PRIVY_POLICY_ID }}
         run: pnpm --filter @mandate/register test:live:provision

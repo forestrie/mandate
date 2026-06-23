@@ -25,6 +25,8 @@ export { OwnerTopologyError } from './owner-topology-error.js';
 export {
 	assertMandateNotWalletOwner,
 	assertMandateIsAdditionalSignerOnly,
+	assertMandateAbsentFromAdditionalSigners,
+	mandateListedAsAdditionalSigner,
 	assertOwnerQuorumExcludesMandate,
 	assertSignerNotOwner,
 	assertWalletIsUserOwned
@@ -46,3 +48,5 @@ export type {
 	ModeCOnboardOutput
 } from './mode-c-onboard-output.js';
 export { onboardModeCWallet, type OnboardModeCInput } from './onboard-mode-c.js';
+export type { RevokeModeCOutput } from './revoke-mode-c-output.js';
+export { revokeModeCWallet, type RevokeModeCInput } from './revoke-mode-c.js';

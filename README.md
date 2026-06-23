@@ -94,21 +94,25 @@ Proposed hostnames:
 
 ### Doppler + GitHub Environments
 
-Create Doppler project **`mandate`** with `dev` and `prod` configs synced to GitHub
-Environments **`dev`** and **`prod`**.
+**Related:** [service-secrets.md](docs/service-secrets.md), [ADR-0006](docs/adr/adr-0006-privy-secrets.md).
 
-| Secret / variable         | dev | prod |
-| ------------------------- | --- | ---- |
-| `CLOUDFLARE_API_TOKEN`    | yes | yes  |
-| `CLOUDFLARE_ACCOUNT_ID`   | yes | yes  |
-| `COORDINATOR_APP_TOKEN`   | yes | yes  |
-| `MANDATE_SIGNER_TOKEN`    | yes | yes  |
-| `OPERATOR_ROOT_KEYS`      | yes | yes  |
-| `PRIVY_APP_SECRET`        | —   | yes  |
-| `KEY_DIRECTORY`           | —   | yes  |
-| `PUBLIC_PRIVY_APP_ID`     | var | var  |
-| `PUBLIC_PRIVY_CLIENT_ID`  | var | var  |
-| `PUBLIC_DEFAULT_CHAIN_ID` | var | var  |
+Create Doppler project **`mandate-forestrie`** with configs **`dev`**, **`prod`**, and
+**`e2e`** synced to GitHub Environments **`prod`** and **`live-signer`** (see
+service-secrets.md).
+
+| Secret / variable                 | dev | prod |
+| --------------------------------- | --- | ---- |
+| `CLOUDFLARE_API_TOKEN`            | yes | yes  |
+| `CLOUDFLARE_ACCOUNT_ID`           | yes | yes  |
+| `COORDINATOR_APP_TOKEN`           | yes | yes  |
+| `MANDATE_SIGNER_TOKEN`            | yes | yes  |
+| `OPERATOR_ROOT_KEYS`              | yes | yes  |
+| `MANDATE_PRIVY_APP_SECRET`        | —   | yes  |
+| `MANDATE_PRIVY_AUTHORIZATION_KEY` | —   | yes  |
+| `KEY_DIRECTORY`                   | —   | yes  |
+| `PUBLIC_MANDATE_PRIVY_APP_ID`     | var | var  |
+| `PUBLIC_MANDATE_PRIVY_CLIENT_ID`  | var | var  |
+| `PUBLIC_DEFAULT_CHAIN_ID`         | var | var  |
 
 ## `@mandate/agent` (FOR-98)
 

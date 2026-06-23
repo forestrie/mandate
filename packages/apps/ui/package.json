@@ -10,7 +10,7 @@
 		"build:check": "wrangler types --check && CF_PAGES=1 vite build",
 		"preview": "wrangler pages dev .svelte-kit/cloudflare --port 4173",
 		"prepare": "svelte-kit sync || echo ''",
-		"check": "PUBLIC_COORDINATOR_BFF_BASE=/api/coordinator PUBLIC_PRIVY_APP_ID=local PUBLIC_PRIVY_CLIENT_ID=local PUBLIC_DEFAULT_CHAIN_ID=11155111 svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check": "PUBLIC_COORDINATOR_BFF_BASE=/api/coordinator PUBLIC_MANDATE_PRIVY_APP_ID=local PUBLIC_MANDATE_PRIVY_CLIENT_ID=local PUBLIC_DEFAULT_CHAIN_ID=11155111 svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:unit": "vitest",
 		"test": "pnpm run test:unit -- --run",

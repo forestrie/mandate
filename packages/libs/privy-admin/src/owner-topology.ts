@@ -15,6 +15,39 @@ export function assertMandateNotWalletOwner(wallet: Wallet, mandateSignerId: str
 }
 
 /**
+ * After revoke, mandate must not appear in additional_signers (FOR-114 / I3).
+ * When mandateSignerId is set, only that signer must be absent (other signers may remain).
+ * When omitted, the wallet must have no additional signers at all.
+ */
+export function assertMandateAbsentFromAdditionalSigners(
+	wallet: Wallet,
+	mandateSignerId?: string
+): void {
+	const signers = wallet.additional_signers ?? [];
+
+	if (mandateSignerId) {
+		const found = signers.some((s) => s.signer_id === mandateSignerId);
+		if (found) {
+			throw new OwnerTopologyError(
+				`mandate signer ${mandateSignerId} is still registered as an additional signer`
+			);
+		}
+		return;
+	}
+
+	if (signers.length > 0) {
+		throw new OwnerTopologyError(
+			`wallet still has ${signers.length} additional signer(s) after revoke`
+		);
+	}
+}
+
+/** Whether mandate's key quorum id is listed in additional_signers. */
+export function mandateListedAsAdditionalSigner(wallet: Wallet, mandateSignerId: string): boolean {
+	return (wallet.additional_signers ?? []).some((s) => s.signer_id === mandateSignerId);
+}
+
+/**
  * After onboarding, mandate must appear only in additional_signers (not owner).
  */
 export function assertMandateIsAdditionalSignerOnly(wallet: Wallet, mandateSignerId: string): void {

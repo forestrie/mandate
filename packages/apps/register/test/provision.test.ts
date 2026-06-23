@@ -75,6 +75,7 @@ describe('provisionInstance', () => {
 			modeC: {
 				appId: 'app',
 				appSecret: 'secret',
+				apiBase: 'https://api.privy.io',
 				walletId: 'wallet-1',
 				mandateSignerId: 'signer-1',
 				ownerAuthorizationKey: 'owner-key',

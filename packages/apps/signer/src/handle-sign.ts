@@ -50,6 +50,18 @@ export async function handleSign(request: Request, deps: HandleSignDeps): Promis
 		return jsonResponse(400, { ok: false, error: 'sigStructure must be base64' });
 	}
 
+	if (
+		!deps.env.MANDATE_PRIVY_APP_ID?.trim() ||
+		!deps.env.MANDATE_PRIVY_APP_SECRET?.trim() ||
+		!deps.env.MANDATE_PRIVY_API_BASE?.trim()
+	) {
+		return jsonResponse(500, {
+			ok: false,
+			error:
+				'MANDATE_PRIVY_APP_ID, MANDATE_PRIVY_APP_SECRET, and MANDATE_PRIVY_API_BASE must be configured'
+		});
+	}
+
 	const directory = new KeyDirectory(deps.env.KEY_DIRECTORY);
 	let entry;
 	try {
@@ -62,21 +74,21 @@ export async function handleSign(request: Request, deps: HandleSignDeps): Promis
 	}
 
 	const requiresAuth = entry.requiresAuthorizationSignature === true;
-	if (requiresAuth && !deps.env.PRIVY_AUTHORIZATION_KEY?.trim()) {
+	if (requiresAuth && !deps.env.MANDATE_PRIVY_AUTHORIZATION_KEY?.trim()) {
 		return jsonResponse(500, {
 			ok: false,
-			error: 'PRIVY_AUTHORIZATION_KEY required for owned-wallet keyRef but not configured'
+			error: 'MANDATE_PRIVY_AUTHORIZATION_KEY required for owned-wallet keyRef but not configured'
 		});
 	}
 
 	let signature: Uint8Array;
 	try {
 		signature = await privySecp256k1Sign(sigStructureBytes, {
-			appId: deps.env.PRIVY_APP_ID,
-			appSecret: deps.env.PRIVY_APP_SECRET,
+			appId: deps.env.MANDATE_PRIVY_APP_ID,
+			appSecret: deps.env.MANDATE_PRIVY_APP_SECRET,
 			walletId: entry.walletId,
-			apiBase: deps.env.PRIVY_API_BASE,
-			authorizationKey: requiresAuth ? deps.env.PRIVY_AUTHORIZATION_KEY : undefined,
+			apiBase: deps.env.MANDATE_PRIVY_API_BASE,
+			authorizationKey: requiresAuth ? deps.env.MANDATE_PRIVY_AUTHORIZATION_KEY : undefined,
 			fetchImpl: deps.fetchImpl
 		});
 	} catch (error) {

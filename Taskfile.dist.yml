@@ -79,9 +79,16 @@ tasks:
   privy:onboard:mode-c:
     desc: >-
       Mode C Privy onboarding — attach mandate additional signer + policy;
-      requires PRIVY_* and MANDATE_SIGNER_URL in Doppler
+      requires MANDATE_* operational + E2E_* fixture secrets in Doppler (see ADR-0006)
     cmds:
       - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- pnpm --filter @mandate/register exec mandate-register privy onboard-mode-c {{.CLI_ARGS}}
+
+  privy:revoke:mode-c:
+    desc: >-
+      Mode C kill switch — remove all additional signers from user-owned wallet;
+      requires E2E_MODE_C_PRIVY_OWNER_AUTH_KEY in Doppler e2e config (FOR-114)
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- pnpm --filter @mandate/register exec mandate-register privy revoke-mode-c {{.CLI_ARGS}}
 
   provision:
     desc: >-

@@ -14,28 +14,29 @@ import {
 /**
  * Live integration test for Privy **owned** wallets (Mode C path).
  *
- * Skipped unless PRIVY_APP_ID, PRIVY_APP_SECRET, PRIVY_WALLET_ID, and
- * PRIVY_AUTHORIZATION_KEY are set. The wallet must be user-owned with mandate
- * registered as an additional signer; the authorization key is the mandate
- * additional-signer P-256 key (`wallet-auth:`-prefixed base64 PKCS#8 DER).
+ * Skipped unless MANDATE_PRIVY_APP_ID, MANDATE_PRIVY_APP_SECRET,
+ * E2E_SIGNER_TEST_PRIVY_WALLET_ID, and MANDATE_PRIVY_AUTHORIZATION_KEY are set.
+ * The wallet must be user-owned with mandate registered as an additional signer;
+ * the authorization key is the mandate additional-signer P-256 key
+ * (`wallet-auth:`-prefixed base64 PKCS#8 DER).
  *
  *   doppler run --project mandate-forestrie --config dev -- \
  *     pnpm --filter @mandate/signer test:live:owned
  */
 
-const APP_ID = process.env.PRIVY_APP_ID;
-const APP_SECRET = process.env.PRIVY_APP_SECRET;
-const WALLET_ID = process.env.PRIVY_WALLET_ID;
-const AUTHORIZATION_KEY = process.env.PRIVY_AUTHORIZATION_KEY;
-const API_BASE = (process.env.PRIVY_API_BASE ?? 'https://api.privy.io').replace(/\/$/, '');
-const LIVE = Boolean(APP_ID && APP_SECRET && WALLET_ID && AUTHORIZATION_KEY);
+const APP_ID = process.env.MANDATE_PRIVY_APP_ID;
+const APP_SECRET = process.env.MANDATE_PRIVY_APP_SECRET;
+const WALLET_ID = process.env.E2E_SIGNER_TEST_PRIVY_WALLET_ID;
+const AUTHORIZATION_KEY = process.env.MANDATE_PRIVY_AUTHORIZATION_KEY;
+const API_BASE = process.env.MANDATE_PRIVY_API_BASE?.replace(/\/$/, '');
+const LIVE = Boolean(APP_ID && APP_SECRET && WALLET_ID && AUTHORIZATION_KEY && API_BASE);
 
 const LOG_ID = 'b2c3d4e5f67890ab1234567890abcdef';
 const SIGNER_TOKEN = 'live-owned-signer-token';
 const PRIVY_TIMEOUT_MS = 60_000;
 
 async function resolveWalletAddress(): Promise<string> {
-	const provided = process.env.PRIVY_WALLET_ADDRESS?.trim();
+	const provided = process.env.E2E_SIGNER_TEST_WALLET_ADDRESS?.trim();
 	if (provided) return provided;
 	const basicAuth = Buffer.from(`${APP_ID}:${APP_SECRET}`).toString('base64');
 	const response = await fetch(`${API_BASE}/v1/wallets/${WALLET_ID}`, {
@@ -44,7 +45,7 @@ async function resolveWalletAddress(): Promise<string> {
 	if (!response.ok) {
 		throw new Error(
 			`failed to resolve wallet ${WALLET_ID}: ${response.status} ${await response.text()} ` +
-				'(set PRIVY_WALLET_ADDRESS to skip this lookup)'
+				'(set E2E_SIGNER_TEST_WALLET_ADDRESS to skip this lookup)'
 		);
 	}
 	const body = (await response.json()) as { address?: string };
@@ -60,10 +61,10 @@ describe.skipIf(!LIVE)('handleSign (live Privy owned wallet)', () => {
 		walletAddress = await resolveWalletAddress();
 		env = {
 			MANDATE_SIGNER_TOKEN: SIGNER_TOKEN,
-			PRIVY_APP_ID: APP_ID!,
-			PRIVY_APP_SECRET: APP_SECRET!,
-			PRIVY_API_BASE: API_BASE,
-			PRIVY_AUTHORIZATION_KEY: AUTHORIZATION_KEY,
+			MANDATE_PRIVY_APP_ID: APP_ID!,
+			MANDATE_PRIVY_APP_SECRET: APP_SECRET!,
+			MANDATE_PRIVY_API_BASE: API_BASE!,
+			MANDATE_PRIVY_AUTHORIZATION_KEY: AUTHORIZATION_KEY,
 			KEY_DIRECTORY: JSON.stringify({
 				'live-owned-key': {
 					walletId: WALLET_ID!,

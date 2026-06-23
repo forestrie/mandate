@@ -4,6 +4,9 @@
 > spike remains for historical Privy vs GCP KMS comparison only; do not extend it
 > for Mode C S3 authorization signatures — use the signer Worker instead.
 
+> spike env vars use legacy `PRIVY_*` names; production naming is
+> [ADR-0006](../../docs/adr/adr-0006-privy-secrets.md).
+
 Runnable PoCs comparing **Privy server wallets** vs **GCP Cloud KMS** as the
 production KS256 remote signer for `@mandate/agent`.
 

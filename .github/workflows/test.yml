@@ -38,8 +38,8 @@ jobs:
       - name: Typecheck
         env:
           PUBLIC_COORDINATOR_BFF_BASE: /api/coordinator
-          PUBLIC_PRIVY_APP_ID: ci-placeholder
-          PUBLIC_PRIVY_CLIENT_ID: ci-placeholder
+          PUBLIC_MANDATE_PRIVY_APP_ID: ci-placeholder
+          PUBLIC_MANDATE_PRIVY_CLIENT_ID: ci-placeholder
           PUBLIC_DEFAULT_CHAIN_ID: '11155111'
         run: pnpm check
 
@@ -50,8 +50,8 @@ jobs:
         env:
           CF_PAGES: '1'
           PUBLIC_COORDINATOR_BFF_BASE: /api/coordinator
-          PUBLIC_PRIVY_APP_ID: ci-placeholder
-          PUBLIC_PRIVY_CLIENT_ID: ci-placeholder
+          PUBLIC_MANDATE_PRIVY_APP_ID: ci-placeholder
+          PUBLIC_MANDATE_PRIVY_CLIENT_ID: ci-placeholder
           PUBLIC_DEFAULT_CHAIN_ID: '11155111'
         run: pnpm build:ui
 

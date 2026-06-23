@@ -29,7 +29,7 @@ const SIGNER = {
 	example: 'packages/apps/signer/wrangler.env.prod.json.example',
 	overlay: 'packages/apps/signer/wrangler.env.prod.json',
 	deploy: '.wrangler/deploy/signer.wrangler.jsonc',
-	privyPlaceholder: 'REPLACE_WITH_PRIVY_APP_ID'
+	privyPlaceholder: 'REPLACE_WITH_MANDATE_PRIVY_APP_ID'
 };
 
 function requireEnv(name) {
@@ -92,7 +92,7 @@ function main() {
 	injectEnvPlaceholder(
 		SIGNER.overlay,
 		SIGNER.privyPlaceholder,
-		process.env.PUBLIC_PRIVY_APP_ID ?? process.env.PRIVY_APP_ID
+		process.env.PUBLIC_MANDATE_PRIVY_APP_ID ?? process.env.MANDATE_PRIVY_APP_ID
 	);
 
 	runNode('scripts/merge-wrangler-config.mjs', [

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	assertMandateAbsentFromAdditionalSigners,
 	assertMandateIsAdditionalSignerOnly,
 	assertMandateNotWalletOwner,
 	assertOwnerQuorumExcludesMandate,
@@ -31,6 +32,33 @@ describe('owner topology (I2)', () => {
 
 	it('accepts mandate as additional signer only', () => {
 		expect(() => assertMandateIsAdditionalSignerOnly(wallet(), MANDATE_SIGNER)).not.toThrow();
+	});
+
+	it('accepts empty additional_signers after revoke', () => {
+		expect(() =>
+			assertMandateAbsentFromAdditionalSigners(wallet({ additional_signers: [] }), MANDATE_SIGNER)
+		).not.toThrow();
+	});
+
+	it('accepts when mandate absent but other additional signers remain', () => {
+		expect(() =>
+			assertMandateAbsentFromAdditionalSigners(
+				wallet({
+					additional_signers: [{ signer_id: 'kq_other_signer', override_policy_ids: ['pol_2'] }]
+				}),
+				MANDATE_SIGNER
+			)
+		).not.toThrow();
+	});
+
+	it('rejects when mandate remains after targeted revoke check', () => {
+		expect(() => assertMandateAbsentFromAdditionalSigners(wallet(), MANDATE_SIGNER)).toThrow(
+			OwnerTopologyError
+		);
+	});
+
+	it('rejects when any additional signers remain and mandateSignerId omitted', () => {
+		expect(() => assertMandateAbsentFromAdditionalSigners(wallet())).toThrow(OwnerTopologyError);
 	});
 
 	it('rejects when mandate is not in additional_signers', () => {

@@ -1,26 +1,26 @@
 #!/usr/bin/env node
 import { randomUUID } from 'node:crypto';
 import { provisionInstance } from './provision.js';
-import { onboardModeCWallet, PrivyRestClient } from '@mandate/privy-admin';
+import { onboardModeCWallet, PrivyRestClient, revokeModeCWallet } from '@mandate/privy-admin';
 import type { DelegationMode } from './delegation-mode.js';
 
 function usageProvision(): void {
 	console.error(`Usage: mandate-register provision [options]
 
 Options (env fallbacks in parentheses):
-  --onboard-token       CANOPY_PAYMENTS_ONBOARD_TOKEN (required)
-  --canopy-url          CANOPY_API_URL or CANOPY_BASE_URL (required)
-  --coordinator-url     DELEGATION_COORDINATOR_URL (required)
-  --webhook-url         Agent webhook URL for genesis ?webhookUrl= (required)
+  --onboard-token       E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN (required)
+  --canopy-url          E2E_CANOPY_API_URL (required)
+  --coordinator-url     E2E_DELEGATION_COORDINATOR_URL (required)
+  --webhook-url         E2E_MANDATE_AGENT_WEBHOOK_URL (required)
   --mode                Delegation mode B or C (default: C)
-  --univocity-addr      40-hex Univocity contract (CANOPY_UNIVOCITY_ADDR)
-  --chain-id            EIP-155 chain id (CANOPY_CHAIN_ID, default 84532)
+  --univocity-addr      40-hex Univocity contract (E2E_CANOPY_UNIVOCITY_ADDR)
+  --chain-id            EIP-155 chain id (E2E_CANOPY_CHAIN_ID)
   --forest-r            Optional dashed UUID for genesis R (generated if omitted)
 
 Mode C (Privy):
-  --wallet-id           PRIVY_MODE_C_WALLET_ID
-  --mandate-signer-id   PRIVY_MANDATE_SIGNER_ID
-  --owner-auth-key      PRIVY_OWNER_AUTHORIZATION_KEY
+  --wallet-id           E2E_MODE_C_USER_PRIVY_WALLET_ID
+  --mandate-signer-id   MANDATE_PRIVY_SIGNER_ID
+  --owner-auth-key      E2E_MODE_C_PRIVY_OWNER_AUTH_KEY
   --key-ref             KEY_DIRECTORY keyRef (default: user-log-wallet)
   --signer-url          MANDATE_SIGNER_URL
   --policy-id           Existing Privy policy id (optional)
@@ -37,13 +37,24 @@ function usageOnboardModeC(): void {
 	console.error(`Usage: mandate-register privy onboard-mode-c [options]
 
 Options (env fallbacks in parentheses):
-  --wallet-id           Privy user-owned wallet id (PRIVY_MODE_C_WALLET_ID)
-  --mandate-signer-id   Mandate key quorum id (PRIVY_MANDATE_SIGNER_ID)
-  --owner-auth-key      Owner authorization key for wallet PATCH (PRIVY_OWNER_AUTHORIZATION_KEY)
+  --wallet-id           Privy user-owned wallet id (E2E_MODE_C_USER_PRIVY_WALLET_ID)
+  --mandate-signer-id   Mandate key quorum id (MANDATE_PRIVY_SIGNER_ID)
+  --owner-auth-key      Owner authorization key for wallet PATCH (E2E_MODE_C_PRIVY_OWNER_AUTH_KEY)
   --key-ref             KEY_DIRECTORY keyRef (default: user-log-wallet)
   --log-id              32-hex log id (required)
   --signer-url          mandate-signer /v1/sign URL (MANDATE_SIGNER_URL)
   --policy-id           Existing policy id (optional; creates policy if omitted)
+`);
+	process.exit(1);
+}
+
+function usageRevokeModeC(): void {
+	console.error(`Usage: mandate-register privy revoke-mode-c [options]
+
+Options (env fallbacks in parentheses):
+  --wallet-id           Privy user-owned wallet id (E2E_MODE_C_USER_PRIVY_WALLET_ID)
+  --owner-auth-key      Owner authorization key for wallet PATCH (E2E_MODE_C_PRIVY_OWNER_AUTH_KEY)
+  --mandate-signer-id   Mandate key quorum id for post-revoke check (MANDATE_PRIVY_SIGNER_ID, optional)
 `);
 	process.exit(1);
 }
@@ -63,19 +74,36 @@ function envOr(flag: string | undefined, ...names: string[]): string | undefined
 	return undefined;
 }
 
+function requireOperationalEnv(name: string): string {
+	const value = process.env[name]?.trim();
+	if (!value) {
+		console.error(`missing required env: ${name}`);
+		process.exit(1);
+	}
+	return value;
+}
+
+function requirePrivyClientConfig(): {
+	appId: string;
+	appSecret: string;
+	apiBase: string;
+} {
+	return {
+		appId: requireOperationalEnv('MANDATE_PRIVY_APP_ID'),
+		appSecret: requireOperationalEnv('MANDATE_PRIVY_APP_SECRET'),
+		apiBase: requireOperationalEnv('MANDATE_PRIVY_API_BASE')
+	};
+}
+
 async function runProvision(): Promise<void> {
-	const onboardToken = envOr(readFlag('--onboard-token'), 'CANOPY_PAYMENTS_ONBOARD_TOKEN');
-	const canopyBaseUrl = envOr(readFlag('--canopy-url'), 'CANOPY_API_URL', 'CANOPY_BASE_URL');
-	const coordinatorBaseUrl = envOr(
-		readFlag('--coordinator-url'),
-		'DELEGATION_COORDINATOR_URL',
-		'COORDINATOR_UPSTREAM_URL'
-	);
-	const agentWebhookUrl = envOr(readFlag('--webhook-url'), 'MANDATE_AGENT_WEBHOOK_URL');
+	const onboardToken = envOr(readFlag('--onboard-token'), 'E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN');
+	const canopyBaseUrl = envOr(readFlag('--canopy-url'), 'E2E_CANOPY_API_URL');
+	const coordinatorBaseUrl = envOr(readFlag('--coordinator-url'), 'E2E_DELEGATION_COORDINATOR_URL');
+	const agentWebhookUrl = envOr(readFlag('--webhook-url'), 'E2E_MANDATE_AGENT_WEBHOOK_URL');
 	const modeRaw = (readFlag('--mode') ?? process.env.MANDATE_DELEGATION_MODE ?? 'C').toUpperCase();
 	const mode = (modeRaw === 'B' ? 'B' : 'C') as DelegationMode;
-	const univocityAddr = envOr(readFlag('--univocity-addr'), 'CANOPY_UNIVOCITY_ADDR');
-	const chainId = envOr(readFlag('--chain-id'), 'CANOPY_CHAIN_ID') ?? '84532';
+	const univocityAddr = envOr(readFlag('--univocity-addr'), 'E2E_CANOPY_UNIVOCITY_ADDR');
+	const chainId = envOr(readFlag('--chain-id'), 'E2E_CANOPY_CHAIN_ID');
 	const forestR = readFlag('--forest-r') ?? process.env.MANDATE_FOREST_R;
 
 	if (
@@ -83,7 +111,8 @@ async function runProvision(): Promise<void> {
 		!canopyBaseUrl ||
 		!coordinatorBaseUrl ||
 		!agentWebhookUrl ||
-		!univocityAddr
+		!univocityAddr ||
+		!chainId
 	) {
 		usageProvision();
 	}
@@ -95,36 +124,26 @@ async function runProvision(): Promise<void> {
 		agentWebhookUrl: agentWebhookUrl!,
 		mode,
 		univocityAddr: univocityAddr!,
-		chainId,
+		chainId: chainId!,
 		forestR: forestR ?? randomUUID()
 	};
 
 	if (mode === 'C') {
-		const walletId = envOr(readFlag('--wallet-id'), 'PRIVY_MODE_C_WALLET_ID');
-		const mandateSignerId = envOr(readFlag('--mandate-signer-id'), 'PRIVY_MANDATE_SIGNER_ID');
+		const walletId = envOr(readFlag('--wallet-id'), 'E2E_MODE_C_USER_PRIVY_WALLET_ID');
+		const mandateSignerId = envOr(readFlag('--mandate-signer-id'), 'MANDATE_PRIVY_SIGNER_ID');
 		const ownerAuthorizationKey = envOr(
 			readFlag('--owner-auth-key'),
-			'PRIVY_OWNER_AUTHORIZATION_KEY'
+			'E2E_MODE_C_PRIVY_OWNER_AUTH_KEY'
 		);
 		const signerUrl = envOr(readFlag('--signer-url'), 'MANDATE_SIGNER_URL');
-		const appId = process.env.PRIVY_APP_ID;
-		const appSecret = process.env.PRIVY_APP_SECRET;
-		if (
-			!walletId ||
-			!mandateSignerId ||
-			!ownerAuthorizationKey ||
-			!signerUrl ||
-			!appId ||
-			!appSecret
-		) {
+		const privy = requirePrivyClientConfig();
+		if (!walletId || !mandateSignerId || !ownerAuthorizationKey || !signerUrl) {
 			usageProvision();
 		}
 		const output = await provisionInstance({
 			...base,
 			modeC: {
-				appId: appId!,
-				appSecret: appSecret!,
-				apiBase: process.env.PRIVY_API_BASE,
+				...privy,
 				walletId: walletId!,
 				mandateSignerId: mandateSignerId!,
 				ownerAuthorizationKey: ownerAuthorizationKey!,
@@ -155,34 +174,21 @@ async function runProvision(): Promise<void> {
 }
 
 async function runOnboardModeC(): Promise<void> {
-	const walletId = readFlag('--wallet-id') ?? process.env.PRIVY_MODE_C_WALLET_ID;
-	const mandateSignerId = readFlag('--mandate-signer-id') ?? process.env.PRIVY_MANDATE_SIGNER_ID;
+	const walletId = readFlag('--wallet-id') ?? process.env.E2E_MODE_C_USER_PRIVY_WALLET_ID;
+	const mandateSignerId = readFlag('--mandate-signer-id') ?? process.env.MANDATE_PRIVY_SIGNER_ID;
 	const ownerAuthorizationKey =
-		readFlag('--owner-auth-key') ?? process.env.PRIVY_OWNER_AUTHORIZATION_KEY;
+		readFlag('--owner-auth-key') ?? process.env.E2E_MODE_C_PRIVY_OWNER_AUTH_KEY;
 	const keyRef = readFlag('--key-ref') ?? 'user-log-wallet';
 	const logId = readFlag('--log-id');
 	const signerUrl = readFlag('--signer-url') ?? process.env.MANDATE_SIGNER_URL;
 	const policyId = readFlag('--policy-id');
-	const appId = process.env.PRIVY_APP_ID;
-	const appSecret = process.env.PRIVY_APP_SECRET;
+	const privy = requirePrivyClientConfig();
 
-	if (
-		!walletId ||
-		!mandateSignerId ||
-		!ownerAuthorizationKey ||
-		!logId ||
-		!signerUrl ||
-		!appId ||
-		!appSecret
-	) {
+	if (!walletId || !mandateSignerId || !ownerAuthorizationKey || !logId || !signerUrl) {
 		usageOnboardModeC();
 	}
 
-	const client = new PrivyRestClient({
-		appId: appId!,
-		appSecret: appSecret!,
-		apiBase: process.env.PRIVY_API_BASE
-	});
+	const client = new PrivyRestClient(privy);
 
 	const output = await onboardModeCWallet(client, {
 		walletId: walletId!,
@@ -192,6 +198,28 @@ async function runOnboardModeC(): Promise<void> {
 		signerUrl: signerUrl!,
 		ownerAuthorizationKey: ownerAuthorizationKey!,
 		policyId
+	});
+
+	console.log(JSON.stringify(output, null, 2));
+}
+
+async function runRevokeModeC(): Promise<void> {
+	const walletId = readFlag('--wallet-id') ?? process.env.E2E_MODE_C_USER_PRIVY_WALLET_ID;
+	const ownerAuthorizationKey =
+		readFlag('--owner-auth-key') ?? process.env.E2E_MODE_C_PRIVY_OWNER_AUTH_KEY;
+	const mandateSignerId = readFlag('--mandate-signer-id') ?? process.env.MANDATE_PRIVY_SIGNER_ID;
+	const privy = requirePrivyClientConfig();
+
+	if (!walletId || !ownerAuthorizationKey) {
+		usageRevokeModeC();
+	}
+
+	const client = new PrivyRestClient(privy);
+
+	const output = await revokeModeCWallet(client, {
+		walletId: walletId!,
+		ownerAuthorizationKey: ownerAuthorizationKey!,
+		mandateSignerId: mandateSignerId ?? undefined
 	});
 
 	console.log(JSON.stringify(output, null, 2));
@@ -211,10 +239,18 @@ async function main(): Promise<void> {
 		return;
 	}
 
+	if (sub === 'privy' && cmd === 'revoke-mode-c') {
+		await runRevokeModeC();
+		return;
+	}
+
 	console.log('mandate-register: Univocity instance provisioning (FOR-100)');
 	console.log('  subcommands:');
 	console.log('    provision              Full genesis + descriptor emission');
 	console.log('    privy onboard-mode-c   Mode C Privy wallet onboarding only (FOR-112)');
+	console.log(
+		'    privy revoke-mode-c    Mode C kill switch — remove additional signers (FOR-114)'
+	);
 	process.exit(sub ? 1 : 0);
 }
 

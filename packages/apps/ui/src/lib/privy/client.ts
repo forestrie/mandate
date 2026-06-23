@@ -3,21 +3,21 @@ import Privy, {
 	getEntropyDetailsFromUser,
 	getUserEmbeddedEthereumWallet
 } from '@privy-io/js-sdk-core';
-import { PUBLIC_PRIVY_APP_ID, PUBLIC_PRIVY_CLIENT_ID } from '$env/static/public';
+import { PUBLIC_MANDATE_PRIVY_APP_ID, PUBLIC_MANDATE_PRIVY_CLIENT_ID } from '$env/static/public';
 
 let privyClient: Privy | null = null;
 let initPromise: Promise<Privy> | null = null;
 
 export function getPrivyAppId(): string {
-	const appId = PUBLIC_PRIVY_APP_ID?.trim();
+	const appId = PUBLIC_MANDATE_PRIVY_APP_ID?.trim();
 	if (!appId) {
-		throw new Error('PUBLIC_PRIVY_APP_ID is not configured');
+		throw new Error('PUBLIC_MANDATE_PRIVY_APP_ID is not configured');
 	}
 	return appId;
 }
 
 export function getPrivyClientId(): string | undefined {
-	const clientId = PUBLIC_PRIVY_CLIENT_ID?.trim();
+	const clientId = PUBLIC_MANDATE_PRIVY_CLIENT_ID?.trim();
 	return clientId || undefined;
 }
 

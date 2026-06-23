@@ -19,7 +19,10 @@
 	} from '$lib/privy/stores.svelte.js';
 	import { buildKs256SigStructureHash, bytesToBase64 } from '$lib/signing/ks256-payload.js';
 	import { PrivyEoaBackend } from '$lib/signing/privy-eoa-backend.js';
+	import { buildSubmitMaterialBody } from './submit-payload.js';
 	import { onMount } from 'svelte';
+
+	type RowStatus = 'pending' | 'signing' | 'signed' | 'failed';
 
 	let authLogId = $state('');
 	let email = $state('');
@@ -30,14 +33,54 @@
 	let signingId = $state<string | null>(null);
 	let killSwitchLogId = $state('');
 	let killSwitchBusy = $state(false);
+	let logFilter = $state('');
+	let rowStatus = $state<Record<string, RowStatus>>({});
 
 	const session = $derived(getPrivySessionState());
+
+	const filteredEntries = $derived(
+		logFilter.trim()
+			? entries.filter((entry) =>
+					entry.logIdHex32.toLowerCase().includes(logFilter.trim().toLowerCase())
+				)
+			: entries
+	);
 
 	onMount(() => {
 		void initPrivySession();
 		const fromQuery = page.url.searchParams.get('authLogId');
 		if (fromQuery) authLogId = fromQuery;
 	});
+
+	function statusFor(entry: PendingEntry): RowStatus {
+		return rowStatus[entry.id] ?? 'pending';
+	}
+
+	function statusLabel(status: RowStatus): string {
+		switch (status) {
+			case 'signing':
+				return 'Signing…';
+			case 'signed':
+				return 'Submitted';
+			case 'failed':
+				return 'Failed';
+			default:
+				return 'Pending';
+		}
+	}
+
+	function statusVariant(status: RowStatus): 'default' | 'secondary' | 'outline' {
+		switch (status) {
+			case 'signed':
+				return 'default';
+			case 'signing':
+				return 'secondary';
+			case 'failed':
+				return 'outline';
+			default:
+				return 'outline';
+		}
+	}
 
 	async function connectWallet() {
 		error = null;
@@ -59,6 +102,9 @@
 		try {
 			const result = await listPendingDelegations(authLogId.trim());
 			entries = result.entries;
+			rowStatus = Object.fromEntries(
+				result.entries.map((entry) => [entry.id, rowStatus[entry.id] ?? 'pending'])
+			);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load pending delegations';
 			entries = [];
@@ -106,6 +152,7 @@
 			return;
 		}
 		signingId = entry.id;
+		rowStatus = { ...rowStatus, [entry.id]: 'signing' };
 		error = null;
 		message = null;
 		try {
@@ -119,18 +166,14 @@
 				(signature.slice(2).match(/.{1,2}/g) ?? []).map((byte) => parseInt(byte, 16))
 			);
 			const now = Math.floor(Date.now() / 1000);
-			await submitDelegationMaterial({
-				logId: entry.logIdHex32,
-				mmrStart: entry.mmrStart,
-				mmrEnd: entry.mmrEnd,
-				delegatedPublicKey: bytesToBase64(new Uint8Array(32)),
-				certificate: bytesToBase64(signatureBytes),
-				issuedAt: now,
-				expiresAt: now + 86400
-			});
+			await submitDelegationMaterial(
+				buildSubmitMaterialBody(entry, bytesToBase64(signatureBytes), now)
+			);
+			rowStatus = { ...rowStatus, [entry.id]: 'signed' };
 			message = `Submitted material for ${entry.logIdHex32.slice(0, 8)}…`;
 			await loadPending();
 		} catch (err) {
+			rowStatus = { ...rowStatus, [entry.id]: 'failed' };
 			error = err instanceof Error ? err.message : 'Sign and submit failed';
 		} finally {
 			signingId = null;
@@ -176,10 +219,24 @@
 
 	<Card class="space-y-4 p-6">
 		<h2 class="text-lg font-medium">Kill switch (FOR-114)</h2>
+		<!-- Coordinator pause/resume uses operator BFF auth (COORDINATOR_APP_TOKEN), not per-user wallet proof (ADR-0001 / FOR-129). -->
 		<p class="text-sm text-zinc-600">
-			<strong>Coordinator:</strong> pause mandate webhook signing for a user log (stops
-			`delegation.required` delivery). <strong>Privy (Mode C):</strong> remove mandate as an additional
-			signer in your Privy wallet settings to revoke signing access at the custody layer (ARC-0022 I3).
+			<strong>Coordinator (immediate, operator):</strong> pause mandate webhook signing for a user
+			log — stops new <code class="text-xs">delegation.required</code> delivery. Use per-row
+			<strong>Pause signing</strong> or resume below.
+		</p>
+		<p class="text-sm text-zinc-600">
+			<strong>Privy custody layer (Mode C, operator-assisted until FOR-117):</strong> revoke mandate
+			as an additional signer so
+			<code class="text-xs">secp256k1_sign</code> fails at Privy (ARC-0022 I3). Run
+			<code class="rounded bg-zinc-100 px-1 py-0.5 text-xs">task privy:revoke:mode-c</code>
+			or see the
+			<a
+				href="https://github.com/forestrie/mandate/blob/main/docs/adr/adr-0005-byok-delegation-modes.md#operational-appendix--mode-c-kill-switch-and-exits-for-114"
+				class="text-blue-600 underline"
+				target="_blank"
+				rel="noopener noreferrer">exit runbook</a
+			>.
 		</p>
 		<div class="flex flex-col gap-3 sm:flex-row">
 			<Input
@@ -201,13 +258,23 @@
 	{/if}
 
 	<Card class="overflow-hidden p-0">
-		<div class="border-b border-zinc-200 px-6 py-4">
+		<div
+			class="flex flex-col gap-3 border-b border-zinc-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
+		>
 			<h2 class="text-lg font-medium">Pending delegations</h2>
+			<Input
+				bind:value={logFilter}
+				placeholder="Filter by log id…"
+				class="max-w-xs"
+				disabled={entries.length === 0}
+			/>
 		</div>
 		{#if loading}
 			<p class="px-6 py-8 text-sm text-zinc-500">Loading…</p>
 		{:else if entries.length === 0}
 			<p class="px-6 py-8 text-sm text-zinc-500">No pending entries for this authority log.</p>
+		{:else if filteredEntries.length === 0}
+			<p class="px-6 py-8 text-sm text-zinc-500">No entries match the log filter.</p>
 		{:else}
 			<div class="overflow-x-auto">
 				<table class="min-w-full text-left text-sm">
@@ -216,20 +283,30 @@
 							<th class="px-4 py-3 font-medium">Log</th>
 							<th class="px-4 py-3 font-medium">MMR range</th>
 							<th class="px-4 py-3 font-medium">Requested</th>
+							<th class="px-4 py-3 font-medium">Status</th>
 							<th class="px-4 py-3 font-medium"></th>
 							<th class="px-4 py-3 font-medium"></th>
 						</tr>
 					</thead>
 					<tbody>
-						{#each entries as entry (entry.id)}
+						{#each filteredEntries as entry (entry.id)}
+							{@const status = statusFor(entry)}
 							<tr class="border-t border-zinc-100">
 								<td class="px-4 py-3 font-mono text-xs">{entry.logIdHex32.slice(0, 12)}…</td>
 								<td class="px-4 py-3">{entry.mmrStart} – {entry.mmrEnd}</td>
 								<td class="px-4 py-3">{new Date(entry.requestedAt * 1000).toLocaleString()}</td>
+								<td class="px-4 py-3">
+									<Badge
+										variant={statusVariant(status)}
+										class={status === 'failed' ? 'border-red-300 text-red-700' : undefined}
+									>
+										{statusLabel(status)}
+									</Badge>
+								</td>
 								<td class="px-4 py-3 text-right">
 									<Button
 										variant="secondary"
-										disabled={signingId === entry.id}
+										disabled={signingId === entry.id || status === 'signed'}
 										onclick={() => signAndSubmit(entry)}
 									>
 										{signingId === entry.id ? 'Signing…' : 'Sign & submit'}

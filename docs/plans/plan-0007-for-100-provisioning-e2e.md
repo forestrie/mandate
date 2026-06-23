@@ -6,7 +6,7 @@ Implemented (2026-06-22)
 
 ## Objective
 
-Deliver mandate `register` provisioning: consume `CANOPY_PAYMENTS_ONBOARD_TOKEN`
+Deliver mandate `register` provisioning: consume `E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN`
 
 - canopy URLs, call genesis `?webhookUrl=` coordinator forward, emit per-log
   signer descriptors — and prove with a gated live e2e through hands-off sealing.

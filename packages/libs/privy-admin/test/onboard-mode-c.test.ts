@@ -73,6 +73,8 @@ function mockFetch(handlers: {
 	};
 }
 
+const TEST_PRIVY_API_BASE = 'https://privy.test';
+
 describe('onboardModeCWallet', () => {
 	const ownerAuthorizationKey = testOwnerAuthorizationKey();
 
@@ -81,6 +83,7 @@ describe('onboardModeCWallet', () => {
 		const client = new PrivyRestClient({
 			appId: 'app_test',
 			appSecret: 'secret_test',
+			apiBase: TEST_PRIVY_API_BASE,
 			fetchImpl: mockFetch({ quorumStatus: 503, patchCalled })
 		});
 
@@ -103,6 +106,7 @@ describe('onboardModeCWallet', () => {
 		const client = new PrivyRestClient({
 			appId: 'app_test',
 			appSecret: 'secret_test',
+			apiBase: TEST_PRIVY_API_BASE,
 			fetchImpl: mockFetch({ quorumStatus: 404, patchCalled })
 		});
 

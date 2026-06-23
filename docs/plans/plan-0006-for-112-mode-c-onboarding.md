@@ -26,8 +26,8 @@ owner-topology enforcement (FOR-112), and agent-level gated hands-off e2e
   `KEY_DIRECTORY` + `OPERATOR_ROOT_KEYS` JSON.
 - `mandate-register privy onboard-mode-c` and `task privy:onboard:mode-c`.
 - Gated live test: `pnpm --filter @mandate/privy-admin test:live` (requires
-  `PRIVY_MODE_C_WALLET_ID`, `PRIVY_MANDATE_SIGNER_ID`,
-  `PRIVY_OWNER_AUTHORIZATION_KEY`).
+  `E2E_MODE_C_USER_PRIVY_WALLET_ID`, `MANDATE_PRIVY_SIGNER_ID`,
+  `E2E_MODE_C_PRIVY_OWNER_AUTH_KEY` — see [ADR-0006](../adr/adr-0006-privy-secrets.md)).
 
 ### FOR-113 — Hands-off agent e2e
 
@@ -41,5 +41,5 @@ owner-topology enforcement (FOR-112), and agent-level gated hands-off e2e
 ## Follow-on
 
 - FOR-100 / FOR-101: full genesis + live coordinator seal.
-- Configure `PRIVY_MODE_C_*` secrets in `live-signer` GitHub environment for
+- Configure `E2E_MODE_C_*` secrets in `live-signer` GitHub environment for
   onboarding live job.

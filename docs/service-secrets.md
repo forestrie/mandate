@@ -1,9 +1,85 @@
-# Mandate Workers secret catalog
+# Mandate secrets catalog
 
-Secrets for `@mandate/agent` and `@mandate/signer` Cloudflare Workers.
-Use your own Cloudflare account and Privy app when deploying from a fork.
+**Decision record:** [ADR-0006](adr/adr-0006-privy-secrets.md). **Glossary:**
+[CONTEXT.md](../CONTEXT.md) — operational secret, E2E fixture secret, Mode C user
+wallet.
 
-## Shared
+One env var / Wrangler binding name everywhere (Doppler, GitHub, Workers, tests,
+CLI). **Hard cutover** — no legacy aliases. CI enforces via
+`scripts/check-legacy-secret-names.mjs`.
+
+## Secret taxonomy
+
+| Prefix                   | Meaning                                                    | Doppler config    | GitHub environment                          |
+| ------------------------ | ---------------------------------------------------------- | ----------------- | ------------------------------------------- |
+| `MANDATE_`               | Long-lived mandate **instance** secrets                    | `dev`, `prod`     | `prod`; operational subset on `live-signer` |
+| `E2E_`                   | Synthetic users, test wallets, dev Canopy/coordinator URLs | **`e2e` only**    | **`live-signer` only** — never `prod`       |
+| `PUBLIC_MANDATE_PRIVY_*` | UI Privy SDK ids (public, not secret)                      | `dev`/`prod` vars | GitHub `vars` on Pages deploy               |
+
+Never sync `E2E_*` secrets to production Workers or the `prod` GitHub environment.
+
+## Operational secrets (`MANDATE_*`)
+
+Doppler `mandate-forestrie` configs **`dev`** and **`prod`**.
+
+| Name                              | Purpose                                                                                                                                         |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MANDATE_PRIVY_APP_ID`            | Privy application id (also in signer `wrangler.env.prod.json` vars)                                                                             |
+| `MANDATE_PRIVY_APP_SECRET`        | Privy app secret (Basic auth)                                                                                                                   |
+| `MANDATE_PRIVY_SIGNER_ID`         | Mandate key quorum id (one per deployment)                                                                                                      |
+| `MANDATE_PRIVY_AUTHORIZATION_KEY` | Mandate additional-signer P-256 key (`wallet-auth:` + base64 PKCS#8 DER); signs Privy authorization header for user-owned wallets (ADR-0003 S3) |
+| `MANDATE_PRIVY_API_BASE`          | Privy API base URL (required; no code default)                                                                                                  |
+| `MANDATE_SIGNER_URL`              | Deployed `@mandate/signer` `POST /v1/sign` URL (CI live tests)                                                                                  |
+| `MANDATE_SIGNER_TOKEN`            | Bearer auth on signer `POST /v1/sign`                                                                                                           |
+| `COORDINATOR_APP_TOKEN`           | Bearer for coordinator material submit                                                                                                          |
+| `COORDINATOR_UPSTREAM_URL`        | Coordinator origin (agent var)                                                                                                                  |
+| `OPERATOR_ROOT_KEYS`              | JSON map of per-log signer descriptors                                                                                                          |
+| `KEY_DIRECTORY`                   | Signer wallet directory JSON                                                                                                                    |
+| `CLOUDFLARE_API_TOKEN`            | Wrangler deploy / KV                                                                                                                            |
+| `CLOUDFLARE_ACCOUNT_ID`           | Target Cloudflare account                                                                                                                       |
+| `PUBLIC_MANDATE_PRIVY_APP_ID`     | UI client Privy app id                                                                                                                          |
+| `PUBLIC_MANDATE_PRIVY_CLIENT_ID`  | UI client Privy client id                                                                                                                       |
+| `PUBLIC_DEFAULT_CHAIN_ID`         | UI default chain id                                                                                                                             |
+
+`MANDATE_PRIVY_AUTHORIZATION_KEY` is **operational**, not per-user. Real Mode C
+users never store owner keys in Doppler; only the synthetic test user owner key is
+`E2E_*`.
+
+## E2E fixture secrets (`E2E_*`)
+
+Doppler config **`e2e`** only. GitHub **`live-signer`** only.
+
+| Name                                | Synthetic role                                      | Tests that mutate                                               |
+| ----------------------------------- | --------------------------------------------------- | --------------------------------------------------------------- |
+| `E2E_SIGNER_TEST_PRIVY_WALLET_ID`   | Hands-off / owned-wallet signer fixture             | `live-owned`, `live-hands-off` (success path)                   |
+| `E2E_SIGNER_TEST_WALLET_ADDRESS`    | Optional; skips Privy lookup for signer test wallet | —                                                               |
+| `E2E_MODE_C_USER_PRIVY_WALLET_ID`   | Mode C **test user** wallet                         | `live-mode-c`, `live-hands-off` (kill-switch), `live-provision` |
+| `E2E_MODE_C_USER_WALLET_ADDRESS`    | Optional address for Mode C wallet                  | —                                                               |
+| `E2E_MODE_C_PRIVY_OWNER_AUTH_KEY`   | Test user owner key for wallet PATCH                | onboard, revoke, kill-switch                                    |
+| `E2E_MODE_C_PRIVY_POLICY_ID`        | Optional; reuse delegation policy across E2E jobs   | provision, mode-c, hands-off restore                            |
+| `E2E_CANOPY_API_URL`                | Dev Canopy SCRAPI base                              | `live-provision`                                                |
+| `E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN` | Onboard bearer for genesis                          | `live-provision`                                                |
+| `E2E_CANOPY_OPS_ADMIN_TOKEN`        | Mint onboard token if payments token unset          | `live-provision`                                                |
+| `E2E_CANOPY_UNIVOCITY_ADDR`         | Dev Univocity contract (40-hex)                     | `live-provision`                                                |
+| `E2E_CANOPY_CHAIN_ID`               | EIP-155 chain id for dev Canopy genesis             | `live-provision`                                                |
+| `E2E_DELEGATION_COORDINATOR_URL`    | Dev coordinator origin                              | `live-provision`                                                |
+| `E2E_MANDATE_AGENT_WEBHOOK_URL`     | Agent webhook for genesis `?webhookUrl=`            | `live-provision`                                                |
+
+Reuse `E2E_MODE_C_PRIVY_POLICY_ID` across provision, mode-c revoke-restore, and
+hands-off kill-switch restore to avoid policy sprawl.
+
+### Mode C testing context
+
+**Mode C user wallet** (see CONTEXT.md): user's root `K(L)` in a Privy wallet they
+control via owner key; mandate is additional signer only (I2). Custody is
+Privy-custodied — not true BYOK (Mode B); user can revoke mandate at Privy (I3).
+E2E secrets model one **synthetic test user**, not production end users.
+
+## Worker secret catalog
+
+Binding names match the tables above exactly.
+
+### Shared
 
 | Secret                  | Workers       | Purpose                             |
 | ----------------------- | ------------- | ----------------------------------- |
@@ -11,20 +87,19 @@ Use your own Cloudflare account and Privy app when deploying from a fork.
 | `CLOUDFLARE_ACCOUNT_ID` | CI, repo-init | Target Cloudflare account           |
 | `MANDATE_SIGNER_TOKEN`  | agent, signer | Bearer auth on `POST /v1/sign`      |
 
-## `@mandate/agent`
+### `@mandate/agent`
 
-| Secret / var               | Type       | Purpose                                                                                                                                                                                                                                                                                    |
-| -------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `COORDINATOR_UPSTREAM_URL` | var        | Coordinator origin (e.g. `https://delegation-coordinator.forestrie.dev`)                                                                                                                                                                                                                   |
-| `COORDINATOR_APP_TOKEN`    | secret     | Bearer for material submit                                                                                                                                                                                                                                                                 |
-| `OPERATOR_ROOT_KEYS`       | secret     | JSON map of per-log signer descriptors (see ADR-0003)                                                                                                                                                                                                                                      |
-| `REQUEST_KEYS`             | KV binding | Webhook dedup (`requestKey` → seen); Cloudflare namespace title `mandate-agent-prod-request-keys`. KV `put` is not atomic across isolates — the agent reserves `requestKey` before signing (120s TTL) and clears on failure; coordinator material submit idempotency is the hard backstop. |
+| Secret / var               | Type       | Purpose                                                    |
+| -------------------------- | ---------- | ---------------------------------------------------------- |
+| `COORDINATOR_UPSTREAM_URL` | var        | Coordinator origin                                         |
+| `COORDINATOR_APP_TOKEN`    | secret     | Bearer for material submit                                 |
+| `OPERATOR_ROOT_KEYS`       | secret     | JSON map of per-log signer descriptors (ADR-0003)          |
+| `REQUEST_KEYS`             | KV binding | Webhook dedup; namespace `mandate-agent-prod-request-keys` |
 
 Prod resource ids live in gitignored `packages/apps/agent/wrangler.env.prod.json`
-(generated by `task repo-init`). Committed template:
-`wrangler.env.prod.json.example`.
+(from `task repo-init`). Template: `wrangler.env.prod.json.example`.
 
-Example remote descriptor entry:
+Example remote descriptor:
 
 ```json
 {
@@ -38,19 +113,17 @@ Example remote descriptor entry:
 }
 ```
 
-## `@mandate/signer`
+### `@mandate/signer`
 
-| Secret / var              | Type   | Purpose                                                                                                                                                                                                                  |
-| ------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `PRIVY_APP_ID`            | var    | Privy application id (in gitignored `wrangler.env.prod.json`)                                                                                                                                                            |
-| `PRIVY_APP_SECRET`        | secret | Privy app secret (Basic auth)                                                                                                                                                                                            |
-| `KEY_DIRECTORY`           | secret | JSON `{ keyRef: { walletId, rootSignerAddress, logIds[], requiresAuthorizationSignature? } }` — set `requiresAuthorizationSignature: true` for Mode C owned wallets; omit or `false` for app-controlled operator wallets |
-| `PRIVY_API_BASE`          | var    | Optional; default `https://api.privy.io`                                                                                                                                                                                 |
-| `PRIVY_AUTHORIZATION_KEY` | secret | `wallet-auth:` + base64 PKCS#8 DER P-256 additional-signer key; required when any `KEY_DIRECTORY` entry has `requiresAuthorizationSignature: true`                                                                       |
+| Secret / var                      | Type   | Purpose                                                                                       |
+| --------------------------------- | ------ | --------------------------------------------------------------------------------------------- |
+| `MANDATE_PRIVY_APP_ID`            | var    | Privy application id (in gitignored `wrangler.env.prod.json`)                                 |
+| `MANDATE_PRIVY_APP_SECRET`        | secret | Privy app secret                                                                              |
+| `KEY_DIRECTORY`                   | secret | JSON `{ keyRef: { walletId, rootSignerAddress, logIds[], requiresAuthorizationSignature? } }` |
+| `MANDATE_PRIVY_API_BASE`          | var    | Privy API base URL (required)                                                                 |
+| `MANDATE_PRIVY_AUTHORIZATION_KEY` | secret | Required when any entry has `requiresAuthorizationSignature: true`                            |
 
-### Mode C `KEY_DIRECTORY` example (FOR-112)
-
-User-owned Privy wallet with mandate as additional signer:
+Mode C `KEY_DIRECTORY` entry:
 
 ```json
 {
@@ -63,322 +136,160 @@ User-owned Privy wallet with mandate as additional signer:
 }
 ```
 
-Operator app-controlled wallet (no authorization signature):
-
-```json
-{
-	"operator-payment-log": {
-		"walletId": "privy-app-wallet-id",
-		"rootSignerAddress": "0x…",
-		"logIds": ["…"],
-		"requiresAuthorizationSignature": false
-	}
-}
-```
-
 ### Mode C Privy policy checklist (I6, FOR-112)
 
-When onboarding a Mode C user wallet in Privy:
+1. **Owner topology (I2):** wallet `owner` is the user alone. Mandate is
+   **additional signer only**.
+2. **Signer policy (I6):** attach mandate override policy — one `ALLOW` for
+   `secp256k1_sign`, explicit `DENY` for transfers/exports/structured signing.
+3. **Authorization key:** register mandate P-256 key as
+   `MANDATE_PRIVY_AUTHORIZATION_KEY` (`wallet-auth:` + base64 PKCS#8 DER).
+4. **KEY_DIRECTORY:** `requiresAuthorizationSignature: true` for user `keyRef`.
+5. **Kill switch (FOR-114):** user PATCH or console kill-switch.
 
-1. **Owner topology (I2):** wallet `owner` is the user alone (or a quorum that does
-   not include mandate). Mandate is **additional signer only**, never in the
-   owner quorum.
-2. **Signer policy (I6, FOR-116):** attach the mandate **override policy** below
-   to the additional signer. Privy is default-deny: one `ALLOW` rule for
-   `secp256k1_sign`, explicit `DENY` rules for transfers, exports, and structured
-   signing. Privy cannot filter raw hash _content_ (ARC-0022 §12 residual) —
-   certificate binding and coordinator verification bound payload scope.
-3. **Authorization key:** register mandate's P-256 additional-signer key; store
-   PKCS#8 DER as `PRIVY_AUTHORIZATION_KEY` (`wallet-auth:` + base64).
-4. **KEY_DIRECTORY:** set `requiresAuthorizationSignature: true` for the user's
-   `keyRef` entry.
-5. **Kill switch (FOR-114):** user can `PATCH /v1/wallets/{id}` with
-   `additional_signers: []` or use the delegation console kill-switch controls.
+Policy template: `buildDelegationSigningPolicy` in `@mandate/privy-admin` (see
+prior commits / privy-admin source for full JSON).
 
-Canonical policy template (`buildDelegationSigningPolicy` in
-`@mandate/privy-admin`):
-
-```json
-{
-	"version": "1.0",
-	"name": "Mandate Mode C delegation signing",
-	"chain_type": "ethereum",
-	"rules": [
-		{
-			"name": "Allow delegation secp256k1_sign",
-			"method": "secp256k1_sign",
-			"conditions": [],
-			"action": "ALLOW"
-		},
-		{
-			"name": "Deny exportPrivateKey",
-			"method": "exportPrivateKey",
-			"conditions": [],
-			"action": "DENY"
-		},
-		{
-			"name": "Deny exportSeedPhrase",
-			"method": "exportSeedPhrase",
-			"conditions": [],
-			"action": "DENY"
-		},
-		{
-			"name": "Deny eth_sendTransaction",
-			"method": "eth_sendTransaction",
-			"conditions": [],
-			"action": "DENY"
-		},
-		{
-			"name": "Deny eth_signTransaction",
-			"method": "eth_signTransaction",
-			"conditions": [],
-			"action": "DENY"
-		},
-		{
-			"name": "Deny eth_signUserOperation",
-			"method": "eth_signUserOperation",
-			"conditions": [],
-			"action": "DENY"
-		},
-		{
-			"name": "Deny eth_signTypedData_v4",
-			"method": "eth_signTypedData_v4",
-			"conditions": [],
-			"action": "DENY"
-		},
-		{
-			"name": "Deny personal_sign",
-			"method": "personal_sign",
-			"conditions": [],
-			"action": "DENY"
-		},
-		{
-			"name": "Deny eth_sign7702Authorization",
-			"method": "eth_sign7702Authorization",
-			"conditions": [],
-			"action": "DENY"
-		},
-		{
-			"name": "Deny wallet_sendCalls",
-			"method": "wallet_sendCalls",
-			"conditions": [],
-			"action": "DENY"
-		},
-		{
-			"name": "Deny signTransaction",
-			"method": "signTransaction",
-			"conditions": [],
-			"action": "DENY"
-		},
-		{
-			"name": "Deny signAndSendTransaction",
-			"method": "signAndSendTransaction",
-			"conditions": [],
-			"action": "DENY"
-		},
-		{
-			"name": "Deny transfer",
-			"method": "transfer",
-			"conditions": [],
-			"action": "DENY"
-		},
-		{
-			"name": "Deny earn_deposit",
-			"method": "earn_deposit",
-			"conditions": [],
-			"action": "DENY"
-		},
-		{
-			"name": "Deny earn_withdraw",
-			"method": "earn_withdraw",
-			"conditions": [],
-			"action": "DENY"
-		},
-		{
-			"name": "Deny signTransactionBytes",
-			"method": "signTransactionBytes",
-			"conditions": [],
-			"action": "DENY"
-		}
-	]
-}
-```
-
-Create via `POST /v1/policies` or:
+Onboard CLI:
 
 ```sh
 doppler run --project mandate-forestrie --config dev -- \
+  doppler run --project mandate-forestrie --config e2e -- \
   pnpm --filter @mandate/register exec mandate-register privy onboard-mode-c \
   --log-id <32-hex-log-id> --key-ref user-log-wallet
 ```
 
-Live validation env (dedicated wallet — do not reuse `PRIVY_WALLET_ID`):
+## Doppler + GitHub sync
 
-| Env                             | Purpose                                        |
-| ------------------------------- | ---------------------------------------------- |
-| `PRIVY_MODE_C_WALLET_ID`        | User-owned wallet for onboarding live tests    |
-| `PRIVY_MANDATE_SIGNER_ID`       | Key quorum id for mandate additional signer    |
-| `PRIVY_OWNER_AUTHORIZATION_KEY` | Owner key for wallet PATCH during onboard      |
-| `MANDATE_SIGNER_URL`            | Deployed `@mandate/signer` `POST /v1/sign` URL |
+Project: **`mandate-forestrie`**.
 
-## Fork deploy checklist
+| Doppler config | GitHub target             | Contents                                             |
+| -------------- | ------------------------- | ---------------------------------------------------- |
+| `prod`         | Environment `prod`        | Operational `MANDATE_*`, agent/signer deploy secrets |
+| `dev`          | (local / repo-init)       | Same operational names as prod for dev deploy        |
+| `e2e`          | Environment `live-signer` | All `E2E_*` fixture secrets                          |
+| `dev`          | Environment `live-signer` | Operational `MANDATE_*` subset for CI live tests     |
 
-1. Install `@forestrie/delegation-cose` from the canopy git tag (CI uses
-   `github:forestrie/canopy#delegation-cose-v0.1.0&path:packages/libs/delegation-cose`
-   until GitHub Packages tarball fetch is reliable — see ADR-0004 / FOR-109). For
-   GitHub Packages installs, configure read auth at the repo root (committed
-   `.npmrc` uses `NODE_AUTH_TOKEN`):
+Sync is **Doppler ↔ GitHub** (no push script). Ensure Doppler configs **`dev`**
+and **`e2e`** are wired to GitHub environment **`live-signer`**, and **`prod`**
+to **`prod`**.
 
-   ```sh
-   export NODE_AUTH_TOKEN="$(gh auth token)"   # needs read:packages scope
-   # if 403: gh auth refresh -s read:packages -h github.com
-   pnpm install
-   ```
+### Doppler migration checklist (manual — 2FA)
 
-   CI uses the workflow `GITHUB_TOKEN` with `packages: read`. If install fails
-   with 403, use an org GitHub App or PAT (see ADR-0004).
+1. Create Doppler config **`e2e`** on project `mandate-forestrie`.
+2. Move + rename E2E secrets from `dev` → `e2e` (see rename table below).
+3. Rename operational secrets in `dev`/`prod` to `MANDATE_*` /
+   `PUBLIC_MANDATE_PRIVY_*`.
+4. Delete old `PRIVY_*` / `CANOPY_*` keys from Doppler.
+5. Configure Doppler↔GitHub sync: `e2e` + operational subset → `live-signer`;
+   `prod` → `prod`.
+6. Verify: `gh workflow run live-owned-wallet.yml --repo forestrie/mandate`.
 
-2. Run `task repo-init` (or `task repo-init:doppler`) with `CLOUDFLARE_API_TOKEN`
-   and `CLOUDFLARE_ACCOUNT_ID` set. This creates gitignored `wrangler.env.prod.json`
-   overlays, ensures KV namespace `mandate-agent-prod-request-keys`, and writes
-   merged deploy configs under `.wrangler/deploy/`.
-3. Copy `.dev.vars.example` → `.dev.vars` for agent and signer; fill secrets locally.
-4. Set GitHub Environment `prod` secrets (or deploy manually):
+### Rename reference (historical)
 
-   ```sh
-   task repo-init
-   cd packages/apps/agent && pnpm exec wrangler deploy --env prod \
-     --config ../../../.wrangler/deploy/agent.wrangler.jsonc
-   cd packages/apps/signer && pnpm exec wrangler deploy --env prod \
-     --config ../../../.wrangler/deploy/signer.wrangler.jsonc
-   ```
+| Old name                                          | New name                            |
+| ------------------------------------------------- | ----------------------------------- |
+| `PRIVY_APP_ID`                                    | `MANDATE_PRIVY_APP_ID`              |
+| `PRIVY_APP_SECRET`                                | `MANDATE_PRIVY_APP_SECRET`          |
+| `PRIVY_MANDATE_SIGNER_ID`                         | `MANDATE_PRIVY_SIGNER_ID`           |
+| `PRIVY_WALLET_SIGNER` / `PRIVY_AUTHORIZATION_KEY` | `MANDATE_PRIVY_AUTHORIZATION_KEY`   |
+| `PRIVY_API_BASE`                                  | `MANDATE_PRIVY_API_BASE`            |
+| `PUBLIC_PRIVY_APP_ID`                             | `PUBLIC_MANDATE_PRIVY_APP_ID`       |
+| `PUBLIC_PRIVY_CLIENT_ID`                          | `PUBLIC_MANDATE_PRIVY_CLIENT_ID`    |
+| `PRIVY_MODE_C_WALLET_ID`                          | `E2E_MODE_C_USER_PRIVY_WALLET_ID`   |
+| `PRIVY_OWNER_AUTHORIZATION_KEY`                   | `E2E_MODE_C_PRIVY_OWNER_AUTH_KEY`   |
+| `PRIVY_WALLET_ID`                                 | `E2E_SIGNER_TEST_PRIVY_WALLET_ID`   |
+| `PRIVY_WALLET_ADDRESS`                            | `E2E_SIGNER_TEST_WALLET_ADDRESS`    |
+| `PRIVY_MODE_C_WALLET_ADDRESS`                     | `E2E_MODE_C_USER_WALLET_ADDRESS`    |
+| `PRIVY_DELEGATION_POLICY_ID`                      | `E2E_MODE_C_PRIVY_POLICY_ID`        |
+| `CANOPY_API_URL` / `CANOPY_BASE_URL`              | `E2E_CANOPY_API_URL`                |
+| `CANOPY_PAYMENTS_ONBOARD_TOKEN`                   | `E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN` |
+| `CANOPY_OPS_ADMIN_TOKEN`                          | `E2E_CANOPY_OPS_ADMIN_TOKEN`        |
+| `CANOPY_UNIVOCITY_ADDR`                           | `E2E_CANOPY_UNIVOCITY_ADDR`         |
+| `CANOPY_CHAIN_ID`                                 | `E2E_CANOPY_CHAIN_ID`               |
+| `DELEGATION_COORDINATOR_URL`                      | `E2E_DELEGATION_COORDINATOR_URL`    |
+| `MANDATE_AGENT_WEBHOOK_URL`                       | `E2E_MANDATE_AGENT_WEBHOOK_URL`     |
 
-5. Bind secrets with `wrangler secret put` (see workflow
-   `.github/workflows/deploy-workers.yml`).
-6. Set repository variable `ENABLE_WORKERS_DEPLOY=true` to enable CI deploy on `main`.
+## Live test matrix
 
-### Gated live signer tests (FOR-113)
+Workflow: `.github/workflows/live-owned-wallet.yml` (`workflow_dispatch`).
 
-Workflow `.github/workflows/live-owned-wallet.yml` runs on `workflow_dispatch`.
-Configure GitHub Environment `live-signer` (or repository secrets) with:
-
-| Secret                          | Purpose                                              |
-| ------------------------------- | ---------------------------------------------------- |
-| `PRIVY_APP_ID`                  | Privy app id                                         |
-| `PRIVY_APP_SECRET`              | Privy app secret                                     |
-| `PRIVY_WALLET_ID`               | Mode C user-owned wallet id                          |
-| `PRIVY_AUTHORIZATION_KEY`       | Mandate additional-signer auth key                   |
-| `PRIVY_WALLET_ADDRESS`          | Optional; skips wallet lookup                        |
-| `PRIVY_MODE_C_WALLET_ID`        | Dedicated wallet for onboarding live tests (FOR-112) |
-| `PRIVY_MANDATE_SIGNER_ID`       | Mandate key quorum id                                |
-| `PRIVY_OWNER_AUTHORIZATION_KEY` | User owner key for wallet PATCH                      |
-| `MANDATE_SIGNER_URL`            | Deployed `@mandate/signer` `POST /v1/sign` URL       |
-
-Doppler project `mandate-forestrie` stores the mandate additional-signer key as
-`PRIVY_WALLET_SIGNER`. Live tests and CI expect `PRIVY_AUTHORIZATION_KEY`
-(`wallet-auth:` + base64 PKCS#8 DER). Map locally before running gated tests:
-
-```sh
-export PRIVY_AUTHORIZATION_KEY="${PRIVY_AUTHORIZATION_KEY:-$PRIVY_WALLET_SIGNER}"
+```mermaid
+flowchart TD
+  preflight[live-secrets-check]
+  owned[live-owned]
+  handsOff[live-hands-off]
+  provision[live-provision]
+  modeC[live-mode-c]
+  preflight --> owned
+  preflight --> provision
+  owned --> handsOff
+  owned --> provision
+  preflight --> modeC
+  provision --> modeC
 ```
 
-CI workflow falls back to `PRIVY_WALLET_SIGNER` when `PRIVY_AUTHORIZATION_KEY` is
-unset. Prefer setting both GitHub secrets to the same value for clarity.
+| Job              | Primary env                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------ |
+| `live-owned`     | `MANDATE_*` + `E2E_SIGNER_TEST_*`                                                                |
+| `live-hands-off` | above + `E2E_MODE_C_*`                                                                           |
+| `live-provision` | `E2E_CANOPY_*`, `E2E_DELEGATION_*`, `E2E_MANDATE_AGENT_WEBHOOK_URL`, `MANDATE_*`, `E2E_MODE_C_*` |
+| `live-mode-c`    | `MANDATE_*` + `E2E_MODE_C_*`                                                                     |
 
-Until `PRIVY_MODE_C_WALLET_ID`, `PRIVY_MANDATE_SIGNER_ID`, and
-`PRIVY_OWNER_AUTHORIZATION_KEY` are configured in the `live-signer` environment,
-`@mandate/privy-admin test:live` skips via `describe.skipIf` (job stays green).
-Once configured, the onboarding job runs after `live-owned` and fails on regressions.
-
-Local signer live test:
+Local examples:
 
 ```sh
+# Owned-wallet signer
 doppler run --project mandate-forestrie --config dev -- \
   pnpm --filter @mandate/signer test:live:owned
-```
 
-Agent hands-off sealing (FOR-113):
-
-```sh
+# Mode C onboarding (dev + e2e)
 doppler run --project mandate-forestrie --config dev -- \
-  pnpm --filter @mandate/agent test:live:hands-off
-```
-
-Mode C onboarding live validation (FOR-112):
-
-```sh
-doppler run --project mandate-forestrie --config dev -- \
+  doppler run --project mandate-forestrie --config e2e -- \
   pnpm --filter @mandate/privy-admin test:live
+
+# Provision e2e
+doppler run --project mandate-forestrie --config dev -- \
+  doppler run --project mandate-forestrie --config e2e -- \
+  pnpm --filter @mandate/register test:live:provision
 ```
 
-### Full live-canopy provisioning e2e (FOR-100 / FOR-101)
+### Provision e2e (FOR-100 / FOR-101)
 
-`@mandate/register provision` consumes a canopy onboard bearer + URLs, calls
-`POST /api/forest/{R}/genesis?webhookUrl=` (canopy brokers coordinator
-`public-root` + webhook registration), and emits `KEY_DIRECTORY` +
-`OPERATOR_ROOT_KEYS` for worker secrets.
-
-#### Mint onboard token (ops admin)
+Mint onboard token (canopy checkout):
 
 ```sh
-# From canopy checkout with Doppler (project canopy, config dev):
-curl -sS -X POST "$CANOPY_API_URL/api/payments/onboard-tokens" \
-  -H "Authorization: Bearer $CANOPY_OPS_ADMIN_TOKEN" \
+curl -sS -X POST "$E2E_CANOPY_API_URL/api/payments/onboard-tokens" \
+  -H "Authorization: Bearer $E2E_CANOPY_OPS_ADMIN_TOKEN" \
   -H "Content-Type: application/cbor" \
   --data-binary @<(node -e "const {encode}=require('cbor-x');process.stdout.write(encode(new Map([[1,'mandate-dev']])))")
 ```
 
-Store the returned `token` as `CANOPY_PAYMENTS_ONBOARD_TOKEN` in Doppler
-`mandate-forestrie/dev`.
-
-#### Provision (Mode C)
-
-```sh
-doppler run --project mandate-forestrie --config dev -- task provision \
-  --onboard-token "$CANOPY_PAYMENTS_ONBOARD_TOKEN" \
-  --canopy-url "$CANOPY_API_URL" \
-  --coordinator-url "$DELEGATION_COORDINATOR_URL" \
-  --webhook-url "https://mandate-agent-prod.<account>.workers.dev/webhooks/delegation-required" \
-  --univocity-addr "$CANOPY_UNIVOCITY_ADDR" \
-  --chain-id "$CANOPY_CHAIN_ID"
-```
-
-Paste the JSON `descriptors` into `wrangler secret put KEY_DIRECTORY` /
-`OPERATOR_ROOT_KEYS` on signer and agent Workers.
-
-#### Gated live e2e (FOR-101)
-
-Requires dev canopy + coordinator + Privy Mode C wallet. Skips when env is
-incomplete (`describe.skipIf`).
-
-| Env                                   | Purpose                                                                            |
-| ------------------------------------- | ---------------------------------------------------------------------------------- |
-| `CANOPY_API_URL` or `CANOPY_BASE_URL` | Canopy SCRAPI base                                                                 |
-| `CANOPY_PAYMENTS_ONBOARD_TOKEN`       | Onboard bearer for genesis (or mint via `CANOPY_OPS_ADMIN_TOKEN`)                  |
-| `CANOPY_UNIVOCITY_ADDR`               | 40-hex Univocity contract                                                          |
-| `CANOPY_CHAIN_ID`                     | EIP-155 chain id (default `84532`)                                                 |
-| `DELEGATION_COORDINATOR_URL`          | Coordinator origin                                                                 |
-| `MANDATE_AGENT_WEBHOOK_URL`           | Agent webhook URL for genesis forward (may be placeholder for in-process seal leg) |
-| `PRIVY_MODE_C_WALLET_ID`              | User-owned wallet                                                                  |
-| `PRIVY_MANDATE_SIGNER_ID`             | Mandate key quorum id                                                              |
-| `PRIVY_OWNER_AUTHORIZATION_KEY`       | Owner key for wallet PATCH                                                         |
-| `MANDATE_SIGNER_URL`                  | Deployed signer `POST /v1/sign` URL                                                |
+Store token as `E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN` in Doppler **`e2e`**.
 
 ```sh
 doppler run --project mandate-forestrie --config dev -- \
-  pnpm --filter @mandate/register test:live:provision
+  doppler run --project mandate-forestrie --config e2e -- \
+  task provision \
+  --onboard-token "$E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN" \
+  --canopy-url "$E2E_CANOPY_API_URL" \
+  --coordinator-url "$E2E_DELEGATION_COORDINATOR_URL" \
+  --webhook-url "$E2E_MANDATE_AGENT_WEBHOOK_URL" \
+  --univocity-addr "$E2E_CANOPY_UNIVOCITY_ADDR" \
+  --chain-id "$E2E_CANOPY_CHAIN_ID"
 ```
 
-Acceptance run (deployed agent receiving real `delegation.required` webhooks) is
-documented in canopy `byok-mode-c-webhook-seal.spec.ts` (`E2E_MODE_C_WEBHOOK_STRETCH=1`).
+## Fork deploy checklist
 
-CI sets `CICD=true` so `repo-init` always refreshes overlays from examples before
-deploy (ephemeral checkout).
+1. Install `@forestrie/delegation-cose` (see ADR-0004 / README).
+2. `task repo-init` with `CLOUDFLARE_*` set — creates wrangler overlays + KV.
+3. Copy `.dev.vars.example` → `.dev.vars` for agent and signer.
+4. Set GitHub `prod` secrets; deploy Workers (see README).
+5. `wrangler secret put` per `.github/workflows/deploy-workers.yml`.
+6. Set `ENABLE_WORKERS_DEPLOY=true` for CI deploy on `main`.
 
-## Doppler
-
-Forestrie-operated instance: Doppler project **`mandate-forestrie`**, config `dev` /
-`prod`. Must include at least `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+`repo-init` injects `PUBLIC_MANDATE_PRIVY_APP_ID` (or `MANDATE_PRIVY_APP_ID`) into
+signer `wrangler.env.prod.json`.
 
 ```sh
 task repo-init:doppler
@@ -386,5 +297,4 @@ task repo-init:doppler
 doppler run --project mandate-forestrie --config dev -- task repo-init
 ```
 
-Optional: `PUBLIC_PRIVY_APP_ID` (or `PRIVY_APP_ID`) is injected into the signer
-`wrangler.env.prod.json` overlay during `repo-init`.
+CI sets `CICD=true` so `repo-init` refreshes overlays from examples before deploy.

@@ -43,3 +43,23 @@ Deterministic idempotency key for a `delegation.required` webhook
 The coordinator's ES256 identity used to sign outbound webhooks. Published as a
 JWKS at `/.well-known/forestrie-webhook-jwks.json`; agents verify signatures
 over `{timestamp}.{rawBody}`.
+
+## operational secret
+
+A long-lived credential for the mandate **instance** (Privy app, mandate
+additional-signer key, Workers deploy tokens). Stored in Doppler `dev`/`prod` and
+GitHub `prod`. Prefixed `MANDATE_` (see ADR-0006).
+
+## E2E fixture secret
+
+A credential or URL used **only** to run live integration tests against real dev
+infra (synthetic Mode C test user wallet, dev Canopy/coordinator endpoints).
+Stored in Doppler config `e2e` and GitHub `live-signer` — never production.
+Prefixed `E2E_` (see ADR-0006).
+
+## Mode C user wallet
+
+A user's root authority `K(L)` held in a Privy wallet they control via an owner
+authorization key; mandate is an **additional signer** only (I2). Custody is
+Privy-custodied (not true BYOK / Mode B); the user can revoke mandate at Privy
+(I3). See ADR-0005 and ARC-0022.
