@@ -86,6 +86,30 @@ UI queue that also hosts the Mode C revocation control.
    logs use Mode B or Mode C as above. The operator wallet model is **not** Mode
    C and has no user kill switch (it is the operator's own key).
 
+   **Privy wallet inventory (mandate-forestrie instance).** Mandate needs exactly
+   three Privy wallet roles — no more:
+
+   | Role | Topology | Purpose | Mandate Privy activity |
+   | ---- | -------- | ------- | ---------------------- |
+   | **Operator payment-authoritative** | Ownerless app-controlled (`owner_id: null`); **no** additional signer | Operator's own payment-authoritative log `K(L)` | Basic-auth `secp256k1_sign` only; `KEY_DIRECTORY` without `requiresAuthorizationSignature` |
+   | **Mode C user wallet** (per user log) | User-owned; mandate = **additional signer** + policy | User log root `K(L)` under hosted Mode C | Onboarding: owner-signed PATCH to add `MANDATE_PRIVY_SIGNER_ID`; signing: owned-wallet `privy-authorization-signature`; revoke: owner-signed PATCH `additional_signers: []` |
+   | **E2E fixtures** (two user-owned wallets) | Same as Mode C user wallet | Stable signer-test wallet (`E2E_SIGNER_TEST_*`, never revoked) + separate kill-switch wallet (`E2E_MODE_C_USER_*`) | Same PATCH/sign/revoke as Mode C; fixtures created outside mandate |
+
+   Mandate **never creates** Privy wallets (`POST /v1/wallets` is not in
+   `@mandate/register`). User wallets are created by the user (or synthetic E2E
+   setup) before `privy onboard-mode-c`. Mandate **never** needs a dedicated
+   wallet to "represent" payment onboarding — canopy is custody-agnostic: genesis
+   declares whatever `bootstrapKey` the operator controls; for user logs that is
+   the **user-owned** wallet address, not an operator wallet. The early
+   `mandate-forestrie` wallet (ownerless + mandate additional signer) matched
+   neither role and is **retired**.
+
+   **Canopy trust boundary.** Canopy stores the declared `bootstrapKey` /
+   `publicRoot` and verifies delegation certificates against it (ARC-0022 I5).
+   Payment registration (onboard token) is independent of sealing authority
+   (I7). Canopy does not know or care whether the root key lives in Privy, KMS,
+   or local custody.
+
 8. **Documented exits.** Mode C users have a layered exit (ARC-0022 §7–§8):
    revoke the additional signer, optionally continue under Mode B with the same
    key (no re-registration, since `publicRoot` is unchanged), export the key for

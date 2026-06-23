@@ -63,3 +63,18 @@ A user's root authority `K(L)` held in a Privy wallet they control via an owner
 authorization key; mandate is an **additional signer** only (I2). Custody is
 Privy-custodied (not true BYOK / Mode B); the user can revoke mandate at Privy
 (I3). See ADR-0005 and ARC-0022.
+
+## operator payment-authoritative wallet
+
+The mandate operator's own payment-authoritative log root signer: an **ownerless
+app-controlled** Privy server wallet (`owner_id: null`), signed via Basic auth
+with no `requiresAuthorizationSignature`. Distinct from Mode C user wallets;
+the operator controls this key directly. See ADR-0005 §7 and ARC-0022 §11.1.
+
+## signer test wallet
+
+A synthetic **user-owned** Privy wallet used only in live integration tests
+(`E2E_SIGNER_TEST_*`). Mandate is registered as an **additional signer** with a
+delegation policy; the wallet is never revoked so `test:live:owned` and the
+hands-off success path stay stable. Distinct from the Mode C kill-switch wallet
+(`E2E_MODE_C_USER_*`). See [service-secrets.md](docs/service-secrets.md).

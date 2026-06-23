@@ -90,6 +90,33 @@ tasks:
     cmds:
       - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- pnpm --filter @mandate/register exec mandate-register privy revoke-mode-c {{.CLI_ARGS}}
 
+  test:live:owned:
+    desc: Owned-wallet signer live test (dev + e2e Doppler; E2E_SIGNER_TEST_*)
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- doppler run --project {{.DOPPLER_PROJECT}} --config e2e -- pnpm --filter @mandate/signer test:live:owned
+
+  test:live:hands-off:
+    desc: Agent hands-off sealing live test (dev + e2e Doppler)
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- doppler run --project {{.DOPPLER_PROJECT}} --config e2e -- pnpm --filter @mandate/agent test:live:hands-off
+
+  test:live:mode-c:
+    desc: Mode C onboarding + revoke live test (dev + e2e Doppler)
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- doppler run --project {{.DOPPLER_PROJECT}} --config e2e -- pnpm --filter @mandate/privy-admin test:live
+
+  test:live:provision:
+    desc: Provision + genesis live e2e (dev + e2e Doppler)
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- doppler run --project {{.DOPPLER_PROJECT}} --config e2e -- pnpm --filter @mandate/register test:live:provision
+
+  provision:e2e-signer-test-wallet:
+    desc: >-
+      Create a fresh user-owned E2E_SIGNER_TEST_* wallet and onboard mandate;
+      optional ARCHIVE_WALLET_ID=vbd6kev6... to archive retired wallet
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- npx --yes tsx scripts/provision-e2e-signer-test-wallet.ts
+
   provision:
     desc: >-
       Provision forest instance via onboard token + genesis ?webhookUrl=;

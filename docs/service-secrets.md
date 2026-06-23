@@ -49,11 +49,25 @@ users never store owner keys in Doppler; only the synthetic test user owner key 
 
 Doppler config **`e2e`** only. GitHub **`live-signer`** only.
 
+### Privy wallet roles (E2E)
+
+Three wallet topologies; see CONTEXT.md and ADR-0005 §7.
+
+| Role | Env vars | Topology | Mutated by tests? |
+| ---- | -------- | -------- | ----------------- |
+| Operator payment-authoritative | *(operational `KEY_DIRECTORY` only; not `E2E_*`)* | Ownerless app-controlled; no additional signer | No |
+| Signer test wallet | `E2E_SIGNER_TEST_*` | User-owned; mandate = additional signer | **No** — stable success path |
+| Mode C kill-switch wallet | `E2E_MODE_C_USER_*` | User-owned; mandate = additional signer | **Yes** — onboard, revoke, restore |
+
+The retired `mandate-forestrie` wallet (ownerless + mandate additional signer)
+matched neither role and must not be referenced.
+
 | Name                                | Synthetic role                                      | Tests that mutate                                               |
 | ----------------------------------- | --------------------------------------------------- | --------------------------------------------------------------- |
-| `E2E_SIGNER_TEST_PRIVY_WALLET_ID`   | Hands-off / owned-wallet signer fixture             | `live-owned`, `live-hands-off` (success path)                   |
-| `E2E_SIGNER_TEST_WALLET_ADDRESS`    | Optional; skips Privy lookup for signer test wallet | —                                                               |
-| `E2E_MODE_C_USER_PRIVY_WALLET_ID`   | Mode C **test user** wallet                         | `live-mode-c`, `live-hands-off` (kill-switch), `live-provision` |
+| `E2E_SIGNER_TEST_PRIVY_WALLET_ID`   | User-owned signer test wallet (mandate additional signer) | `live-owned`, `live-hands-off` (success path) — **never revoked** |
+| `E2E_SIGNER_TEST_WALLET_ADDRESS`    | Signer test wallet Ethereum address                 | —                                                               |
+| `E2E_SIGNER_TEST_OWNER_AUTH_KEY`    | Owner key for signer test wallet PATCH (onboard/re-onboard only) | Provision script / manual re-onboard |
+| `E2E_MODE_C_USER_PRIVY_WALLET_ID`   | Mode C **kill-switch** test user wallet (distinct from signer test) | `live-mode-c`, `live-hands-off` (kill-switch), `live-provision` |
 | `E2E_MODE_C_USER_WALLET_ADDRESS`    | Optional address for Mode C wallet                  | —                                                               |
 | `E2E_MODE_C_PRIVY_OWNER_AUTH_KEY`   | Test user owner key for wallet PATCH                | onboard, revoke, kill-switch                                    |
 | `E2E_MODE_C_PRIVY_POLICY_ID`        | Optional; reuse delegation policy across E2E jobs   | provision, mode-c, hands-off restore                            |
@@ -237,6 +251,26 @@ flowchart TD
 | `live-mode-c`    | `MANDATE_*` + `E2E_MODE_C_*`                                                                     |
 
 Local examples:
+
+```sh
+# Owned-wallet signer (stable user-owned signer test wallet)
+task test:live:owned
+
+# Agent hands-off (dev + e2e)
+task test:live:hands-off
+
+# Mode C onboarding (dev + e2e)
+task test:live:mode-c
+
+# Provision e2e
+task test:live:provision
+
+# Provision a fresh E2E_SIGNER_TEST_* wallet (ops; then set Doppler e2e)
+ARCHIVE_WALLET_ID=vbd6kev61oe46vsp29hw281b task provision:e2e-signer-test-wallet
+# Archive vbd6kev6 manually in Privy dashboard if API PATCH is unavailable.
+```
+
+Legacy explicit Doppler invocations:
 
 ```sh
 # Owned-wallet signer

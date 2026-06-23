@@ -1,5 +1,11 @@
 import { randomBytes } from 'node:crypto';
 import { secp256k1 } from '@noble/curves/secp256k1';
+import {
+	assertWalletIsUserOwned,
+	getWallet,
+	mandateListedAsAdditionalSigner,
+	PrivyRestClient
+} from '@mandate/privy-admin';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { handleSign } from '../src/handle-sign.js';
 import type { Env } from '../src/env.js';
@@ -15,10 +21,10 @@ import {
  * Live integration test for Privy **owned** wallets (Mode C path).
  *
  * Skipped unless MANDATE_PRIVY_APP_ID, MANDATE_PRIVY_APP_SECRET,
- * E2E_SIGNER_TEST_PRIVY_WALLET_ID, and MANDATE_PRIVY_AUTHORIZATION_KEY are set.
- * The wallet must be user-owned with mandate registered as an additional signer;
- * the authorization key is the mandate additional-signer P-256 key
- * (`wallet-auth:`-prefixed base64 PKCS#8 DER).
+ * E2E_SIGNER_TEST_PRIVY_WALLET_ID, MANDATE_PRIVY_AUTHORIZATION_KEY, and
+ * MANDATE_PRIVY_SIGNER_ID are set. The wallet must be a **user-owned** signer
+ * test wallet with mandate registered as an **additional signer** (distinct from
+ * the operator ownerless wallet and the Mode C kill-switch wallet).
  *
  *   doppler run --project mandate-forestrie --config dev -- \
  *     pnpm --filter @mandate/signer test:live:owned
@@ -28,8 +34,11 @@ const APP_ID = process.env.MANDATE_PRIVY_APP_ID;
 const APP_SECRET = process.env.MANDATE_PRIVY_APP_SECRET;
 const WALLET_ID = process.env.E2E_SIGNER_TEST_PRIVY_WALLET_ID;
 const AUTHORIZATION_KEY = process.env.MANDATE_PRIVY_AUTHORIZATION_KEY;
+const MANDATE_SIGNER_ID = process.env.MANDATE_PRIVY_SIGNER_ID;
 const API_BASE = process.env.MANDATE_PRIVY_API_BASE?.replace(/\/$/, '');
-const LIVE = Boolean(APP_ID && APP_SECRET && WALLET_ID && AUTHORIZATION_KEY && API_BASE);
+const LIVE = Boolean(
+	APP_ID && APP_SECRET && WALLET_ID && AUTHORIZATION_KEY && MANDATE_SIGNER_ID && API_BASE
+);
 
 const LOG_ID = 'b2c3d4e5f67890ab1234567890abcdef';
 const SIGNER_TOKEN = 'live-owned-signer-token';
@@ -58,7 +67,21 @@ describe.skipIf(!LIVE)('handleSign (live Privy owned wallet)', () => {
 	let env: Env;
 
 	beforeAll(async () => {
-		walletAddress = await resolveWalletAddress();
+		const client = new PrivyRestClient({
+			appId: APP_ID!,
+			appSecret: APP_SECRET!,
+			apiBase: API_BASE!
+		});
+		const wallet = await getWallet(client, WALLET_ID!);
+		assertWalletIsUserOwned(wallet);
+		if (!mandateListedAsAdditionalSigner(wallet, MANDATE_SIGNER_ID!)) {
+			throw new Error(
+				`E2E_SIGNER_TEST_PRIVY_WALLET_ID must be a user-owned wallet with mandate ` +
+					`(${MANDATE_SIGNER_ID}) as an additional signer`
+			);
+		}
+
+		walletAddress = wallet.address ?? (await resolveWalletAddress());
 		env = {
 			MANDATE_SIGNER_TOKEN: SIGNER_TOKEN,
 			MANDATE_PRIVY_APP_ID: APP_ID!,

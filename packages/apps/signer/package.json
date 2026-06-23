@@ -9,7 +9,6 @@
 		"build": "tsc --noEmit",
 		"check": "tsc --noEmit",
 		"test": "vitest run",
-		"test:live": "vitest run test/handle-sign.live.test.ts",
 		"test:live:owned": "vitest run test/handle-sign.owned-wallet.live.test.ts"
 	},
 	"dependencies": {
@@ -20,6 +19,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20260228.0",
+		"@mandate/privy-admin": "workspace:*",
 		"@types/node": "^22",
 		"typescript": "^6.0.2",
 		"vitest": "^4.1.3",

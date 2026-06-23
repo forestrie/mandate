@@ -1,7 +1,10 @@
 import { randomBytes } from 'node:crypto';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import {
+	assertWalletIsUserOwned,
 	createDelegationSigningPolicy,
+	getWallet,
+	mandateListedAsAdditionalSigner,
 	onboardModeCWallet,
 	PrivyRestClient,
 	revokeModeCWallet
@@ -27,6 +30,9 @@ import {
  * Webhook → agent → in-process @mandate/signer → live Privy owned-wallet sign
  * → verify-before-submit → captured coordinator material submit.
  *
+ * Uses E2E_SIGNER_TEST_* (stable user-owned signer test wallet; never revoked).
+ * Kill-switch coverage uses the separate E2E_MODE_C_USER_* wallet below.
+ *
  *   doppler run --project mandate-forestrie --config dev -- \
  *     pnpm --filter @mandate/agent test:live:hands-off
  */
@@ -35,8 +41,11 @@ const APP_ID = process.env.MANDATE_PRIVY_APP_ID;
 const APP_SECRET = process.env.MANDATE_PRIVY_APP_SECRET;
 const WALLET_ID = process.env.E2E_SIGNER_TEST_PRIVY_WALLET_ID;
 const AUTH_KEY = process.env.MANDATE_PRIVY_AUTHORIZATION_KEY;
+const MANDATE_SIGNER_ID = process.env.MANDATE_PRIVY_SIGNER_ID;
 const API_BASE = process.env.MANDATE_PRIVY_API_BASE?.replace(/\/$/, '');
-const LIVE = Boolean(APP_ID && APP_SECRET && WALLET_ID && AUTH_KEY && API_BASE);
+const LIVE = Boolean(
+	APP_ID && APP_SECRET && WALLET_ID && AUTH_KEY && MANDATE_SIGNER_ID && API_BASE
+);
 
 const MODE_C_WALLET_ID = process.env.E2E_MODE_C_USER_PRIVY_WALLET_ID;
 const MODE_C_OWNER_AUTH_KEY = process.env.E2E_MODE_C_PRIVY_OWNER_AUTH_KEY;
@@ -108,7 +117,21 @@ describe.skipIf(!LIVE)('hands-off Mode C sealing (live Privy)', () => {
 	let rootSignerAddressBytes: Uint8Array;
 
 	beforeAll(async () => {
-		walletAddress = await resolveWalletAddress();
+		const client = new PrivyRestClient({
+			appId: APP_ID!,
+			appSecret: APP_SECRET!,
+			apiBase: API_BASE!
+		});
+		const wallet = await getWallet(client, WALLET_ID!);
+		assertWalletIsUserOwned(wallet);
+		if (!mandateListedAsAdditionalSigner(wallet, MANDATE_SIGNER_ID!)) {
+			throw new Error(
+				`E2E_SIGNER_TEST_PRIVY_WALLET_ID must be a user-owned wallet with mandate ` +
+					`(${MANDATE_SIGNER_ID}) as an additional signer`
+			);
+		}
+
+		walletAddress = wallet.address ?? (await resolveWalletAddress());
 		rootSignerAddressBytes = Buffer.from(walletAddress.slice(2), 'hex');
 		signerEnv = {
 			MANDATE_SIGNER_TOKEN: SIGNER_TOKEN,
