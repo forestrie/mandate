@@ -191,7 +191,7 @@ describe.skipIf(!LIVE)('provision + hands-off seal (live)', () => {
 				if (url === remoteSignerUrl) {
 					return handleSign(new Request(url, init), { env: signerEnv });
 				}
-				if (url.endsWith('/api/delegations/material')) {
+				if (url.endsWith('/api/delegations/certificate')) {
 					const body = JSON.parse(String(init?.body)) as { certificate: string };
 					submittedCertificate = body.certificate;
 					await assertCertificateVerifies(body.certificate, rootSignerAddressBytes);
@@ -203,7 +203,7 @@ describe.skipIf(!LIVE)('provision + hands-off seal (live)', () => {
 			});
 
 			const coordinatorOrigin = new URL(COORDINATOR_URL!).origin;
-			const materialSubmitUrl = `${COORDINATOR_URL!.replace(/\/$/, '')}/api/delegations/material`;
+			const materialSubmitUrl = `${COORDINATOR_URL!.replace(/\/$/, '')}/api/delegations/certificate`;
 
 			const event = buildDelegationRequiredEvent({
 				root: {

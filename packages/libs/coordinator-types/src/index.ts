@@ -14,13 +14,27 @@ export type {
 	PutWebhookRequest,
 	SigningRoute,
 	SigningRouteMode,
+	SubmitDelegationCertificateRequest,
 	SubmitMaterialRequest,
 	SubmitPublicRootRequest,
 	TrustRootResponseCbor,
 	WebhookConfig,
-	WebhookConfigResponse
+	WebhookConfigResponse,
+	ControlPlaneScope,
+	ChallengeRequest,
+	ChallengeResponse,
+	WalletChallengeEnvelope,
+	SessionTokenClaims,
+	SessionExchangeRequest,
+	SessionExchangeResponse
+} from './types.js';
+export {
+	CONTROL_PLANE_SCOPE_VALUES,
+	WALLET_CHALLENGE_VERSION,
+	buildKs256ControlPlaneMessage
 } from './types.js';
 export type {
+	CertificateSubmitResponse,
 	MaterialSubmitResponse,
 	PendingListResponse,
 	ProblemDetails,

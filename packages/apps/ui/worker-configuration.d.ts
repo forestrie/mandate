@@ -11,6 +11,8 @@ interface __BaseEnv_Env {
 	COORDINATOR_UPSTREAM_URL: string;
 	COORDINATOR_AUTH_MODE: string;
 	ENABLE_CUSTODY_KEYS_BFF: string;
+	ENABLE_WALLET_CHALLENGE_AUTH: string;
+	COORDINATOR_WALLET_CHALLENGE_BROKER: string;
 }
 declare namespace Cloudflare {
 	interface Env extends __BaseEnv_Env {}
@@ -32,6 +34,8 @@ declare namespace NodeJS {
 			| 'COORDINATOR_UPSTREAM_URL'
 			| 'COORDINATOR_AUTH_MODE'
 			| 'ENABLE_CUSTODY_KEYS_BFF'
+			| 'ENABLE_WALLET_CHALLENGE_AUTH'
+			| 'COORDINATOR_WALLET_CHALLENGE_BROKER'
 		>
 	> {}
 }

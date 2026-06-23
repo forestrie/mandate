@@ -1,13 +1,12 @@
-import type { PendingEntry } from '@mandate/coordinator-types';
-import type { SubmitMaterialRequest } from '@mandate/coordinator-types';
+import type { PendingEntry, SubmitDelegationCertificateRequest } from '@mandate/coordinator-types';
 
-/** Build coordinator material submit body from pending entry and certificate bytes. */
-export function buildSubmitMaterialBody(
+/** Build coordinator certificate submit body from pending entry and certificate bytes. */
+export function buildSubmitCertificateBody(
 	entry: PendingEntry,
 	certificateBase64: string,
 	nowSeconds: number,
 	ttlSeconds = 86400
-): SubmitMaterialRequest {
+): SubmitDelegationCertificateRequest {
 	return {
 		logId: entry.logIdHex32,
 		mmrStart: entry.mmrStart,
@@ -18,3 +17,6 @@ export function buildSubmitMaterialBody(
 		expiresAt: nowSeconds + ttlSeconds
 	};
 }
+
+/** @deprecated use buildSubmitCertificateBody */
+export const buildSubmitMaterialBody = buildSubmitCertificateBody;

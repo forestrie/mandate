@@ -13,17 +13,5 @@ export const POST: RequestHandler = async ({ request }) => {
 			{ status: 501 }
 		);
 	}
-	return proxyCoordinatorAuth('challenge', request);
-};
-
-export const GET: RequestHandler = async () => {
-	return json(
-		{
-			type: 'about:blank',
-			title: 'Method Not Allowed',
-			status: 405,
-			detail: 'Use POST to request a wallet challenge.'
-		},
-		{ status: 405 }
-	);
+	return proxyCoordinatorAuth('session', request);
 };

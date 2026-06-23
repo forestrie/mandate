@@ -6,7 +6,8 @@
 	"pages_build_output_dir": ".svelte-kit/cloudflare",
 	"vars": {
 		"NODE_ENV": "production",
-		"COORDINATOR_AUTH_MODE": "app_token_bff",
-		"COORDINATOR_UPSTREAM_URL": "https://coordinator.forest-2.forestrie.dev"
+		"COORDINATOR_AUTH_MODE": "wallet_challenge",
+		"COORDINATOR_UPSTREAM_URL": "https://coordinator.forest-2.forestrie.dev",
+		"ENABLE_WALLET_CHALLENGE_AUTH": "true"
 	}
 }

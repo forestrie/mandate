@@ -8,7 +8,13 @@ export interface PendingListResponse {
 	shardCount: number;
 }
 
-/** POST /api/delegations/material success response. */
+/** POST /api/delegations/certificate success response. */
+export interface CertificateSubmitResponse {
+	ok: true;
+	certificateKey: string;
+}
+
+/** @deprecated use CertificateSubmitResponse */
 export interface MaterialSubmitResponse {
 	ok: true;
 	materialKey: string;

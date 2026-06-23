@@ -172,7 +172,7 @@ describe.skipIf(!LIVE)('hands-off Mode C sealing (live Privy)', () => {
 				if (url === SIGNER_URL) {
 					return handleSign(new Request(url, init), { env: signerEnv });
 				}
-				if (url.endsWith('/api/delegations/material')) {
+				if (url.endsWith('/api/delegations/certificate')) {
 					const body = JSON.parse(String(init?.body)) as { certificate: string };
 					submittedCertificate = body.certificate;
 					await assertCertificateVerifies(body.certificate, rootSignerAddressBytes);
@@ -226,7 +226,7 @@ describe.skipIf(!LIVE)('hands-off Mode C sealing (live Privy)', () => {
 				if (url === SIGNER_URL) {
 					return handleSign(new Request(url, init), { env: signerEnv });
 				}
-				if (url.endsWith('/api/delegations/material')) {
+				if (url.endsWith('/api/delegations/certificate')) {
 					return new Response('internal coordinator detail with secret', { status: 403 });
 				}
 				throw new Error(`unexpected fetch: ${url}`);
@@ -364,7 +364,7 @@ describe.skipIf(!LIVE_MODE_C_KILL_SWITCH)(
 					if (url === SIGNER_URL) {
 						return handleSign(new Request(url, init), { env: modeCSignerEnv });
 					}
-					if (url.endsWith('/api/delegations/material')) {
+					if (url.endsWith('/api/delegations/certificate')) {
 						materialSubmitCount += 1;
 						throw new Error('material submit must not be called after revoke');
 					}
@@ -409,7 +409,7 @@ describe.skipIf(!LIVE_MODE_C_KILL_SWITCH)(
 					if (url === SIGNER_URL) {
 						return handleSign(new Request(url, init), { env: modeCSignerEnv });
 					}
-					if (url.endsWith('/api/delegations/material')) {
+					if (url.endsWith('/api/delegations/certificate')) {
 						const body = JSON.parse(String(init?.body)) as { certificate: string };
 						submittedCertificate = body.certificate;
 						await assertCertificateVerifies(body.certificate, modeCRootSignerAddressBytes);

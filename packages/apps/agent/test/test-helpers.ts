@@ -97,6 +97,7 @@ export function buildDelegationRequiredEvent(opts: {
 	root: TestKs256Root;
 	delegatedPublicKeyCbor: Uint8Array;
 	materialSubmitUrl?: string;
+	certificateSubmitUrl?: string;
 	requestKey?: string;
 	logId?: string;
 	authLogId?: string;
@@ -113,7 +114,12 @@ export function buildDelegationRequiredEvent(opts: {
 		mmrEnd: 8,
 		delegatedPublicKey,
 		requestedAt: 1_700_000_000,
-		materialSubmitUrl: opts.materialSubmitUrl ?? 'http://coordinator.test/api/delegations/material'
+		materialSubmitUrl:
+			opts.materialSubmitUrl ?? 'http://coordinator.test/api/delegations/certificate',
+		certificateSubmitUrl:
+			opts.certificateSubmitUrl ??
+			opts.materialSubmitUrl ??
+			'http://coordinator.test/api/delegations/certificate'
 	};
 }
 
