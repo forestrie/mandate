@@ -59,8 +59,8 @@ Three wallet topologies; see CONTEXT.md and ADR-0005 §7.
 | Signer test wallet             | `E2E_SIGNER_TEST_*`                                  | User-owned; mandate = additional signer        | **No** — stable success path       |
 | Mode C kill-switch wallet      | `E2E_MODE_C_USER_*`                                  | User-owned; mandate = additional signer        | **Yes** — onboard, revoke, restore |
 
-The retired `mandate-forestrie` wallet (ownerless + mandate additional signer)
-matched neither role and must not be referenced.
+The retired early `mandate-forestrie` wallet (ownerless + mandate additional
+signer; renamed **`mandate-forestrie-archived`** in Privy) must not be referenced.
 
 | Name                                | Synthetic role                                                      | Tests that mutate                                                 |
 | ----------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -270,11 +270,12 @@ ARCHIVE_WALLET_ID=vbd6kev61oe46vsp29hw281b task provision:e2e-signer-test-wallet
 # Archive vbd6kev6 manually in Privy dashboard if API PATCH is unavailable.
 ```
 
-Legacy explicit Doppler invocations:
+Legacy explicit Doppler invocations (all need nested `dev` + `e2e` for fixtures):
 
 ```sh
 # Owned-wallet signer
 doppler run --project mandate-forestrie --config dev -- \
+  doppler run --project mandate-forestrie --config e2e -- \
   pnpm --filter @mandate/signer test:live:owned
 
 # Mode C onboarding (dev + e2e)
