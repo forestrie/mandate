@@ -44,7 +44,7 @@ const MODE_C_MANDATE_SIGNER_ID = process.env.MANDATE_PRIVY_SIGNER_ID;
 const MODE_C_POLICY_ID = process.env.E2E_MODE_C_PRIVY_POLICY_ID?.trim();
 const MODE_C_SIGNER_URL = process.env.MANDATE_SIGNER_URL;
 const MODE_C_KEY_REF = 'mode-c-kill-switch-hands-off';
-const MODE_C_LOG_ID = 'd4e5f67890abcdef1234567890abcdef1';
+const MODE_C_LOG_ID = 'd4e5f67890abcdef1234567890abcdef';
 const LIVE_MODE_C_KILL_SWITCH = Boolean(
 	APP_ID &&
 	APP_SECRET &&

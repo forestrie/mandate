@@ -18,16 +18,16 @@ const ETHEREUM_TX_CHAIN_DENY_CONDITION: PolicyCondition = {
 	value: [...ETHEREUM_POLICY_DENY_CHAIN_IDS]
 };
 
-const PERSONAL_SIGN_DENY_CONDITION: PolicyCondition = {
-	field_source: 'message',
-	field: 'byte_length',
-	operator: 'gte',
-	value: '1'
-};
-
 const EARN_AMOUNT_DENY_CONDITION: PolicyCondition = {
 	field_source: 'action_request_body',
 	field: 'amount',
+	operator: 'gte',
+	value: '0'
+};
+
+const TRANSFER_DENY_CONDITION: PolicyCondition = {
+	field_source: 'action_request_body',
+	field: 'source.amount',
 	operator: 'gte',
 	value: '0'
 };
@@ -39,20 +39,33 @@ const ETH_SIGN7702_DENY_CONDITION: PolicyCondition = {
 	value: '0x0000000000000000000000000000000000000001'
 };
 
+/** Privy requires ≥1 condition on DENY rules; matches all requests. */
+const ALWAYS_DENY_SYSTEM_CONDITION: PolicyCondition = {
+	field_source: 'system',
+	field: 'current_unix_timestamp',
+	operator: 'gte',
+	value: '0'
+};
+
 function denyConditionsForMethod(
 	method: (typeof DENIED_MODE_C_POLICY_METHODS)[number]
 ): PolicyCondition[] {
 	switch (method) {
 		case 'exportPrivateKey':
 		case 'exportSeedPhrase':
-			return [];
+		case 'signTransaction':
+		case 'signAndSendTransaction':
+		case 'signTransactionBytes':
+			return [ALWAYS_DENY_SYSTEM_CONDITION];
 		case 'eth_sendTransaction':
 		case 'eth_signTransaction':
 		case 'eth_signUserOperation':
 		case 'wallet_sendCalls':
 			return [ETHEREUM_TX_CHAIN_DENY_CONDITION];
+		case 'transfer':
+			return [TRANSFER_DENY_CONDITION];
 		case 'personal_sign':
-			return [PERSONAL_SIGN_DENY_CONDITION];
+			return [ALWAYS_DENY_SYSTEM_CONDITION];
 		case 'eth_signTypedData_v4':
 			return ETHEREUM_POLICY_DENY_CHAIN_IDS.map((chainId) => ({
 				field_source: 'ethereum_typed_data_domain',
