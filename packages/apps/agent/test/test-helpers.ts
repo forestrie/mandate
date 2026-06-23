@@ -97,6 +97,7 @@ export function buildDelegationRequiredEvent(opts: {
 	root: TestKs256Root;
 	delegatedPublicKeyCbor: Uint8Array;
 	materialSubmitUrl?: string;
+	certificateSubmitUrl?: string;
 	requestKey?: string;
 	logId?: string;
 	authLogId?: string;

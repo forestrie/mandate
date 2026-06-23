@@ -1,8 +1,6 @@
 import { browser } from '$app/environment';
 import type { ControlPlaneScope } from '@mandate/coordinator-types';
-import { buildKs256ControlPlaneMessage } from '@mandate/coordinator-types';
 import { getConnectedEthereumProvider, getConnectedWalletAddress } from '$lib/privy/client.js';
-import type { WalletChallengeEnvelope } from '@mandate/coordinator-types';
 import {
 	ensureCachedControlPlaneSession,
 	type CachedControlPlaneSession
@@ -10,12 +8,11 @@ import {
 
 const cache = new Map<string, CachedControlPlaneSession>();
 
-async function signKs256Envelope(envelope: WalletChallengeEnvelope): Promise<string> {
+async function signKs256Message(message: string): Promise<string> {
 	const provider = await getConnectedEthereumProvider();
 	if (!provider) {
 		throw new Error('Connect a wallet before signing the control-plane challenge.');
 	}
-	const message = buildKs256ControlPlaneMessage(envelope);
 	const address = await getConnectedWalletAddress();
 	if (!address) {
 		throw new Error('Connect a wallet before signing the control-plane challenge.');
@@ -40,7 +37,7 @@ export async function ensureControlPlaneSession(
 
 	return ensureCachedControlPlaneSession(authLogId, scopes, cache, {
 		fetch,
-		signMessage: signKs256Envelope
+		signMessage: signKs256Message
 	});
 }
 
