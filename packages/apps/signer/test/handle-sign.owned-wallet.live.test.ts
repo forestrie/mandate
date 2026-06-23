@@ -95,9 +95,13 @@ describe.skipIf(!LIVE)('handleSign (live Privy owned wallet)', () => {
 			});
 
 			const response = await handleSign(request, { env });
-			expect(response.status).toBe(200);
+			const responseText = await response.text();
+			if (response.status !== 200) {
+				console.error('handleSign error:', response.status, responseText);
+			}
+			expect(response.status, responseText).toBe(200);
 
-			const body = (await response.json()) as { signature: string };
+			const body = JSON.parse(responseText) as { signature: string };
 			const signature = base64ToBytes(body.signature);
 			expect(signature.length).toBe(65);
 
