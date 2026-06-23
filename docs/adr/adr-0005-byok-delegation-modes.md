@@ -89,11 +89,11 @@ UI queue that also hosts the Mode C revocation control.
    **Privy wallet inventory (mandate-forestrie instance).** Mandate needs exactly
    three Privy wallet roles — no more:
 
-   | Role | Topology | Purpose | Mandate Privy activity |
-   | ---- | -------- | ------- | ---------------------- |
-   | **Operator payment-authoritative** | Ownerless app-controlled (`owner_id: null`); **no** additional signer | Operator's own payment-authoritative log `K(L)` | Basic-auth `secp256k1_sign` only; `KEY_DIRECTORY` without `requiresAuthorizationSignature` |
-   | **Mode C user wallet** (per user log) | User-owned; mandate = **additional signer** + policy | User log root `K(L)` under hosted Mode C | Onboarding: owner-signed PATCH to add `MANDATE_PRIVY_SIGNER_ID`; signing: owned-wallet `privy-authorization-signature`; revoke: owner-signed PATCH `additional_signers: []` |
-   | **E2E fixtures** (two user-owned wallets) | Same as Mode C user wallet | Stable signer-test wallet (`E2E_SIGNER_TEST_*`, never revoked) + separate kill-switch wallet (`E2E_MODE_C_USER_*`) | Same PATCH/sign/revoke as Mode C; fixtures created outside mandate |
+   | Role                                      | Topology                                                              | Purpose                                                                                                            | Mandate Privy activity                                                                                                                                                      |
+   | ----------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | **Operator payment-authoritative**        | Ownerless app-controlled (`owner_id: null`); **no** additional signer | Operator's own payment-authoritative log `K(L)`                                                                    | Basic-auth `secp256k1_sign` only; `KEY_DIRECTORY` without `requiresAuthorizationSignature`                                                                                  |
+   | **Mode C user wallet** (per user log)     | User-owned; mandate = **additional signer** + policy                  | User log root `K(L)` under hosted Mode C                                                                           | Onboarding: owner-signed PATCH to add `MANDATE_PRIVY_SIGNER_ID`; signing: owned-wallet `privy-authorization-signature`; revoke: owner-signed PATCH `additional_signers: []` |
+   | **E2E fixtures** (two user-owned wallets) | Same as Mode C user wallet                                            | Stable signer-test wallet (`E2E_SIGNER_TEST_*`, never revoked) + separate kill-switch wallet (`E2E_MODE_C_USER_*`) | Same PATCH/sign/revoke as Mode C; fixtures created outside mandate                                                                                                          |
 
    Mandate **never creates** Privy wallets (`POST /v1/wallets` is not in
    `@mandate/register`). User wallets are created by the user (or synthetic E2E

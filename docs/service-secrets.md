@@ -53,31 +53,31 @@ Doppler config **`e2e`** only. GitHub **`live-signer`** only.
 
 Three wallet topologies; see CONTEXT.md and ADR-0005 §7.
 
-| Role | Env vars | Topology | Mutated by tests? |
-| ---- | -------- | -------- | ----------------- |
-| Operator payment-authoritative | *(operational `KEY_DIRECTORY` only; not `E2E_*`)* | Ownerless app-controlled; no additional signer | No |
-| Signer test wallet | `E2E_SIGNER_TEST_*` | User-owned; mandate = additional signer | **No** — stable success path |
-| Mode C kill-switch wallet | `E2E_MODE_C_USER_*` | User-owned; mandate = additional signer | **Yes** — onboard, revoke, restore |
+| Role                           | Env vars                                            | Topology                                       | Mutated by tests?                  |
+| ------------------------------ | --------------------------------------------------- | ---------------------------------------------- | ---------------------------------- |
+| Operator payment-authoritative | _(operational `KEY_DIRECTORY` only; not `E2E\__`)\* | Ownerless app-controlled; no additional signer | No                                 |
+| Signer test wallet             | `E2E_SIGNER_TEST_*`                                 | User-owned; mandate = additional signer        | **No** — stable success path       |
+| Mode C kill-switch wallet      | `E2E_MODE_C_USER_*`                                 | User-owned; mandate = additional signer        | **Yes** — onboard, revoke, restore |
 
 The retired `mandate-forestrie` wallet (ownerless + mandate additional signer)
 matched neither role and must not be referenced.
 
-| Name                                | Synthetic role                                      | Tests that mutate                                               |
-| ----------------------------------- | --------------------------------------------------- | --------------------------------------------------------------- |
-| `E2E_SIGNER_TEST_PRIVY_WALLET_ID`   | User-owned signer test wallet (mandate additional signer) | `live-owned`, `live-hands-off` (success path) — **never revoked** |
-| `E2E_SIGNER_TEST_WALLET_ADDRESS`    | Signer test wallet Ethereum address                 | —                                                               |
-| `E2E_SIGNER_TEST_OWNER_AUTH_KEY`    | Owner key for signer test wallet PATCH (onboard/re-onboard only) | Provision script / manual re-onboard |
-| `E2E_MODE_C_USER_PRIVY_WALLET_ID`   | Mode C **kill-switch** test user wallet (distinct from signer test) | `live-mode-c`, `live-hands-off` (kill-switch), `live-provision` |
-| `E2E_MODE_C_USER_WALLET_ADDRESS`    | Optional address for Mode C wallet                  | —                                                               |
-| `E2E_MODE_C_PRIVY_OWNER_AUTH_KEY`   | Test user owner key for wallet PATCH                | onboard, revoke, kill-switch                                    |
-| `E2E_MODE_C_PRIVY_POLICY_ID`        | Optional; reuse delegation policy across E2E jobs   | provision, mode-c, hands-off restore                            |
-| `E2E_CANOPY_API_URL`                | Dev Canopy SCRAPI base                              | `live-provision`                                                |
-| `E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN` | Onboard bearer for genesis                          | `live-provision`                                                |
-| `E2E_CANOPY_OPS_ADMIN_TOKEN`        | Mint onboard token if payments token unset          | `live-provision`                                                |
-| `E2E_CANOPY_UNIVOCITY_ADDR`         | Dev Univocity contract (40-hex)                     | `live-provision`                                                |
-| `E2E_CANOPY_CHAIN_ID`               | EIP-155 chain id for dev Canopy genesis             | `live-provision`                                                |
-| `E2E_DELEGATION_COORDINATOR_URL`    | Dev coordinator origin                              | `live-provision`                                                |
-| `E2E_MANDATE_AGENT_WEBHOOK_URL`     | Agent webhook for genesis `?webhookUrl=`            | `live-provision`                                                |
+| Name                                | Synthetic role                                                      | Tests that mutate                                                 |
+| ----------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `E2E_SIGNER_TEST_PRIVY_WALLET_ID`   | User-owned signer test wallet (mandate additional signer)           | `live-owned`, `live-hands-off` (success path) — **never revoked** |
+| `E2E_SIGNER_TEST_WALLET_ADDRESS`    | Signer test wallet Ethereum address                                 | —                                                                 |
+| `E2E_SIGNER_TEST_OWNER_AUTH_KEY`    | Owner key for signer test wallet PATCH (onboard/re-onboard only)    | Provision script / manual re-onboard                              |
+| `E2E_MODE_C_USER_PRIVY_WALLET_ID`   | Mode C **kill-switch** test user wallet (distinct from signer test) | `live-mode-c`, `live-hands-off` (kill-switch), `live-provision`   |
+| `E2E_MODE_C_USER_WALLET_ADDRESS`    | Optional address for Mode C wallet                                  | —                                                                 |
+| `E2E_MODE_C_PRIVY_OWNER_AUTH_KEY`   | Test user owner key for wallet PATCH                                | onboard, revoke, kill-switch                                      |
+| `E2E_MODE_C_PRIVY_POLICY_ID`        | Optional; reuse delegation policy across E2E jobs                   | provision, mode-c, hands-off restore                              |
+| `E2E_CANOPY_API_URL`                | Dev Canopy SCRAPI base                                              | `live-provision`                                                  |
+| `E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN` | Onboard bearer for genesis                                          | `live-provision`                                                  |
+| `E2E_CANOPY_OPS_ADMIN_TOKEN`        | Mint onboard token if payments token unset                          | `live-provision`                                                  |
+| `E2E_CANOPY_UNIVOCITY_ADDR`         | Dev Univocity contract (40-hex)                                     | `live-provision`                                                  |
+| `E2E_CANOPY_CHAIN_ID`               | EIP-155 chain id for dev Canopy genesis                             | `live-provision`                                                  |
+| `E2E_DELEGATION_COORDINATOR_URL`    | Dev coordinator origin                                              | `live-provision`                                                  |
+| `E2E_MANDATE_AGENT_WEBHOOK_URL`     | Agent webhook for genesis `?webhookUrl=`                            | `live-provision`                                                  |
 
 Reuse `E2E_MODE_C_PRIVY_POLICY_ID` across provision, mode-c revoke-restore, and
 hands-off kill-switch restore to avoid policy sprawl.
