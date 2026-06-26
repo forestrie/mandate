@@ -37,7 +37,7 @@ describe.skipIf(!liveReady)('onboard self-service live', () => {
 					Authorization: `Bearer ${opsToken}`,
 					'Content-Type': 'application/cbor'
 				},
-				body: encode(new Map()) as unknown as BodyInit
+				body: new Uint8Array(encode(new Map()))
 			}
 		);
 		expect(approveRes.status).toBe(200);

@@ -68,7 +68,7 @@ export async function requestOnboardToken(
 			'Content-Type': 'application/cbor',
 			Accept: 'application/cbor'
 		},
-		body: encode(body) as unknown as BodyInit
+		body: new Uint8Array(encode(body))
 	});
 
 	if (response.status !== 201) {
@@ -119,7 +119,7 @@ export async function redeemOnboardToken(opts: RedeemOnboardOptions): Promise<st
 				'Content-Type': 'application/cbor',
 				Accept: 'application/cbor'
 			},
-			body: encode(new Map([[CBOR_REDEEM_CODE, opts.redeemCode]])) as unknown as BodyInit
+			body: new Uint8Array(encode(new Map([[CBOR_REDEEM_CODE, opts.redeemCode]])))
 		}
 	);
 
