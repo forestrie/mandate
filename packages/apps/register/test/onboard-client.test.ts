@@ -11,7 +11,9 @@ describe('onboard-client', () => {
 		const fetchImpl = vi.fn(
 			async () =>
 				new Response(
-					encode({ requestId: 'id-1', status: 'pending', expiresAt: 9, redeemCode: 'rc' }),
+					new Uint8Array(
+						encode({ requestId: 'id-1', status: 'pending', expiresAt: 9, redeemCode: 'rc' })
+					),
 					{
 						status: 201,
 						headers: { 'Content-Type': 'application/cbor' }
@@ -37,7 +39,7 @@ describe('onboard-client', () => {
 		const { encode } = await import('cbor-x');
 		const fetchImpl = vi.fn(
 			async () =>
-				new Response(encode({ token: 'tok-abc' }), {
+				new Response(new Uint8Array(encode({ token: 'tok-abc' })), {
 					status: 200,
 					headers: { 'Content-Type': 'application/cbor' }
 				})
@@ -56,7 +58,7 @@ describe('onboard-client', () => {
 		const { encode } = await import('cbor-x');
 		const fetchImpl = vi.fn(
 			async () =>
-				new Response(encode({ requestId: 'id-1', status: 'approved' }), {
+				new Response(new Uint8Array(encode({ requestId: 'id-1', status: 'approved' })), {
 					status: 200,
 					headers: { 'Content-Type': 'application/cbor' }
 				})
