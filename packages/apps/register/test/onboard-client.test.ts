@@ -8,11 +8,15 @@ import {
 describe('onboard-client', () => {
 	it('requestOnboardToken posts CBOR create body', async () => {
 		const { encode } = await import('cbor-x');
-		const fetchImpl = vi.fn(async () =>
-			new Response(encode({ requestId: 'id-1', status: 'pending', expiresAt: 9, redeemCode: 'rc' }), {
-				status: 201,
-				headers: { 'Content-Type': 'application/cbor' }
-			})
+		const fetchImpl = vi.fn(
+			async () =>
+				new Response(
+					encode({ requestId: 'id-1', status: 'pending', expiresAt: 9, redeemCode: 'rc' }),
+					{
+						status: 201,
+						headers: { 'Content-Type': 'application/cbor' }
+					}
+				)
 		);
 
 		const out = await requestOnboardToken({
@@ -31,11 +35,12 @@ describe('onboard-client', () => {
 
 	it('redeemOnboardToken returns token', async () => {
 		const { encode } = await import('cbor-x');
-		const fetchImpl = vi.fn(async () =>
-			new Response(encode({ token: 'tok-abc' }), {
-				status: 200,
-				headers: { 'Content-Type': 'application/cbor' }
-			})
+		const fetchImpl = vi.fn(
+			async () =>
+				new Response(encode({ token: 'tok-abc' }), {
+					status: 200,
+					headers: { 'Content-Type': 'application/cbor' }
+				})
 		);
 
 		const token = await redeemOnboardToken({
@@ -49,11 +54,12 @@ describe('onboard-client', () => {
 
 	it('getOnboardRequestStatus polls status', async () => {
 		const { encode } = await import('cbor-x');
-		const fetchImpl = vi.fn(async () =>
-			new Response(encode({ requestId: 'id-1', status: 'approved' }), {
-				status: 200,
-				headers: { 'Content-Type': 'application/cbor' }
-			})
+		const fetchImpl = vi.fn(
+			async () =>
+				new Response(encode({ requestId: 'id-1', status: 'approved' }), {
+					status: 200,
+					headers: { 'Content-Type': 'application/cbor' }
+				})
 		);
 
 		const out = await getOnboardRequestStatus('https://api.test', 'id-1', fetchImpl);

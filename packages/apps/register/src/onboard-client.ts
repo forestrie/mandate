@@ -73,7 +73,9 @@ export async function requestOnboardToken(
 
 	if (response.status !== 201) {
 		const detail = await response.text().catch(() => '');
-		throw new Error(`request onboard: expected 201, got ${response.status}: ${detail.slice(0, 300)}`);
+		throw new Error(
+			`request onboard: expected 201, got ${response.status}: ${detail.slice(0, 300)}`
+		);
 	}
 
 	const parsed = await decodeCborResponse(response);
@@ -102,8 +104,7 @@ export async function getOnboardRequestStatus(
 		requestId: String(parsed.requestId),
 		status: String(parsed.status),
 		expiresAt: parsed.expiresAt != null ? Number(parsed.expiresAt) : undefined,
-		onboardTokenRef:
-			typeof parsed.onboardTokenRef === 'string' ? parsed.onboardTokenRef : undefined
+		onboardTokenRef: typeof parsed.onboardTokenRef === 'string' ? parsed.onboardTokenRef : undefined
 	};
 }
 
@@ -124,7 +125,9 @@ export async function redeemOnboardToken(opts: RedeemOnboardOptions): Promise<st
 
 	if (response.status !== 200) {
 		const detail = await response.text().catch(() => '');
-		throw new Error(`redeem onboard: expected 200, got ${response.status}: ${detail.slice(0, 300)}`);
+		throw new Error(
+			`redeem onboard: expected 200, got ${response.status}: ${detail.slice(0, 300)}`
+		);
 	}
 
 	const parsed = await decodeCborResponse(response);

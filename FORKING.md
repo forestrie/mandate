@@ -53,15 +53,15 @@ runs the Canopy ops plane.
 
 ## Prerequisites
 
-| Item | Notes |
-| ---- | ----- |
+| Item                            | Notes                                                                                                       |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | Git fork of `forestrie/mandate` | `pnpm install` (see [ADR-0004](docs/adr/adr-0004-delegation-cose-distribution.md) for GitHub Packages auth) |
-| Cloudflare account | Pages (`@mandate/ui`) + Workers (agent, signer) |
-| Privy app | Dashboard app id + secret; embedded Ethereum wallets enabled |
-| Canopy SCRAPI base URL | e.g. `https://api-a.forest-2.forestrie.dev` or your self-hosted worker |
-| Delegation-coordinator URL | e.g. `https://delegation-coordinator.a.forest-2.forestrie.dev` |
-| Chain + Univocity address | 20-byte contract address bound at genesis |
-| Onboard bearer token | From Canopy operator (below) — gates **payment-authoritative** genesis |
+| Cloudflare account              | Pages (`@mandate/ui`) + Workers (agent, signer)                                                             |
+| Privy app                       | Dashboard app id + secret; embedded Ethereum wallets enabled                                                |
+| Canopy SCRAPI base URL          | e.g. `https://api-a.forest-2.forestrie.dev` or your self-hosted worker                                      |
+| Delegation-coordinator URL      | e.g. `https://delegation-coordinator.a.forest-2.forestrie.dev`                                              |
+| Chain + Univocity address       | 20-byte contract address bound at genesis                                                                   |
+| Onboard bearer token            | From Canopy operator (below) — gates **payment-authoritative** genesis                                      |
 
 Optional for local dev: [Doppler](https://www.doppler.com/) project `mandate-forestrie`
 config `dev`, or copy `.dev.vars.example` files under `packages/apps/*`.
@@ -99,12 +99,12 @@ sequenceDiagram
     M->>M: Record chainId + address for genesis
 ```
 
-| Path | When to use |
-| ---- | ----------- |
-| **A** | Fork on a shared Forestrie dev lane |
+| Path  | When to use                                                                                                                      |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **A** | Fork on a shared Forestrie dev lane                                                                                              |
 | **B** | Independent fork; prebuilt deployer + release tag — no Foundry — see [releases](https://github.com/forestrie/univocity/releases) |
-| **C** | Custom contract changes |
-| **D** | Local smoke only — not production |
+| **C** | Custom contract changes                                                                                                          |
+| **D** | Local smoke only — not production                                                                                                |
 
 **B (detail):** download `deployer-darwin-arm64` or `deployer-linux-x64` from
 [univocity-tools releases](https://github.com/forestrie/univocity-tools/releases),
@@ -254,12 +254,12 @@ doppler run --project mandate-forestrie --config dev -- \
   --chain-id "$CANOPY_CHAIN_ID"
 ```
 
-| Output field | Keep |
-| ------------ | ---- |
-| `forestR` | Bootstrap UUID `R` for SCRAPI paths |
-| `logIdHex32` | Coordinator / grant log id |
-| `descriptors` | `KEY_DIRECTORY` + `OPERATOR_ROOT_KEYS` for Workers |
-| `genesis.coordinator` | Expect `publicRoot: ok`, `webhook: ok` |
+| Output field          | Keep                                               |
+| --------------------- | -------------------------------------------------- |
+| `forestR`             | Bootstrap UUID `R` for SCRAPI paths                |
+| `logIdHex32`          | Coordinator / grant log id                         |
+| `descriptors`         | `KEY_DIRECTORY` + `OPERATOR_ROOT_KEYS` for Workers |
+| `genesis.coordinator` | Expect `publicRoot: ok`, `webhook: ok`             |
 
 Warm-log grant flow matches
 [scitt-hackathon Appendix B](../canopy/docs/demo/scitt-hackathon.md#appendix-b--organizer-setup-not-the-main-show).
@@ -389,25 +389,25 @@ sequenceDiagram
 
 ## Credential cheat sheet
 
-| Credential | Who holds it | Gates |
-| ---------- | ------------ | ----- |
-| `CANOPY_OPS_ADMIN_TOKEN` | Canopy operator | Mint onboard tokens |
-| `CANOPY_PAYMENTS_ONBOARD_TOKEN` | Mandate operator | PA genesis only |
-| `Forestrie-Grant` | User / operator keys | Grants + statements |
-| `COORDINATOR_APP_TOKEN` | Mandate infra | Coordinator service APIs |
-| Control-plane session | User wallet | Coordinator UX APIs (v1) — [ADR-0001](docs/adr-0001-auth-strategy-seams.md) |
+| Credential                      | Who holds it         | Gates                                                                       |
+| ------------------------------- | -------------------- | --------------------------------------------------------------------------- |
+| `CANOPY_OPS_ADMIN_TOKEN`        | Canopy operator      | Mint onboard tokens                                                         |
+| `CANOPY_PAYMENTS_ONBOARD_TOKEN` | Mandate operator     | PA genesis only                                                             |
+| `Forestrie-Grant`               | User / operator keys | Grants + statements                                                         |
+| `COORDINATOR_APP_TOKEN`         | Mandate infra        | Coordinator service APIs                                                    |
+| Control-plane session           | User wallet          | Coordinator UX APIs (v1) — [ADR-0001](docs/adr-0001-auth-strategy-seams.md) |
 
 ---
 
 ## Troubleshooting
 
-| Symptom | Check |
-| ------- | ----- |
-| Genesis 401 | Onboard token wrong or revoked |
-| Genesis 503 coordinator | Webhook URL unreachable from Canopy |
-| Statement 403 `signer_mismatch` | Statement signer ≠ grant binding |
-| Receipt poll never completes | Ask Canopy operator: Ranger + Sealer health |
-| Agent never seals | Webhook URL, Worker secrets, log enabled flag |
+| Symptom                         | Check                                         |
+| ------------------------------- | --------------------------------------------- |
+| Genesis 401                     | Onboard token wrong or revoked                |
+| Genesis 503 coordinator         | Webhook URL unreachable from Canopy           |
+| Statement 403 `signer_mismatch` | Statement signer ≠ grant binding              |
+| Receipt poll never completes    | Ask Canopy operator: Ranger + Sealer health   |
+| Agent never seals               | Webhook URL, Worker secrets, log enabled flag |
 
 ---
 

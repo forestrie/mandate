@@ -11,12 +11,11 @@ import {
 } from '../src/onboard-client.js';
 
 const canopyBaseUrl = process.env.E2E_CANOPY_API_URL?.trim();
-const opsToken = process.env.CANOPY_OPS_ADMIN_TOKEN?.trim();
+const opsToken = process.env.E2E_CANOPY_OPS_ADMIN_TOKEN?.trim();
 const chainId = process.env.E2E_CANOPY_CHAIN_ID?.trim();
 const univocityAddr = process.env.E2E_CANOPY_UNIVOCITY_ADDR?.trim();
 
-const liveReady =
-	!!canopyBaseUrl && !!opsToken && !!chainId && !!univocityAddr;
+const liveReady = !!canopyBaseUrl && !!opsToken && !!chainId && !!univocityAddr;
 
 describe.skipIf(!liveReady)('onboard self-service live', () => {
 	it('request → approve → redeem returns usable token', async () => {
@@ -29,7 +28,7 @@ describe.skipIf(!liveReady)('onboard self-service live', () => {
 		});
 
 		// Ops approve via CBOR route
-		const { encode, decode } = await import('cbor-x');
+		const { encode } = await import('cbor-x');
 		const approveRes = await fetch(
 			`${canopyBaseUrl!.replace(/\/$/, '')}/api/onboarding/requests/${requested.requestId}/approve`,
 			{
@@ -56,7 +55,7 @@ describe.skipIf(!liveReady)('onboard self-service live', () => {
 });
 
 describe('onboard self-service live preflight', () => {
-	it.skipIf(liveReady)('skipped — set E2E_CANOPY_* + CANOPY_OPS_ADMIN_TOKEN', () => {
+	it.skipIf(liveReady)('skipped — set E2E_CANOPY_* + E2E_CANOPY_OPS_ADMIN_TOKEN', () => {
 		expect(liveReady).toBe(false);
 	});
 });

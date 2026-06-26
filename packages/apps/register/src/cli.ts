@@ -13,7 +13,7 @@ function usageOnboardRequest(): void {
 	console.error(`Usage: mandate-register onboard request [options]
 
 Options:
-  --canopy-url       CANOPY_BASE_URL or E2E_CANOPY_API_URL (required)
+  --canopy-url       E2E_CANOPY_API_URL (required)
   --label            Instance label (required)
   --chain-id         EIP-155 chain id (required)
   --univocity-addr   40-hex Univocity contract (required)
@@ -27,7 +27,7 @@ function usageOnboardRedeem(): void {
 	console.error(`Usage: mandate-register onboard redeem [options]
 
 Options:
-  --canopy-url       CANOPY_BASE_URL or E2E_CANOPY_API_URL (required)
+  --canopy-url       E2E_CANOPY_API_URL (required)
   --request-id       Onboard request id from request step (required)
   --redeem-code      Redeem code from request step (required)
 `);
@@ -38,7 +38,7 @@ function usageOnboardStatus(): void {
 	console.error(`Usage: mandate-register onboard status [options]
 
 Options:
-  --canopy-url       CANOPY_BASE_URL or E2E_CANOPY_API_URL (required)
+  --canopy-url       E2E_CANOPY_API_URL (required)
   --request-id       Onboard request id (required)
 `);
 	process.exit(1);
@@ -136,7 +136,7 @@ function requirePrivyClientConfig(): {
 }
 
 async function runOnboardRequest(): Promise<void> {
-	const canopyBaseUrl = envOr(readFlag('--canopy-url'), 'CANOPY_BASE_URL', 'E2E_CANOPY_API_URL');
+	const canopyBaseUrl = envOr(readFlag('--canopy-url'), 'E2E_CANOPY_API_URL');
 	const label = readFlag('--label');
 	const chainId = readFlag('--chain-id');
 	const univocityAddr = readFlag('--univocity-addr');
@@ -159,7 +159,7 @@ async function runOnboardRequest(): Promise<void> {
 }
 
 async function runOnboardRedeem(): Promise<void> {
-	const canopyBaseUrl = envOr(readFlag('--canopy-url'), 'CANOPY_BASE_URL', 'E2E_CANOPY_API_URL');
+	const canopyBaseUrl = envOr(readFlag('--canopy-url'), 'E2E_CANOPY_API_URL');
 	const requestId = readFlag('--request-id');
 	const redeemCode = readFlag('--redeem-code');
 
@@ -176,7 +176,7 @@ async function runOnboardRedeem(): Promise<void> {
 }
 
 async function runOnboardStatus(): Promise<void> {
-	const canopyBaseUrl = envOr(readFlag('--canopy-url'), 'CANOPY_BASE_URL', 'E2E_CANOPY_API_URL');
+	const canopyBaseUrl = envOr(readFlag('--canopy-url'), 'E2E_CANOPY_API_URL');
 	const requestId = readFlag('--request-id');
 
 	if (!canopyBaseUrl || !requestId) {
