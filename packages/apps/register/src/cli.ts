@@ -1,8 +1,48 @@
 #!/usr/bin/env node
 import { randomUUID } from 'node:crypto';
 import { provisionInstance } from './provision.js';
+import {
+	getOnboardRequestStatus,
+	redeemOnboardToken,
+	requestOnboardToken
+} from './onboard-client.js';
 import { onboardModeCWallet, PrivyRestClient, revokeModeCWallet } from '@mandate/privy-admin';
 import type { DelegationMode } from './delegation-mode.js';
+
+function usageOnboardRequest(): void {
+	console.error(`Usage: mandate-register onboard request [options]
+
+Options:
+  --canopy-url       CANOPY_BASE_URL or E2E_CANOPY_API_URL (required)
+  --label            Instance label (required)
+  --chain-id         EIP-155 chain id (required)
+  --univocity-addr   40-hex Univocity contract (required)
+  --contact-email    Operator contact email (required)
+  --mandate-origin   Deployed mandate UI URL (optional)
+`);
+	process.exit(1);
+}
+
+function usageOnboardRedeem(): void {
+	console.error(`Usage: mandate-register onboard redeem [options]
+
+Options:
+  --canopy-url       CANOPY_BASE_URL or E2E_CANOPY_API_URL (required)
+  --request-id       Onboard request id from request step (required)
+  --redeem-code      Redeem code from request step (required)
+`);
+	process.exit(1);
+}
+
+function usageOnboardStatus(): void {
+	console.error(`Usage: mandate-register onboard status [options]
+
+Options:
+  --canopy-url       CANOPY_BASE_URL or E2E_CANOPY_API_URL (required)
+  --request-id       Onboard request id (required)
+`);
+	process.exit(1);
+}
 
 function usageProvision(): void {
 	console.error(`Usage: mandate-register provision [options]
@@ -93,6 +133,58 @@ function requirePrivyClientConfig(): {
 		appSecret: requireOperationalEnv('MANDATE_PRIVY_APP_SECRET'),
 		apiBase: requireOperationalEnv('MANDATE_PRIVY_API_BASE')
 	};
+}
+
+async function runOnboardRequest(): Promise<void> {
+	const canopyBaseUrl = envOr(readFlag('--canopy-url'), 'CANOPY_BASE_URL', 'E2E_CANOPY_API_URL');
+	const label = readFlag('--label');
+	const chainId = readFlag('--chain-id');
+	const univocityAddr = readFlag('--univocity-addr');
+	const contactEmail = readFlag('--contact-email');
+	const mandateOrigin = readFlag('--mandate-origin');
+
+	if (!canopyBaseUrl || !label || !chainId || !univocityAddr || !contactEmail) {
+		usageOnboardRequest();
+	}
+
+	const result = await requestOnboardToken({
+		canopyBaseUrl: canopyBaseUrl!,
+		label: label!,
+		chainId: chainId!,
+		univocityAddr: univocityAddr!,
+		contactEmail: contactEmail!,
+		mandateOrigin
+	});
+	console.log(JSON.stringify(result, null, 2));
+}
+
+async function runOnboardRedeem(): Promise<void> {
+	const canopyBaseUrl = envOr(readFlag('--canopy-url'), 'CANOPY_BASE_URL', 'E2E_CANOPY_API_URL');
+	const requestId = readFlag('--request-id');
+	const redeemCode = readFlag('--redeem-code');
+
+	if (!canopyBaseUrl || !requestId || !redeemCode) {
+		usageOnboardRedeem();
+	}
+
+	const token = await redeemOnboardToken({
+		canopyBaseUrl: canopyBaseUrl!,
+		requestId: requestId!,
+		redeemCode: redeemCode!
+	});
+	console.log(JSON.stringify({ token, requestId }, null, 2));
+}
+
+async function runOnboardStatus(): Promise<void> {
+	const canopyBaseUrl = envOr(readFlag('--canopy-url'), 'CANOPY_BASE_URL', 'E2E_CANOPY_API_URL');
+	const requestId = readFlag('--request-id');
+
+	if (!canopyBaseUrl || !requestId) {
+		usageOnboardStatus();
+	}
+
+	const status = await getOnboardRequestStatus(canopyBaseUrl!, requestId!);
+	console.log(JSON.stringify(status, null, 2));
 }
 
 async function runProvision(): Promise<void> {
@@ -229,6 +321,21 @@ async function main(): Promise<void> {
 	const sub = process.argv[2];
 	const cmd = process.argv[3];
 
+	if (sub === 'onboard' && cmd === 'request') {
+		await runOnboardRequest();
+		return;
+	}
+
+	if (sub === 'onboard' && cmd === 'redeem') {
+		await runOnboardRedeem();
+		return;
+	}
+
+	if (sub === 'onboard' && cmd === 'status') {
+		await runOnboardStatus();
+		return;
+	}
+
 	if (sub === 'provision') {
 		await runProvision();
 		return;
@@ -246,7 +353,10 @@ async function main(): Promise<void> {
 
 	console.log('mandate-register: Univocity instance provisioning (FOR-100)');
 	console.log('  subcommands:');
-	console.log('    provision              Full genesis + descriptor emission');
+	console.log('    onboard request          Self-service onboard token request (FOR-173)');
+	console.log('    onboard status           Poll onboard request status');
+	console.log('    onboard redeem           Redeem approved request for onboard token');
+	console.log('    provision                Full genesis + descriptor emission');
 	console.log('    privy onboard-mode-c   Mode C Privy wallet onboarding only (FOR-112)');
 	console.log(
 		'    privy revoke-mode-c    Mode C kill switch — remove additional signers (FOR-114)'

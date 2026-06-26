@@ -19,6 +19,11 @@ export { GenesisClientError } from './genesis-client-error.js';
 export { logIdFromR, rFromLogIdHex32, normalizeForestR } from './log-id.js';
 export { provisionInstance } from './provision.js';
 export { mintOnboardToken } from './mint-onboard-token.js';
+export {
+	requestOnboardToken,
+	redeemOnboardToken,
+	getOnboardRequestStatus
+} from './onboard-client.js';
 
 export {
 	onboardModeCWallet,
