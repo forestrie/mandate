@@ -110,6 +110,26 @@ tasks:
     cmds:
       - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- doppler run --project {{.DOPPLER_PROJECT}} --config e2e -- pnpm --filter @mandate/register test:live:provision
 
+  test:live:onboard:
+    desc: Self-service onboard request → approve → redeem live e2e
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- doppler run --project {{.DOPPLER_PROJECT}} --config e2e -- doppler run --project canopy --config dev -- pnpm --filter @mandate/register test:live:onboard
+
+  onboard:request:
+    desc: Submit self-service onboard token request (FOR-173)
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- doppler run --project {{.DOPPLER_PROJECT}} --config e2e -- pnpm --filter @mandate/register exec mandate-register onboard request {{.CLI_ARGS}}
+
+  onboard:redeem:
+    desc: Redeem approved onboard request for bearer token (FOR-173)
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- doppler run --project {{.DOPPLER_PROJECT}} --config e2e -- pnpm --filter @mandate/register exec mandate-register onboard redeem {{.CLI_ARGS}}
+
+  onboard:status:
+    desc: Poll onboard request status by request id (FOR-173)
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- doppler run --project {{.DOPPLER_PROJECT}} --config e2e -- pnpm --filter @mandate/register exec mandate-register onboard status {{.CLI_ARGS}}
+
   provision:e2e-signer-test-wallet:
     desc: >-
       Create a fresh user-owned E2E_SIGNER_TEST_* wallet and onboard mandate;

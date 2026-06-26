@@ -11,7 +11,8 @@
 		"build": "tsc --noEmit",
 		"check": "tsc --noEmit",
 		"test": "vitest run",
-		"test:live:provision": "vitest run test/provision-e2e.live.test.ts"
+		"test:live:provision": "vitest run test/provision-e2e.live.test.ts",
+		"test:live:onboard": "vitest run test/onboard-request.live.test.ts"
 	},
 	"dependencies": {
 		"@mandate/privy-admin": "workspace:*",
