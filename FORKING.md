@@ -274,10 +274,10 @@ Warm-log grant flow matches
 Each user log has its own `logId` and root key `K(L)`. Choose one delegation
 mode per user log:
 
-| Mode   | Typical use                         | Where `K(L)` lives              | Mandate sealing path                          |
-| ------ | ----------------------------------- | ------------------------------- | --------------------------------------------- |
-| **C**  | Hosted sealing (default fork path)  | User-owned Privy wallet         | `@mandate/signer` via `MANDATE_SIGNER_TOKEN`  |
-| **B**  | Purist BYOK (reference fork path)   | User signer / HSM only          | User `signerUrl` via `bearerEnvKey` env bearer  |
+| Mode  | Typical use                        | Where `K(L)` lives      | Mandate sealing path                           |
+| ----- | ---------------------------------- | ----------------------- | ---------------------------------------------- |
+| **C** | Hosted sealing (default fork path) | User-owned Privy wallet | `@mandate/signer` via `MANDATE_SIGNER_TOKEN`   |
+| **B** | Purist BYOK (reference fork path)  | User signer / HSM only  | User `signerUrl` via `bearerEnvKey` env bearer |
 
 **§5a** below is Mode C. **§5b** is Mode B — see
 [ADR-0005](docs/adr/adr-0005-byok-delegation-modes.md) and
@@ -367,22 +367,22 @@ sequenceDiagram
 
 #### Reader FAQ (Mode B)
 
-| Question | Answer |
-| -------- | ------ |
-| **D1 — Where is my root key?** | Only in the user-operated signer (`USER_SIGNER_KEYS_JSON` on the reference Worker, or your KMS). Mandate Workers hold descriptors and bearer tokens, not `K(L)`. |
-| **D2 — What does mandate-signer do?** | Nothing for this user log. `signerUrl` must **not** be `MANDATE_SIGNER_URL`. `@mandate/signer` remains for Mode C logs and the operator PA wallet only. |
-| **D3 — Same key after Mode C revoke?** | Yes — [ADR-0005 exit step 3](docs/adr/adr-0005-byok-delegation-modes.md#operational-appendix--mode-c-kill-switch-and-exits-for-114): revoke mandate at Privy, point `OPERATOR_ROOT_KEYS.signerUrl` at the user's signer, set `bearerEnvKey: USER_SIGNER_BEARER`. `publicRoot` is unchanged — no re-registration. |
-| **D4 — Which bearer does the agent send?** | The env named by `bearerEnvKey` on the descriptor (default `USER_SIGNER_BEARER`). It must match the user signer's bearer. Empty env → agent fails closed (no fallback to `MANDATE_SIGNER_TOKEN`). |
+| Question                                   | Answer                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **D1 — Where is my root key?**             | Only in the user-operated signer (`USER_SIGNER_KEYS_JSON` on the reference Worker, or your KMS). Mandate Workers hold descriptors and bearer tokens, not `K(L)`.                                                                                                                                                 |
+| **D2 — What does mandate-signer do?**      | Nothing for this user log. `signerUrl` must **not** be `MANDATE_SIGNER_URL`. `@mandate/signer` remains for Mode C logs and the operator PA wallet only.                                                                                                                                                          |
+| **D3 — Same key after Mode C revoke?**     | Yes — [ADR-0005 exit step 3](docs/adr/adr-0005-byok-delegation-modes.md#operational-appendix--mode-c-kill-switch-and-exits-for-114): revoke mandate at Privy, point `OPERATOR_ROOT_KEYS.signerUrl` at the user's signer, set `bearerEnvKey: USER_SIGNER_BEARER`. `publicRoot` is unchanged — no re-registration. |
+| **D4 — Which bearer does the agent send?** | The env named by `bearerEnvKey` on the descriptor (default `USER_SIGNER_BEARER`). It must match the user signer's bearer. Empty env → agent fails closed (no fallback to `MANDATE_SIGNER_TOKEN`).                                                                                                                |
 
 #### Mode B vs Mode C — what mandate never holds (user log)
 
-| Secret / config | Mode C (hosted) | Mode B (purist BYOK) |
-| --------------- | --------------- | -------------------- |
-| User root private key | Never (Privy TEE) | **Never** (user signer only) |
+| Secret / config                    | Mode C (hosted)                 | Mode B (purist BYOK)                      |
+| ---------------------------------- | ------------------------------- | ----------------------------------------- |
+| User root private key              | Never (Privy TEE)               | **Never** (user signer only)              |
 | `KEY_DIRECTORY` entry for user log | Yes (`walletId`, auth key path) | **No** — empty `{}` from Mode B provision |
-| `OPERATOR_ROOT_KEYS.signerUrl` | `MANDATE_SIGNER_URL` | User `signerUrl` (≠ mandate-signer) |
-| Agent bearer for remote sign | `MANDATE_SIGNER_TOKEN` | `USER_SIGNER_BEARER` via `bearerEnvKey` |
-| Privy additional-signer policy | Required | Not used for this log |
+| `OPERATOR_ROOT_KEYS.signerUrl`     | `MANDATE_SIGNER_URL`            | User `signerUrl` (≠ mandate-signer)       |
+| Agent bearer for remote sign       | `MANDATE_SIGNER_TOKEN`          | `USER_SIGNER_BEARER` via `bearerEnvKey`   |
+| Privy additional-signer policy     | Required                        | Not used for this log                     |
 
 #### Deploy reference user signer
 
@@ -417,11 +417,11 @@ doppler run --project mandate-forestrie --config dev -- \
 
 Expect provision output:
 
-| Field | Mode B expectation |
-| ----- | ------------------ |
-| `descriptors.keyDirectory` | `{}` |
-| `descriptors.operatorRootKeys[logId].signerUrl` | User signer URL (≠ `MANDATE_SIGNER_URL`) |
-| `descriptors.operatorRootKeys[logId].bearerEnvKey` | `USER_SIGNER_BEARER` |
+| Field                                              | Mode B expectation                       |
+| -------------------------------------------------- | ---------------------------------------- |
+| `descriptors.keyDirectory`                         | `{}`                                     |
+| `descriptors.operatorRootKeys[logId].signerUrl`    | User signer URL (≠ `MANDATE_SIGNER_URL`) |
+| `descriptors.operatorRootKeys[logId].bearerEnvKey` | `USER_SIGNER_BEARER`                     |
 
 Merge into agent Worker secrets:
 
@@ -433,14 +433,14 @@ Example descriptor (one log):
 
 ```json
 {
-  "a1b2c3d4e5f678901234567890abcdef0": {
-    "alg": "KS256",
-    "rootSignerAddress": "0x…",
-    "kind": "remote",
-    "signerUrl": "https://mandate-reference-user-signer.<account>.workers.dev/v1/sign",
-    "keyRef": "user-remote",
-    "bearerEnvKey": "USER_SIGNER_BEARER"
-  }
+	"a1b2c3d4e5f678901234567890abcdef0": {
+		"alg": "KS256",
+		"rootSignerAddress": "0x…",
+		"kind": "remote",
+		"signerUrl": "https://mandate-reference-user-signer.<account>.workers.dev/v1/sign",
+		"keyRef": "user-remote",
+		"bearerEnvKey": "USER_SIGNER_BEARER"
+	}
 }
 ```
 

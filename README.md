@@ -80,7 +80,7 @@ Requires [go-task](https://taskfile.dev). Doppler project defaults to
 
 | Task                                | Purpose                                                                                  |
 | ----------------------------------- | ---------------------------------------------------------------------------------------- |
-| `task dev:doppler`                  | UI dev server with Doppler `dev` secrets                                                   |
+| `task dev:doppler`                  | UI dev server with Doppler `dev` secrets                                                 |
 | `task repo-init:doppler`            | Provision KV + `wrangler.env.prod.json` overlays                                         |
 | `task test:live:owned`              | Signer owned-wallet live test (`dev` + `e2e`)                                            |
 | `task test:live:hands-off`          | Agent hands-off sealing live test                                                        |
@@ -88,7 +88,7 @@ Requires [go-task](https://taskfile.dev). Doppler project defaults to
 | `task test:live:provision`          | Provision + genesis live e2e                                                             |
 | `task test:live:mode-b`             | Mode B reference user signer live test                                                   |
 | `task deploy:reference-user-signer` | Deploy Mode B reference user signer Worker                                               |
-| `task privy:onboard:mode-c`         | Attach mandate additional signer to a user wallet                                      |
+| `task privy:onboard:mode-c`         | Attach mandate additional signer to a user wallet                                        |
 | `task privy:revoke:mode-c`          | Mode C kill switch (owner-signed PATCH)                                                  |
 | `task provision`                    | `mandate-register provision` (`dev` + `e2e`)                                             |
 | `task provision:mode-b`             | Mode B user log provision ([FORKING.md §5b](FORKING.md#5b--mode-b-user-log-purist-byok)) |
