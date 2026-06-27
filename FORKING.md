@@ -133,34 +133,55 @@ For Safe multisig deploys, use `deploy propose imutable` / `deploy approve` with
 
 ---
 
-## 2 — Request an onboard token (Canopy operator)
+## 2 — Request an onboard token
 
 Payment-authoritative genesis requires a **minted onboard bearer** from the Canopy
-ops plane — not a mandate secret you invent yourself.
+registration control plane.
+
+### Self-service (recommended)
+
+After step 1, submit an **onboard request** with your deployed Univocity binding.
+The canopy operator approves (or dev lane auto-approves); you **redeem** with the
+one-time code to receive the bearer.
 
 ```mermaid
 sequenceDiagram
     participant M as Mandate operator
+    participant API as canopy-api
     participant C as Canopy operator
 
-    M->>C: Request onboard token<br/>(instance name, label, optional forest R)
-    M->>C: Confirm CANOPY_BASE_URL + lane is healthy
-  alt C operates Canopy for you
-        C->>C: Mint token (ops API or internal runbook)
-        C-->>M: Plaintext onboard bearer (once)<br/>+ base URL + chain binding if needed
-    else You operate Canopy yourself
-        M->>M: Mint with CANOPY_OPS_ADMIN_TOKEN
-    end
-    M->>M: Store as CANOPY_PAYMENTS_ONBOARD_TOKEN<br/>(secrets manager — never commit)
+    M->>API: POST /api/onboarding/requests
+    API-->>M: requestId + redeemCode
+    C->>API: POST approve (ops)
+    M->>API: POST redeem
+    API-->>M: CANOPY_PAYMENTS_ONBOARD_TOKEN once
+    M->>M: Store in secrets manager
 ```
 
-**You provide:** mandate hostname / instance name, token label (e.g.
-`acme-mandate-prod`), optional planned forest UUID `R`.
+```bash
+# Request
+mandate-register onboard request \
+  --canopy-url "$CANOPY_BASE_URL" \
+  --label "your-mandate-prod" \
+  --chain-id "$CHAIN_ID" \
+  --univocity-addr "$UNIVOCITY_ADDR" \
+  --contact-email "you@example.com"
 
-**You receive:** onboard bearer (single disclosure), `CANOPY_BASE_URL`, and
-`chainId` + `univocityAddr` if not already settled in step 1.
+# Poll until approved
+mandate-register onboard status --canopy-url "$CANOPY_BASE_URL" --request-id "$REQUEST_ID"
 
-Mint reference ([ARC-021.1](../devdocs/arc/arc-021-payment-onboarding/01-ops-admin-token.md)):
+# Redeem
+mandate-register onboard redeem \
+  --canopy-url "$CANOPY_BASE_URL" \
+  --request-id "$REQUEST_ID" \
+  --redeem-code "$REDEEM_CODE"
+```
+
+See [ARC-021.7](../devdocs/arc/arc-021-payment-onboarding/07-self-service-onboard-request.md).
+
+### Break-glass (ops mint)
+
+If you operate canopy yourself or need a manual path:
 
 ```bash
 curl -sS -X POST "$CANOPY_BASE_URL/api/payments/onboard-tokens" \
