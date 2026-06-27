@@ -22,7 +22,8 @@ function buildModeBDescriptors(
 				rootSignerAddress: input.rootSignerAddress,
 				kind: 'remote',
 				signerUrl: input.userSignerUrl,
-				keyRef
+				keyRef,
+				bearerEnvKey: 'USER_SIGNER_BEARER'
 			}
 		}
 	};

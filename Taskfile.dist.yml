@@ -113,6 +113,11 @@ tasks:
     cmds:
       - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- doppler run --project {{.DOPPLER_PROJECT}} --config e2e -- pnpm --filter @mandate/agent test:live:hands-off
 
+  test:live:mode-b:
+    desc: Mode B reference user signer live test (dev + e2e Doppler; LIVE_MODE_B=1)
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- doppler run --project {{.DOPPLER_PROJECT}} --config e2e -- env LIVE_MODE_B=1 pnpm --filter @mandate/agent test:live:mode-b
+
   test:live:mode-c:
     desc: Mode C onboarding + revoke live test (dev + e2e Doppler)
     cmds:

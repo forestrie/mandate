@@ -300,15 +300,18 @@ Workflow: `.github/workflows/live-owned-wallet.yml` (`workflow_dispatch`).
 ```mermaid
 flowchart TD
   preflight[live-secrets-check]
+  modeBPreflight[live-mode-b-secrets-check]
   owned[live-owned]
   handsOff[live-hands-off]
   provision[live-provision]
   modeC[live-mode-c]
+  modeB[live-mode-b]
   preflight --> owned
   preflight --> provision
   owned --> handsOff
   owned --> provision
   preflight --> modeC
+  modeBPreflight --> modeB
   provision --> modeC
 ```
 
@@ -318,6 +321,7 @@ flowchart TD
 | `live-hands-off` | above + `E2E_MODE_C_*`                                                                           |
 | `live-provision` | `E2E_CANOPY_*`, `E2E_DELEGATION_*`, `E2E_MANDATE_AGENT_WEBHOOK_URL`, `MANDATE_*`, `E2E_MODE_C_*` |
 | `live-mode-c`    | `MANDATE_*` + `E2E_MODE_C_*`                                                                     |
+| `live-mode-b`    | `E2E_CANOPY_*`, `E2E_USER_SIGNER_URL`, `USER_SIGNER_*`, `MANDATE_SIGNER_URL`, `LIVE_MODE_B=1`    |
 
 Local examples:
 
@@ -330,6 +334,9 @@ task test:live:hands-off
 
 # Mode C onboarding (dev + e2e)
 task test:live:mode-c
+
+# Mode B reference user signer (dev + e2e; LIVE_MODE_B=1)
+task test:live:mode-b
 
 # Provision e2e
 task test:live:provision

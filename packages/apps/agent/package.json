@@ -9,7 +9,8 @@
 		"build": "tsc --noEmit",
 		"check": "tsc --noEmit",
 		"test": "vitest run",
-		"test:live:hands-off": "vitest run test/hands-off-sealing.live.test.ts"
+		"test:live:hands-off": "vitest run test/hands-off-sealing.live.test.ts",
+		"test:live:mode-b": "vitest run test/mode-b-sealing.live.test.ts"
 	},
 	"dependencies": {
 		"@forestrie/delegation-cose": "github:forestrie/canopy#delegation-cose-v0.1.0&path:packages/libs/delegation-cose",
