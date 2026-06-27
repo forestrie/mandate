@@ -116,20 +116,21 @@ describe('RemoteKs256Signer', () => {
 	});
 
 	it('fails closed when bearerEnvKey is set but env value is empty', () => {
-		expect(() =>
-			new RemoteKs256Signer(
-				{
-					alg: 'KS256',
-					rootSignerAddress: '0x0000000000000000000000000000000000000001',
-					kind: 'remote',
-					signerUrl: 'https://user-signer.example/v1/sign',
-					keyRef: 'user-key-ref',
-					bearerEnvKey: 'USER_SIGNER_BEARER'
-				},
-				'mandate-token',
-				undefined,
-				{}
-			)
+		expect(
+			() =>
+				new RemoteKs256Signer(
+					{
+						alg: 'KS256',
+						rootSignerAddress: '0x0000000000000000000000000000000000000001',
+						kind: 'remote',
+						signerUrl: 'https://user-signer.example/v1/sign',
+						keyRef: 'user-key-ref',
+						bearerEnvKey: 'USER_SIGNER_BEARER'
+					},
+					'mandate-token',
+					undefined,
+					{}
+				)
 		).toThrow('remote bearer env USER_SIGNER_BEARER is required but empty');
 	});
 });

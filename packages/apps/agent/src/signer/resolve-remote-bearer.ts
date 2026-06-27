@@ -8,9 +8,7 @@ export function resolveRemoteBearerToken(
 	if (descriptor.bearerEnvKey) {
 		const token = remoteBearerEnv[descriptor.bearerEnvKey];
 		if (!token) {
-			throw new Error(
-				`remote bearer env ${descriptor.bearerEnvKey} is required but empty`
-			);
+			throw new Error(`remote bearer env ${descriptor.bearerEnvKey} is required but empty`);
 		}
 		return token;
 	}

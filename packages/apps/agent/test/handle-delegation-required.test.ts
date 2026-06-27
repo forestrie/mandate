@@ -380,10 +380,7 @@ describe('handleDelegationRequired', () => {
 			expect(response.status).toBe(502);
 		}
 
-		expect(authHeaders).toEqual([
-			'Bearer test-signer-token',
-			'Bearer user-bearer-token'
-		]);
+		expect(authHeaders).toEqual(['Bearer test-signer-token', 'Bearer user-bearer-token']);
 	});
 
 	it('returns 502 when bearerEnvKey is configured but env value is empty', async () => {

@@ -23,11 +23,7 @@ export class RemoteKs256Signer implements DelegationSigner {
 		if (descriptor.kind !== 'remote' || !descriptor.signerUrl || !descriptor.keyRef) {
 			throw new Error('RemoteKs256Signer requires kind=remote, signerUrl, and keyRef');
 		}
-		this.bearerToken = resolveRemoteBearerToken(
-			descriptor,
-			mandateSignerToken,
-			remoteBearerEnv
-		);
+		this.bearerToken = resolveRemoteBearerToken(descriptor, mandateSignerToken, remoteBearerEnv);
 	}
 
 	async buildCertificate(input: DelegationInput): Promise<Uint8Array> {
