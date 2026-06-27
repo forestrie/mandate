@@ -100,7 +100,12 @@ export async function handleDelegationRequired(
 		}
 		throw error;
 	}
-	if (await deps.seenStore.has(event.requestKey)) {
+
+	const reservation = await deps.seenStore.tryReserve(
+		event.requestKey,
+		REQUEST_KEY_RESERVATION_TTL_SECONDS
+	);
+	if (reservation === 'duplicate') {
 		logDelegationOutcome(event, 'duplicate');
 		return jsonResponse(200, { ok: true, duplicate: true });
 	}
@@ -126,12 +131,9 @@ export async function handleDelegationRequired(
 		);
 	} catch {
 		logDelegationOutcome(event, 'signer_failed');
+		await deps.seenStore.clear(event.requestKey);
 		return jsonResponse(502, { ok: false, error: 'delegation signing failed' });
 	}
-
-	// Reserve before signing to narrow duplicate-webhook races. KV is eventually
-	// consistent; coordinator idempotency on material submit remains the hard backstop.
-	await deps.seenStore.markSeen(event.requestKey, REQUEST_KEY_RESERVATION_TTL_SECONDS);
 
 	let certificate: Uint8Array;
 	try {

@@ -1,8 +1,17 @@
+export type RequestKeyReservation = 'reserved' | 'duplicate';
+
+/** Idempotency store for delegation.required `requestKey` values. */
 export interface SeenStore {
 	has(requestKey: string): Promise<boolean>;
 	markSeen(requestKey: string, ttlSeconds?: number): Promise<void>;
 	/** Release a reservation so a failed attempt can be retried. */
 	clear(requestKey: string): Promise<void>;
+	/**
+	 * Best-effort reserve-before-sign. KV lacks CAS; concurrent deliveries may
+	 * both observe absence before either write — coordinator submit idempotency
+	 * remains authoritative.
+	 */
+	tryReserve(requestKey: string, ttlSeconds: number): Promise<RequestKeyReservation>;
 }
 
 export class MemorySeenStore implements SeenStore {
@@ -18,6 +27,14 @@ export class MemorySeenStore implements SeenStore {
 
 	async clear(requestKey: string): Promise<void> {
 		this.seen.delete(requestKey);
+	}
+
+	async tryReserve(requestKey: string, _ttlSeconds: number): Promise<RequestKeyReservation> {
+		if (this.seen.has(requestKey)) {
+			return 'duplicate';
+		}
+		this.seen.add(requestKey);
+		return 'reserved';
 	}
 }
 
@@ -38,5 +55,17 @@ export class KvSeenStore implements SeenStore {
 
 	async clear(requestKey: string): Promise<void> {
 		await this.kv.delete(requestKey);
+	}
+
+	async tryReserve(
+		requestKey: string,
+		ttlSeconds: number
+	): Promise<RequestKeyReservation> {
+		const existing = await this.kv.get(requestKey);
+		if (existing !== null) {
+			return 'duplicate';
+		}
+		await this.kv.put(requestKey, '1', { expirationTtl: ttlSeconds });
+		return 'reserved';
 	}
 }
