@@ -2,6 +2,9 @@ name: Refresh delegation-cose lockfile
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - robin/for-119-packages-install
 
 permissions:
   contents: write
