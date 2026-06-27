@@ -15,7 +15,6 @@
 		buildBrowserDelegationCertificate,
 		pendingEntryToDelegationInput
 	} from '$lib/signing/build-browser-delegation-certificate.js';
-	import { bytesToBase64 } from '$lib/signing/bytes.js';
 	import type { EnabledResponse, PendingEntry } from '@mandate/coordinator-types';
 	import {
 		getPrivySessionState,
@@ -24,7 +23,7 @@
 		logoutPrivy
 	} from '$lib/privy/stores.svelte.js';
 	import { PrivyEoaBackend } from '$lib/signing/privy-eoa-backend.js';
-	import { buildSubmitCertificateBody } from './submit-payload.js';
+	import { buildSubmitCertificateBodyFromCert } from './submit-payload.js';
 	import {
 		enabledBadgeLabels,
 		effectiveEnabledVariant,
@@ -198,9 +197,7 @@
 			const input = pendingEntryToDelegationInput(entry, now);
 			const backend = new PrivyEoaBackend();
 			const certificate = await buildBrowserDelegationCertificate(input, session.address, backend);
-			await submitDelegationCertificate(
-				buildSubmitCertificateBody(entry, bytesToBase64(certificate), now)
-			);
+			await submitDelegationCertificate(buildSubmitCertificateBodyFromCert(entry, certificate));
 			rowStatus = { ...rowStatus, [entry.id]: 'signed' };
 			persistRowStatus();
 			message = `Submitted certificate for ${entry.logIdHex32.slice(0, 8)}…`;
