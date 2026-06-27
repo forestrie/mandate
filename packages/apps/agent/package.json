@@ -13,7 +13,7 @@
 		"test:live:mode-b": "vitest run test/mode-b-sealing.live.test.ts"
 	},
 	"dependencies": {
-		"@forestrie/delegation-cose": "0.1.0",
+		"@forestrie/delegation-cose": "0.1.1",
 		"@mandate/coordinator-types": "workspace:*",
 		"@mandate/signer-contract": "workspace:*",
 		"cbor-x": "^1.6.4"

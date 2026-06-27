@@ -43,7 +43,7 @@
 		"wrangler": "^4.81.0"
 	},
 	"dependencies": {
-		"@forestrie/delegation-cose": "0.1.0",
+		"@forestrie/delegation-cose": "0.1.1",
 		"@mandate/coordinator-types": "workspace:*",
 		"@noble/curves": "^1.9.7",
 		"@noble/hashes": "^1.7.1",
