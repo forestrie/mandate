@@ -45,8 +45,8 @@ importers:
   packages/apps/agent:
     dependencies:
       '@forestrie/delegation-cose':
-        specifier: github:forestrie/canopy#delegation-cose-v0.1.0&path:packages/libs/delegation-cose
-        version: https://codeload.github.com/forestrie/canopy/tar.gz/971c995e269403ec2e4d8b4934f2e6b6113e4a40#path:packages/libs/delegation-cose
+        specifier: 0.1.0
+        version: 0.1.0
       '@mandate/coordinator-types':
         specifier: workspace:*
         version: link:../../libs/coordinator-types
@@ -98,8 +98,8 @@ importers:
         specifier: ^4.20260228.0
         version: 4.20260524.1
       '@forestrie/delegation-cose':
-        specifier: github:forestrie/canopy#delegation-cose-v0.1.0&path:packages/libs/delegation-cose
-        version: https://codeload.github.com/forestrie/canopy/tar.gz/971c995e269403ec2e4d8b4934f2e6b6113e4a40#path:packages/libs/delegation-cose
+        specifier: 0.1.0
+        version: 0.1.0
       '@types/node':
         specifier: ^22
         version: 22.19.19
@@ -172,8 +172,8 @@ importers:
   packages/apps/ui:
     dependencies:
       '@forestrie/delegation-cose':
-        specifier: github:forestrie/canopy#delegation-cose-v0.1.0&path:packages/libs/delegation-cose
-        version: https://codeload.github.com/forestrie/canopy/tar.gz/971c995e269403ec2e4d8b4934f2e6b6113e4a40#path:packages/libs/delegation-cose
+        specifier: 0.1.0
+        version: 0.1.0
       '@mandate/coordinator-types':
         specifier: workspace:*
         version: link:../../libs/coordinator-types
@@ -742,8 +742,8 @@ packages:
     resolution: {integrity: sha512-rZAP3aVgB9ds9KOeUSL+zZ21hPmo8dh6fnIFwRQj5EAZl9gzR7wxYbYXYysAM8CTqGmUGyp2S4kUdV17MnGuWQ==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
-  '@forestrie/delegation-cose@https://codeload.github.com/forestrie/canopy/tar.gz/971c995e269403ec2e4d8b4934f2e6b6113e4a40#path:packages/libs/delegation-cose':
-    resolution: {path: packages/libs/delegation-cose, tarball: https://codeload.github.com/forestrie/canopy/tar.gz/971c995e269403ec2e4d8b4934f2e6b6113e4a40}
+  '@forestrie/delegation-cose@0.1.0':
+    resolution: {integrity: sha512-SUbjyWY40LLn0XF/6A1R7FZkg0oOMykQd/Ekr3oPPTeY1uHWA4cGs1tW7yEYrlOMxb49KIhf3KEX8wQ8RckR5g==, tarball: https://npm.pkg.github.com/download/@forestrie/delegation-cose/0.1.0/sha512-SUbjyWY40LLn0XF/6A1R7FZkg0oOMykQd/Ekr3oPPTeY1uHWA4cGs1tW7yEYrlOMxb49KIhf3KEX8wQ8RckR5g==}
     version: 0.1.0
 
   '@humanfs/core@0.19.2':
@@ -2706,7 +2706,7 @@ snapshots:
       '@eslint/core': 1.2.1
       levn: 0.4.1
 
-  '@forestrie/delegation-cose@https://codeload.github.com/forestrie/canopy/tar.gz/971c995e269403ec2e4d8b4934f2e6b6113e4a40#path:packages/libs/delegation-cose':
+  '@forestrie/delegation-cose@0.1.0':
     dependencies:
       '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
