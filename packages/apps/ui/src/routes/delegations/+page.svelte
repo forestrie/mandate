@@ -37,6 +37,7 @@
 		type RowStatus,
 		type StatusFilter
 	} from './delegation-console-state.js';
+	import { killSwitchGuidance, KILL_SWITCH_RUNBOOK_URL } from './mode-c-revoke-spike.js';
 	import { onMount } from 'svelte';
 
 	let authLogId = $state('');
@@ -54,6 +55,7 @@
 	let enabledByLogId = $state<Record<string, EnabledResponse>>({});
 
 	const session = $derived(getPrivySessionState());
+	const killSwitch = $derived(killSwitchGuidance());
 
 	const filteredEntries = $derived(
 		entries.filter((entry) => {
@@ -137,6 +139,15 @@
 		}
 	}
 
+	async function pauseUserSigning() {
+		const logId = killSwitchLogId.trim();
+		if (!logId) {
+			error = 'Enter a user log ID to pause signing';
+			return;
+		}
+		await pauseOperatorSigning(logId);
+	}
+
 	async function pauseOperatorSigning(logId: string) {
 		killSwitchBusy = true;
 		error = null;
@@ -144,9 +155,9 @@
 		try {
 			const response = await setLogDelegationEnabled(logId, false);
 			enabledByLogId = { ...enabledByLogId, [logId]: response };
-			message = `Operator signing paused for log ${logId.slice(0, 8)}…`;
+			message = `Signing paused for log ${logId.slice(0, 8)}…`;
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to pause operator signing';
+			error = err instanceof Error ? err.message : 'Failed to pause signing';
 		} finally {
 			killSwitchBusy = false;
 		}
@@ -164,9 +175,9 @@
 		try {
 			const response = await setLogDelegationEnabled(logId, true);
 			enabledByLogId = { ...enabledByLogId, [logId]: response };
-			message = `Operator signing resumed for log ${logId.slice(0, 8)}…`;
+			message = `Signing resumed for log ${logId.slice(0, 8)}…`;
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to resume operator signing';
+			error = err instanceof Error ? err.message : 'Failed to resume signing';
 		} finally {
 			killSwitchBusy = false;
 		}
@@ -242,32 +253,38 @@
 
 	<Card class="space-y-4 p-6">
 		<h2 class="text-lg font-medium">Kill switch</h2>
-		<p class="text-sm text-zinc-600">
-			<strong>Coordinator (wallet-challenge session):</strong> pause or resume webhook signing for a
-			user log using your connected wallet session (<code class="text-xs">logs:enabled:write</code>).
-			Use per-row <strong>Pause signing</strong> or resume below.
-		</p>
-		<p class="text-sm text-zinc-600">
-			<strong>Privy custody layer (Mode C):</strong> revoke mandate as an additional signer so
-			<code class="text-xs">secp256k1_sign</code> fails at Privy (ARC-0022 I3). This requires the
-			owner authorization key — use
-			<code class="rounded bg-zinc-100 px-1 py-0.5 text-xs">task privy:revoke:mode-c</code>
-			or the
-			<a
-				href="https://github.com/forestrie/mandate/blob/main/docs/adr/adr-0005-byok-delegation-modes.md#operational-appendix--mode-c-kill-switch-and-exits-for-114"
-				class="text-blue-600 underline"
-				target="_blank"
-				rel="noopener noreferrer">exit runbook</a
-			>.
-		</p>
+		<div class="space-y-3">
+			<div>
+				<p class="text-sm font-medium text-zinc-800">{killSwitch.coordinatorTitle}</p>
+				<p class="text-sm text-zinc-600">{killSwitch.coordinatorBody}</p>
+			</div>
+			<div>
+				<p class="text-sm font-medium text-zinc-800">{killSwitch.custodyTitle}</p>
+				<p class="text-sm text-zinc-600">{killSwitch.custodyBody}</p>
+				<p class="mt-2 text-sm text-zinc-600">
+					CLI:
+					<code class="rounded bg-zinc-100 px-1 py-0.5 text-xs">{killSwitch.custodyCliCommand}</code>
+					·
+					<a
+						href={KILL_SWITCH_RUNBOOK_URL}
+						class="text-blue-600 underline"
+						target="_blank"
+						rel="noopener noreferrer">exit runbook</a
+					>
+				</p>
+			</div>
+		</div>
 		<div class="flex flex-col gap-3 sm:flex-row">
 			<Input
 				bind:value={killSwitchLogId}
 				placeholder="User log UUID or 32-char hex"
 				class="flex-1"
 			/>
+			<Button variant="outline" disabled={killSwitchBusy} onclick={() => pauseUserSigning()}>
+				Pause signing
+			</Button>
 			<Button variant="outline" disabled={killSwitchBusy} onclick={() => resumeOperatorSigning()}>
-				Resume operator signing
+				Resume signing
 			</Button>
 		</div>
 	</Card>
