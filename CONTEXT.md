@@ -64,6 +64,21 @@ authorization key; mandate is an **additional signer** only (I2). Custody is
 Privy-custodied (not true BYOK / Mode B); the user can revoke mandate at Privy
 (I3). See ADR-0005 and ARC-0022.
 
+## targeted revoke
+
+The default Mode C custody kill switch: an owner-signed Privy `PATCH` that removes
+**only** mandate's `signer_id` from a wallet's `additional_signers`, preserving any
+other authorized signers (FOR-130, ARC-0022 I3). Implemented by
+`removeMandateAdditionalSigner` / `revokeModeCWallet` in `@mandate/privy-admin`.
+Distinct from a **full clear**.
+
+## full clear
+
+The ops escape hatch that removes **all** `additional_signers` from a wallet
+(`removeAllAdditionalSigners`, PATCH `additional_signers: []`). Opt-in only via the
+`--clear-all-additional-signers` CLI flag; never the default Mode C revoke.
+Distinct from a **targeted revoke**.
+
 ## operator payment-authoritative wallet
 
 The mandate operator's own payment-authoritative log root signer: an **ownerless

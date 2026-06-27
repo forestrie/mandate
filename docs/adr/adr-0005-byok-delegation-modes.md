@@ -167,28 +167,39 @@ status.
 
 ### Exit gradient
 
-| Step | Actor                                                                           | Action                                                                                                          | Effect                                                                                                                    | Reversible?                                                   |
-| ---- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| 1    | **Operator**                                                                    | **Coordinator pause** — `PUT /api/logs/{logId}/enabled` with `{ enabled: false }` via UI BFF or coordinator API | Stops `delegation.required` webhook delivery to mandate agent; in-flight windows may still complete if already dispatched | Yes — resume with `{ enabled: true }`                         |
-| 2    | **Operator-assisted** (user session revoke deferred FOR-117)                    | **Privy revoke** — owner-signed `PATCH /v1/wallets/{id}` with `additional_signers: []`                          | Mandate additional-signer key can no longer `secp256k1_sign`; custody-layer kill switch (ARC-0022 I3)                     | Yes — re-onboard with `mandate-register privy onboard-mode-c` |
-| 3    | **Mode B same key** — point `signerUrl` at user's own signer, keep `publicRoot` | User signs certificates directly; no re-registration (I5 anchor unchanged)                                      | N/A — operational mode change                                                                                             |
-| 4    | **Export key** — Privy owner-only export (if supported for user-owned wallet)   | User holds `K(L)` outside Privy TEE                                                                             | Irreversible for that wallet instance                                                                                     |
-| 5    | **Protocol exit** — rotate `K(L)`, re-register grant `kid` on-chain             | Defends against prior key exposure; only exit independent of Privy                                              | Irreversible on-chain                                                                                                     |
+| Step | Actor                                                                           | Action                                                                                                                                                          | Effect                                                                                                                    | Reversible?                                                   |
+| ---- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| 1    | **Operator**                                                                    | **Coordinator pause** — `PUT /api/logs/{logId}/enabled` with `{ enabled: false }` via UI BFF or coordinator API                                                 | Stops `delegation.required` webhook delivery to mandate agent; in-flight windows may still complete if already dispatched | Yes — resume with `{ enabled: true }`                         |
+| 2    | **Operator-assisted** (user session revoke deferred FOR-117)                    | **Privy revoke** — owner-signed `PATCH /v1/wallets/{id}` removing mandate from `additional_signers` (targeted; full clear via `--clear-all-additional-signers`) | Mandate additional-signer key can no longer `secp256k1_sign`; custody-layer kill switch (ARC-0022 I3)                     | Yes — re-onboard with `mandate-register privy onboard-mode-c` |
+| 3    | **Mode B same key** — point `signerUrl` at user's own signer, keep `publicRoot` | User signs certificates directly; no re-registration (I5 anchor unchanged)                                                                                      | N/A — operational mode change                                                                                             |
+| 4    | **Export key** — Privy owner-only export (if supported for user-owned wallet)   | User holds `K(L)` outside Privy TEE                                                                                                                             | Irreversible for that wallet instance                                                                                     |
+| 5    | **Protocol exit** — rotate `K(L)`, re-register grant `kid` on-chain             | Defends against prior key exposure; only exit independent of Privy                                                                                              | Irreversible on-chain                                                                                                     |
 
 ### CLI revoke (FOR-117 / FOR-114)
 
 ```sh
-doppler run --project mandate-forestrie --config dev -- task privy:revoke:mode-c
+doppler run --project mandate-forestrie --config dev -- task privy:revoke:mode-c -- \
+  --yes --confirm-wallet-id "$E2E_MODE_C_USER_PRIVY_WALLET_ID"
 # or:
 mandate-register privy revoke-mode-c \
   --wallet-id "$E2E_MODE_C_USER_PRIVY_WALLET_ID" \
   --owner-auth-key "$E2E_MODE_C_PRIVY_OWNER_AUTH_KEY" \
-  --mandate-signer-id "$MANDATE_PRIVY_SIGNER_ID"
+  --mandate-signer-id "$MANDATE_PRIVY_SIGNER_ID" \
+  --yes --confirm-wallet-id "$E2E_MODE_C_USER_PRIVY_WALLET_ID"
 ```
 
-Uses `revokeModeCWallet()` in `@mandate/privy-admin` (wraps
-`removeAllAdditionalSigners`). Requires the **owner** authorization key, not
-mandate's additional-signer key.
+Uses `revokeModeCWallet()` in `@mandate/privy-admin`. With `--mandate-signer-id`
+the revoke is **targeted** (`removeMandateAdditionalSigner` — only mandate is
+removed, other signers preserved, FOR-130); `--clear-all-additional-signers`
+forces a full clear via `removeAllAdditionalSigners`. Requires the **owner**
+authorization key, not mandate's additional-signer key.
+
+The CLI prints a pre-revoke summary (wallet id, address, signer count, action)
+and, in non-interactive/CI runs, requires both `--yes` and a matching
+`--confirm-wallet-id` before any Privy call (FOR-132). After a successful revoke
+run `mandate-register privy describe-post-revoke-actions` to prune the signer
+`KEY_DIRECTORY` (FOR-131); see
+[service-secrets.md](../service-secrets.md#post-revoke-secret-hygiene-for-131).
 
 ### In-flight semantics
 
@@ -200,6 +211,9 @@ mandate's additional-signer key.
   revoke as **eventually consistent** at the custody layer.
 - **Post-revoke verification:** mandate signer RPC with the additional-signer key
   must fail closed (`401`/`403` or policy denial).
+- **Targeted revoke (FOR-130):** removing only mandate from `additional_signers`
+  leaves any other authorized signers intact; the fail-closed guarantee covers
+  mandate's key, not the wallet's other signers.
 
 ### Revocation propagation
 
@@ -214,16 +228,16 @@ pause and CLI revoke are the supported surfaces today.
 
 ### Implementation status (FOR-114 / FOR-117 / FOR-115 / FOR-128)
 
-| Surface                                   | Status                      | Notes                                                     |
-| ----------------------------------------- | --------------------------- | --------------------------------------------------------- |
-| Coordinator pause/resume UI               | Shipped (operator BFF)      | Global `COORDINATOR_APP_TOKEN`; per-user auth → FOR-129   |
-| CLI `privy revoke-mode-c`                 | Shipped (operator-assisted) | Requires owner key; user-session revoke → FOR-117         |
-| Post-revoke Privy RPC deny                | Shipped                     | Live test in `@mandate/privy-admin`                       |
-| Post-revoke agent → signer fail-closed    | Shipped                     | Live test in `@mandate/agent` hands-off kill-switch block |
-| Live CI secrets + preflight               | Shipped                     | FOR-128; `live-owned-wallet.yml`                          |
-| Targeted mandate-only revoke              | Deferred                    | FOR-130                                                   |
-| Post-revoke KEY_DIRECTORY hygiene runbook | Deferred                    | FOR-131                                                   |
-| Revoke CLI safety guardrails              | Deferred                    | FOR-132                                                   |
+| Surface                                   | Status                      | Notes                                                      |
+| ----------------------------------------- | --------------------------- | ---------------------------------------------------------- |
+| Coordinator pause/resume UI               | Shipped (operator BFF)      | Global `COORDINATOR_APP_TOKEN`; per-user auth → FOR-129    |
+| CLI `privy revoke-mode-c`                 | Shipped (operator-assisted) | Requires owner key; user-session revoke → FOR-117          |
+| Post-revoke Privy RPC deny                | Shipped                     | Live test in `@mandate/privy-admin`                        |
+| Post-revoke agent → signer fail-closed    | Shipped                     | Live test in `@mandate/agent` hands-off kill-switch block  |
+| Live CI secrets + preflight               | Shipped                     | FOR-128; `live-owned-wallet.yml`                           |
+| Targeted mandate-only revoke              | Shipped                     | FOR-130; `removeMandateAdditionalSigner`, preserves others |
+| Post-revoke KEY_DIRECTORY hygiene runbook | Shipped                     | FOR-131; `describe-post-revoke-actions` + service-secrets  |
+| Revoke CLI safety guardrails              | Shipped                     | FOR-132; `--confirm-wallet-id`, `--yes`, full-clear gate   |
 
 ## Alternatives considered
 
