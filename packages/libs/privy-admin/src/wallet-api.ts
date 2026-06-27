@@ -3,6 +3,7 @@ import type { WalletAdditionalSignerItem } from './wallet-additional-signer.js';
 import type { KeyQuorum } from './key-quorum.js';
 import type { PrivyRestClient } from './privy-rest.js';
 import { PrivyRestError } from './privy-rest-error.js';
+import { OwnerTopologyError } from './owner-topology-error.js';
 
 export interface WalletUpdateBody {
 	display_name?: string | null;
@@ -87,6 +88,36 @@ export async function removeAllAdditionalSigners(
 	ownerAuthorizationKey: string
 ): Promise<Wallet> {
 	return updateWallet(client, walletId, { additional_signers: [] }, ownerAuthorizationKey);
+}
+
+/** Additional signers with the given signer id filtered out (pure). */
+export function withoutSigner(
+	signers: WalletAdditionalSignerItem[] | undefined,
+	signerId: string
+): WalletAdditionalSignerItem[] {
+	return (signers ?? []).filter((s) => s.signer_id !== signerId);
+}
+
+/**
+ * Remove only mandate's additional-signer entry, preserving every other signer
+ * (targeted custody kill switch — ARC-0022 I3). Fails closed when mandate is
+ * not currently listed, so callers never silently no-op a revoke.
+ */
+export async function removeMandateAdditionalSigner(
+	client: PrivyRestClient,
+	walletId: string,
+	mandateSignerId: string,
+	ownerAuthorizationKey: string
+): Promise<Wallet> {
+	const wallet = await getWallet(client, walletId);
+	const current = wallet.additional_signers ?? [];
+	const next = withoutSigner(current, mandateSignerId);
+	if (next.length === current.length) {
+		throw new OwnerTopologyError(
+			`mandate signer ${mandateSignerId} is not registered as an additional signer — nothing to revoke`
+		);
+	}
+	return updateWallet(client, walletId, { additional_signers: next }, ownerAuthorizationKey);
 }
 
 export function mergeAdditionalSigner(

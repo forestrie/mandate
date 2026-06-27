@@ -38,6 +38,8 @@ export {
 	walletRpc,
 	walletRpcAttempt,
 	removeAllAdditionalSigners,
+	removeMandateAdditionalSigner,
+	withoutSigner,
 	mergeAdditionalSigner,
 	type WalletUpdateBody,
 	type WalletRpcInput
