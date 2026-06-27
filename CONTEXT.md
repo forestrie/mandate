@@ -38,6 +38,14 @@ external service and never hold private key material in the agent.
 Deterministic idempotency key for a `delegation.required` webhook
 (`SHA-256(logId:mmrStart:mmrEnd:delegatedPubkeyHash)`).
 
+## requestKey reservation
+
+A short-TTL hold in the agent dedup store before signing starts. If the same
+`requestKey` arrives again while reserved or after success, the agent returns
+duplicate without re-signing. Reservations clear on failure so the coordinator
+can retry. KV reservation is best-effort; coordinator certificate submit
+idempotency is the authoritative backstop.
+
 ## webhook signing key
 
 The coordinator's ES256 identity used to sign outbound webhooks. Published as a

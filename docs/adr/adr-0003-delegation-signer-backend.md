@@ -66,9 +66,12 @@ not in the agent.
   `@mandate/agent` calls `assertCertificateMatchesEvent` — signature verification
   against the descriptor `rootSignerAddress` plus `logId` / `mmrStart` / `mmrEnd`
   binding to the webhook event.
-- **`requestKey` reservation:** mark seen with a short TTL before signing; re-mark
-  with full TTL after successful submit; clear on failure. KV is eventually
-  consistent; coordinator idempotency remains the hard backstop.
+- **`requestKey` reservation:** `tryReserve` before signing (120s TTL); re-mark
+  with full TTL after successful submit; clear on failure. Cloudflare KV is
+  eventually consistent — two concurrent webhook deliveries may both pass a
+  read check before either write lands; coordinator certificate submit
+  idempotency remains the hard backstop. See CONTEXT.md **requestKey
+  reservation** and [FOR-118](https://linear.app/forestrie/issue/FOR-118).
 - `materialSubmitUrl` origin allowlist unchanged (FOR-98).
 
 ### 4. Per-log descriptor schema (FOR-100)
