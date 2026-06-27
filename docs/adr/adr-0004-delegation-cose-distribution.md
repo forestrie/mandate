@@ -24,18 +24,18 @@ GitHub Packages requires the npm scope to match the owning GitHub org
 2. **Mandate pins an exact version** (no semver range) so a canopy republish
    cannot change the signing artifact without an explicit mandate bump PR.
 
-3. **CI read auth** uses a short-lived **GitHub App installation token**
-   (same pattern as canopy system tests and forest-1 cross-repo dispatch):
-   `vars.GITAPP_ID` + `secrets.GITAPP_PRIVATE_KEY` →
-   `.github/actions/github-packages-token` → `NODE_AUTH_TOKEN` at
-   `pnpm install`. The org app must have **`packages: read`** and be installed
-   on `forestrie`. Mandate pins **`0.1.1`** via **git tag** until the app has
-   **Packages: Read**; then run `refresh-delegation-cose-lockfile` workflow to
-   switch to exact semver + lockfile tarball (FOR-109).
+3. **CI read auth** uses the workflow **`GITHUB_TOKEN`** with
+   `permissions: packages: read` and `NODE_AUTH_TOKEN` at `pnpm install`.
+   **`@forestrie/delegation-cose`** must grant **`forestrie/mandate`** Actions
+   read access under package settings. GitHub App installation tokens are not
+   supported by the npm registry (FOR-109).
 
-   **Historical:** Default `GITHUB_TOKEN` cannot read packages published from
-   another repository (403). Git tag pins were an interim workaround until this
-   app-token path landed (FOR-218 public publish + FOR-109 app auth).
+   Mandate pins **`0.1.1`** via **git tag** until registry auth is verified;
+   run **`refresh-delegation-cose-lockfile`** workflow to switch to exact semver
+   + lockfile tarball.
+
+   **Historical:** Default `GITHUB_TOKEN` returned 403 until package Actions
+   access was configured (FOR-218 public publish + package settings).
 
 4. **Forks and local dev** configure root `.npmrc` and supply
    `NODE_AUTH_TOKEN` from `gh auth token` or a PAT with `read:packages`. GitHub
