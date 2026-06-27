@@ -1,21 +1,44 @@
-# GitHub Packages: `@forestrie/delegation-cose` (FOR-119)
+# GitHub Packages: `@forestrie/delegation-cose` (FOR-119 / FOR-109)
 
-Mandate currently pins `@forestrie/delegation-cose` via a git dependency:
+Mandate pins exact semver `@forestrie/delegation-cose@0.1.1` from GitHub
+Packages (see [ADR-0004](../adr/adr-0004-delegation-cose-distribution.md)).
 
-```json
-"github:forestrie/canopy#delegation-cose-v0.1.0&path:packages/libs/delegation-cose"
-```
+## CI auth (cross-repo)
 
-FOR-109 switches to semver once registry install is reliable in CI and locally.
+Default `GITHUB_TOKEN` is repo-scoped and returns **403** for packages
+published from `forestrie/canopy`. Mandate workflows mint a short-lived org
+**GitHub App** installation token (canopy / forest-1 pattern):
+
+| Setting              | Location                           |
+| -------------------- | ---------------------------------- |
+| `GITAPP_ID`          | Repository or environment variable |
+| `GITAPP_PRIVATE_KEY` | Repository or environment secret   |
+
+Composite action: [`.github/actions/github-packages-token`](../../.github/actions/github-packages-token/action.yml).
+
+The app needs **`packages: read`** on the forestrie org installation.
+
+### GitHub App permission (org admin)
+
+If install returns `Permission installation not allowed to Read organization
+package`, the forestrie org GitHub App is missing **Packages → Read** (or
+Read-only). Update under **GitHub → Organization settings → Developer settings
+→ GitHub Apps → [app] → Permissions**, then save and accept the org permission
+request.
+
+Mandate repo settings: variable **`GITAPP_ID`**, secret **`GITAPP_PRIVATE_KEY`**
+(same app as arbor-flux / forest-platform Doppler `GITAPP_*`).
+
+## Local / fork install
+
+Root `.npmrc` + `NODE_AUTH_TOKEN` with `read:packages` (`gh auth token` after
+`gh auth refresh -s read:packages`, or a PAT). GitHub Packages requires a
+token even for public packages.
 
 ## Investigation (2026-06-22)
 
-| Check                                                              | Result                                                                        |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| `gh api /orgs/forestrie/packages/npm/@forestrie%2fdelegation-cose` | **404** without `read:packages` on CLI token (org list API)                   |
-| `publish-delegation-cose.yml` workflow_dispatch (2026-06-27)       | **Success** — `@forestrie/delegation-cose@0.1.0` republished                  |
-| Mandate CI                                                         | `permissions: packages: read` + `NODE_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}` |
-
-**Resolved (FOR-218 + FOR-109):** Mandate pins git tag
-`delegation-cose-v0.1.1` (same artifact as published `@forestrie/delegation-cose@0.1.1`).
-Registry semver remains blocked for cross-repo CI until org PAT (403).
+| Check                                      | Result                                              |
+| ------------------------------------------ | --------------------------------------------------- |
+| `publish-delegation-cose.yml` (2026-06-27) | `@forestrie/delegation-cose@0.1.1` public (FOR-218) |
+| Mandate CI with `GITHUB_TOKEN` only        | 403 cross-repo                                      |
+| Mandate CI with GitHub App token           | Registry semver install (FOR-109)                   |

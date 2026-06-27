@@ -24,18 +24,17 @@ GitHub Packages requires the npm scope to match the owning GitHub org
 2. **Mandate pins an exact version** (no semver range) so a canopy republish
    cannot change the signing artifact without an explicit mandate bump PR.
 
-3. **CI read auth** uses the workflow default `GITHUB_TOKEN` with
-   `permissions: packages: read` and `NODE_AUTH_TOKEN` at `pnpm install`.
-   Canopy publishes `@forestrie/delegation-cose` with `"access": "public"`
-   (FOR-218), but **cross-repo** `GITHUB_TOKEN` still cannot read another
-   repository's GitHub Packages (403). Mandate therefore pins the **git tag**
-   `delegation-cose-v0.1.1` (`github:forestrie/canopy#…&path:…`) so CI
-   installs from the tagged source without a registry tarball (FOR-109).
+3. **CI read auth** uses a short-lived **GitHub App installation token**
+   (same pattern as canopy system tests and forest-1 cross-repo dispatch):
+   `vars.GITAPP_ID` + `secrets.GITAPP_PRIVATE_KEY` →
+   `.github/actions/github-packages-token` → `NODE_AUTH_TOKEN` at
+   `pnpm install`. The org app must have **`packages: read`** and be installed
+   on `forestrie`. Mandate pins exact semver **`0.1.1`** from GitHub Packages
+   (FOR-109).
 
-   **Historical:** Semver `0.1.0` from the registry returned
-   `ERR_PNPM_FETCH_405` before public publish; semver `0.1.1` after publish
-   returns 403 cross-repo. Revisit exact semver once an org PAT or
-   same-repo publish path is available.
+   **Historical:** Default `GITHUB_TOKEN` cannot read packages published from
+   another repository (403). Git tag pins were an interim workaround until this
+   app-token path landed (FOR-218 public publish + FOR-109 app auth).
 
 4. **Forks and local dev** configure root `.npmrc` and supply
    `NODE_AUTH_TOKEN` from `gh auth token` or a PAT with `read:packages`. GitHub
