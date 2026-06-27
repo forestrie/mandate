@@ -25,11 +25,17 @@ GitHub Packages requires the npm scope to match the owning GitHub org
    cannot change the signing artifact without an explicit mandate bump PR.
 
 3. **CI read auth** uses the workflow default `GITHUB_TOKEN` with
-   `permissions: packages: read` and `NODE_AUTH_TOKEN` at `pnpm install`. If
-   cross-repo read returns 403 or tarball fetch returns 405, the agent pins
-   `@forestrie/delegation-cose` from the canopy git tag
-   `delegation-cose-v0.1.0` (`path:packages/libs/delegation-cose`) until
-   GitHub Packages tarball URLs are reliable in CI (FOR-109).
+   `permissions: packages: read` and `NODE_AUTH_TOKEN` at `pnpm install`.
+   Canopy publishes `@forestrie/delegation-cose` with `"access": "public"`
+   (FOR-218), but **cross-repo** `GITHUB_TOKEN` still cannot read another
+   repository's GitHub Packages (403). Mandate therefore pins the **git tag**
+   `delegation-cose-v0.1.1` (`github:forestrie/canopy#…&path:…`) so CI
+   installs from the tagged source without a registry tarball (FOR-109).
+
+   **Historical:** Semver `0.1.0` from the registry returned
+   `ERR_PNPM_FETCH_405` before public publish; semver `0.1.1` after publish
+   returns 403 cross-repo. Revisit exact semver once an org PAT or
+   same-repo publish path is available.
 
 4. **Forks and local dev** configure root `.npmrc` and supply
    `NODE_AUTH_TOKEN` from `gh auth token` or a PAT with `read:packages`. GitHub

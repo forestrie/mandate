@@ -43,7 +43,7 @@
 		"wrangler": "^4.81.0"
 	},
 	"dependencies": {
-		"@forestrie/delegation-cose": "github:forestrie/canopy#delegation-cose-v0.1.0&path:packages/libs/delegation-cose",
+		"@forestrie/delegation-cose": "github:forestrie/canopy#delegation-cose-v0.1.1&path:packages/libs/delegation-cose",
 		"@mandate/coordinator-types": "workspace:*",
 		"@noble/curves": "^1.9.7",
 		"@noble/hashes": "^1.7.1",

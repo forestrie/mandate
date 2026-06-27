@@ -18,7 +18,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20260228.0",
-		"@forestrie/delegation-cose": "github:forestrie/canopy#delegation-cose-v0.1.0&path:packages/libs/delegation-cose",
+		"@forestrie/delegation-cose": "github:forestrie/canopy#delegation-cose-v0.1.1&path:packages/libs/delegation-cose",
 		"@types/node": "^22",
 		"typescript": "^6.0.2",
 		"vitest": "^4.1.3",
