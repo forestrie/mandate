@@ -4,7 +4,8 @@ import type { Hex } from 'viem';
 export interface SigningBackend {
 	readonly kind: 'eoa' | 'safe';
 	isAvailable(): boolean;
-	signKs256Hash(hash: Hex): Promise<Hex>;
+	/** Sign keccak256(Sig_structure) and return 0x-prefixed 65-byte recoverable hex. */
+	signKs256SigStructure(sigStructureBytes: Uint8Array): Promise<Hex>;
 }
 
 export class SigningBackendUnavailableError extends Error {

@@ -65,9 +65,6 @@ export async function submitDelegationCertificate(
 	});
 }
 
-/** @deprecated use submitDelegationCertificate */
-export const submitDelegationMaterial = submitDelegationCertificate;
-
 export async function getLogDelegationEnabled(logId: string): Promise<EnabledResponse> {
 	return bffFetch<EnabledResponse>(`logs/${encodeURIComponent(logId)}/enabled`, undefined, logId, [
 		'logs:enabled:read'

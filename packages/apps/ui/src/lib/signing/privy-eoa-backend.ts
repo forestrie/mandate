@@ -1,4 +1,4 @@
-import type { Hex } from 'viem';
+import { keccak256, type Hex } from 'viem';
 import type { SigningBackend } from './signing-backend.js';
 import { SigningBackendUnavailableError } from './signing-backend.js';
 import { getConnectedEthereumProvider } from '$lib/privy/client.js';
@@ -11,7 +11,8 @@ export class PrivyEoaBackend implements SigningBackend {
 		return typeof window !== 'undefined';
 	}
 
-	async signKs256Hash(hash: Hex): Promise<Hex> {
+	async signKs256SigStructure(sigStructureBytes: Uint8Array): Promise<Hex> {
+		const hash = keccak256(sigStructureBytes);
 		const provider = await getConnectedEthereumProvider();
 		if (!provider) {
 			throw new SigningBackendUnavailableError('Connect a wallet before signing.');
