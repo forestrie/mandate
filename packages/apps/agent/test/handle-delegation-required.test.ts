@@ -315,4 +315,166 @@ describe('handleDelegationRequired', () => {
 		expect(JSON.stringify(body)).not.toContain('secret');
 		expect(await seenStore.has(requestKey)).toBe(false);
 	});
+
+	it('routes Mode B log to user signer bearer and Mode C log to mandate token', async () => {
+		const rootModeC = await generateTestKs256Root();
+		const rootModeB = await generateTestKs256Root();
+		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+		const { privateKey, publicJwk } = await generateWebhookSigningKeyPair();
+		const modeCLogId = TEST_LOG_ID;
+		const modeBLogId = 'a1b2c3d4e5f678901234567890abcdef0';
+		const mandateSignerUrl = 'http://mandate-signer.test/v1/sign';
+		const userSignerUrl = 'http://user-signer.test/v1/sign';
+
+		const operatorKeys = JSON.stringify({
+			[modeCLogId]: {
+				alg: 'KS256',
+				rootSignerAddress: rootModeC.rootSignerAddress,
+				kind: 'remote',
+				signerUrl: mandateSignerUrl,
+				keyRef: 'mode-c-key-ref'
+			},
+			[modeBLogId]: {
+				alg: 'KS256',
+				rootSignerAddress: rootModeB.rootSignerAddress,
+				kind: 'remote',
+				signerUrl: userSignerUrl,
+				keyRef: 'mode-b-key-ref',
+				bearerEnvKey: 'USER_SIGNER_BEARER'
+			}
+		});
+
+		const authHeaders: string[] = [];
+		const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = String(input);
+			if (url === mandateSignerUrl || url === userSignerUrl) {
+				const headers = init?.headers as Record<string, string>;
+				authHeaders.push(headers.Authorization);
+				return new Response('signer unavailable', { status: 500 });
+			}
+			throw new Error(`unexpected fetch: ${url}`);
+		});
+
+		for (const [logId, root] of [
+			[modeCLogId, rootModeC],
+			[modeBLogId, rootModeB]
+		] as const) {
+			const event = buildDelegationRequiredEvent({
+				root,
+				delegatedPublicKeyCbor,
+				logId,
+				requestKey: `routing-${logId}`
+			});
+			const response = await handleDelegationRequired(
+				await signedWebhookRequest({ eventBody: JSON.stringify(event), privateKey }),
+				{
+					jwksResolver: createJwksResolver(publicJwk),
+					keyRegistry: new KeyRegistry(operatorKeys),
+					seenStore: new MemorySeenStore(),
+					...TEST_AGENT_DEPS,
+					fetchImpl,
+					remoteBearerEnv: { USER_SIGNER_BEARER: 'user-bearer-token' },
+					nowSeconds: NOW
+				}
+			);
+			expect(response.status).toBe(502);
+		}
+
+		expect(authHeaders).toEqual([
+			'Bearer test-signer-token',
+			'Bearer user-bearer-token'
+		]);
+	});
+
+	it('returns 502 when bearerEnvKey is configured but env value is empty', async () => {
+		const root = await generateTestKs256Root();
+		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+		const { privateKey, publicJwk } = await generateWebhookSigningKeyPair();
+		const seenStore = new MemorySeenStore();
+		const requestKey = 'empty-user-bearer-key';
+
+		const operatorKeys = JSON.stringify({
+			[TEST_LOG_ID]: {
+				alg: 'KS256',
+				rootSignerAddress: root.rootSignerAddress,
+				kind: 'remote',
+				signerUrl: 'http://user-signer.test/v1/sign',
+				keyRef: 'mode-b-key-ref',
+				bearerEnvKey: 'USER_SIGNER_BEARER'
+			}
+		});
+
+		const event = buildDelegationRequiredEvent({
+			root,
+			delegatedPublicKeyCbor,
+			requestKey
+		});
+
+		const response = await handleDelegationRequired(
+			await signedWebhookRequest({ eventBody: JSON.stringify(event), privateKey }),
+			{
+				jwksResolver: createJwksResolver(publicJwk),
+				keyRegistry: new KeyRegistry(operatorKeys),
+				seenStore,
+				...TEST_AGENT_DEPS,
+				remoteBearerEnv: {},
+				nowSeconds: NOW
+			}
+		);
+
+		expect(response.status).toBe(502);
+		expect(await seenStore.has(requestKey)).toBe(false);
+	});
+
+	it('returns generic 502 when remote signer returns 401 and clears requestKey reservation', async () => {
+		const root = await generateTestKs256Root();
+		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+		const { privateKey, publicJwk } = await generateWebhookSigningKeyPair();
+		const seenStore = new MemorySeenStore();
+		const signerUrl = 'http://user-signer.test/v1/sign';
+		const requestKey = 'remote-signer-401-key';
+
+		const operatorKeys = JSON.stringify({
+			[TEST_LOG_ID]: {
+				alg: 'KS256',
+				rootSignerAddress: root.rootSignerAddress,
+				kind: 'remote',
+				signerUrl,
+				keyRef: 'mode-b-key-ref',
+				bearerEnvKey: 'USER_SIGNER_BEARER'
+			}
+		});
+
+		const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url === signerUrl) {
+				return new Response('unauthorized', { status: 401 });
+			}
+			throw new Error(`unexpected fetch: ${url}`);
+		});
+
+		const event = buildDelegationRequiredEvent({
+			root,
+			delegatedPublicKeyCbor,
+			requestKey
+		});
+
+		const response = await handleDelegationRequired(
+			await signedWebhookRequest({ eventBody: JSON.stringify(event), privateKey }),
+			{
+				jwksResolver: createJwksResolver(publicJwk),
+				keyRegistry: new KeyRegistry(operatorKeys),
+				seenStore,
+				...TEST_AGENT_DEPS,
+				fetchImpl,
+				remoteBearerEnv: { USER_SIGNER_BEARER: 'user-bearer-token' },
+				nowSeconds: NOW
+			}
+		);
+
+		expect(response.status).toBe(502);
+		const body = (await response.json()) as { ok?: boolean; error?: string };
+		expect(body).toEqual({ ok: false, error: 'delegation signing failed' });
+		expect(await seenStore.has(requestKey)).toBe(false);
+	});
 });

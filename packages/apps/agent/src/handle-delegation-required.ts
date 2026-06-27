@@ -23,6 +23,7 @@ export interface AgentDeps {
 	coordinatorUpstreamUrl: string;
 	coordinatorAppToken: string;
 	mandateSignerToken: string;
+	remoteBearerEnv?: Record<string, string | undefined>;
 	fetchImpl?: typeof fetch;
 	nowSeconds?: number;
 }
@@ -114,12 +115,19 @@ export async function handleDelegationRequired(
 		throw error;
 	}
 
-	const signer = resolveSigner(
-		deps.keyRegistry,
-		event.logId,
-		deps.mandateSignerToken,
-		deps.fetchImpl
-	);
+	let signer;
+	try {
+		signer = resolveSigner(
+			deps.keyRegistry,
+			event.logId,
+			deps.mandateSignerToken,
+			deps.fetchImpl,
+			deps.remoteBearerEnv ?? {}
+		);
+	} catch {
+		logDelegationOutcome(event, 'signer_failed');
+		return jsonResponse(502, { ok: false, error: 'delegation signing failed' });
+	}
 
 	// Reserve before signing to narrow duplicate-webhook races. KV is eventually
 	// consistent; coordinator idempotency on material submit remains the hard backstop.

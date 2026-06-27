@@ -6,22 +6,28 @@ import type { SignRequest } from '@mandate/signer-contract';
 import { base64ToBytes, bytesToBase64, parseEthAddress } from '../bytes.js';
 import type { LogSignerDescriptor } from './log-signer-descriptor.js';
 import type { DelegationSigner } from './delegation-signer.js';
+import { resolveRemoteBearerToken } from './resolve-remote-bearer.js';
 
 /**
  * Remote KS256 signer: POST ADR-0003 SignRequest to signerUrl with bearer auth.
  */
 export class RemoteKs256Signer implements DelegationSigner {
+	private readonly bearerToken: string;
+
 	constructor(
 		private readonly descriptor: LogSignerDescriptor,
-		private readonly mandateSignerToken: string,
-		private readonly fetchImpl: typeof fetch = fetch
+		mandateSignerToken: string,
+		private readonly fetchImpl: typeof fetch = fetch,
+		remoteBearerEnv: Record<string, string | undefined> = {}
 	) {
 		if (descriptor.kind !== 'remote' || !descriptor.signerUrl || !descriptor.keyRef) {
 			throw new Error('RemoteKs256Signer requires kind=remote, signerUrl, and keyRef');
 		}
-		if (!mandateSignerToken) {
-			throw new Error('MANDATE_SIGNER_TOKEN is required for remote signing');
-		}
+		this.bearerToken = resolveRemoteBearerToken(
+			descriptor,
+			mandateSignerToken,
+			remoteBearerEnv
+		);
 	}
 
 	async buildCertificate(input: DelegationInput): Promise<Uint8Array> {
@@ -44,7 +50,7 @@ export class RemoteKs256Signer implements DelegationSigner {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				Authorization: `Bearer ${this.mandateSignerToken}`
+				Authorization: `Bearer ${this.bearerToken}`
 			},
 			body: JSON.stringify(requestBody)
 		});
