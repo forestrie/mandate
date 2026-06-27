@@ -6,7 +6,8 @@ import {
 	redeemOnboardToken,
 	requestOnboardToken
 } from './onboard-client.js';
-import { onboardModeCWallet, PrivyRestClient, revokeModeCWallet } from '@mandate/privy-admin';
+import { onboardModeCWallet, PrivyRestClient } from '@mandate/privy-admin';
+import { runRevokeModeCCommand } from './revoke-mode-c-command.js';
 import type { DelegationMode } from './delegation-mode.js';
 
 function usageOnboardRequest(): void {
@@ -91,10 +92,21 @@ Options (env fallbacks in parentheses):
 function usageRevokeModeC(): void {
 	console.error(`Usage: mandate-register privy revoke-mode-c [options]
 
+Destructive: removes mandate as an additional signer on a user-owned Privy
+wallet (custody kill switch, ARC-0022 I3). Prints a pre-revoke summary
+(wallet id, address, signer count, action) before any change.
+
 Options (env fallbacks in parentheses):
-  --wallet-id           Privy user-owned wallet id (E2E_MODE_C_USER_PRIVY_WALLET_ID)
-  --owner-auth-key      Owner authorization key for wallet PATCH (E2E_MODE_C_PRIVY_OWNER_AUTH_KEY)
-  --mandate-signer-id   Mandate key quorum id for post-revoke check (MANDATE_PRIVY_SIGNER_ID, optional)
+  --wallet-id                     Privy user-owned wallet id (E2E_MODE_C_USER_PRIVY_WALLET_ID)
+  --owner-auth-key                Owner authorization key for wallet PATCH (E2E_MODE_C_PRIVY_OWNER_AUTH_KEY)
+  --mandate-signer-id             Mandate key quorum id; enables targeted revoke (MANDATE_PRIVY_SIGNER_ID)
+  --confirm-wallet-id             Must equal --wallet-id; required in non-interactive/CI runs
+  --yes                           Skip the interactive prompt (required in non-interactive/CI runs)
+  --clear-all-additional-signers  Ops escape hatch: remove ALL additional signers (full clear)
+
+Targeted revoke (default with --mandate-signer-id) preserves other authorized
+signers; full clear requires --clear-all-additional-signers. In CI pass
+--yes --confirm-wallet-id "$E2E_MODE_C_USER_PRIVY_WALLET_ID".
 `);
 	process.exit(1);
 }
@@ -103,6 +115,21 @@ function readFlag(name: string): string | undefined {
 	const index = process.argv.indexOf(name);
 	if (index === -1 || index + 1 >= process.argv.length) return undefined;
 	return process.argv[index + 1];
+}
+
+function hasFlag(name: string): boolean {
+	return process.argv.includes(name);
+}
+
+async function promptYesNo(question: string): Promise<boolean> {
+	const { createInterface } = await import('node:readline/promises');
+	const rl = createInterface({ input: process.stdin, output: process.stdout });
+	try {
+		const answer = (await rl.question(question)).trim().toLowerCase();
+		return answer === 'y' || answer === 'yes';
+	} finally {
+		rl.close();
+	}
 }
 
 function envOr(flag: string | undefined, ...names: string[]): string | undefined {
@@ -300,6 +327,9 @@ async function runRevokeModeC(): Promise<void> {
 	const ownerAuthorizationKey =
 		readFlag('--owner-auth-key') ?? process.env.E2E_MODE_C_PRIVY_OWNER_AUTH_KEY;
 	const mandateSignerId = readFlag('--mandate-signer-id') ?? process.env.MANDATE_PRIVY_SIGNER_ID;
+	const confirmWalletId = readFlag('--confirm-wallet-id');
+	const yes = hasFlag('--yes');
+	const clearAllAdditionalSigners = hasFlag('--clear-all-additional-signers');
 	const privy = requirePrivyClientConfig();
 
 	if (!walletId || !ownerAuthorizationKey) {
@@ -307,14 +337,29 @@ async function runRevokeModeC(): Promise<void> {
 	}
 
 	const client = new PrivyRestClient(privy);
+	const nonInteractive = process.env.CI === 'true' || !process.stdout.isTTY;
 
-	const output = await revokeModeCWallet(client, {
-		walletId: walletId!,
-		ownerAuthorizationKey: ownerAuthorizationKey!,
-		mandateSignerId: mandateSignerId ?? undefined
-	});
+	const exitCode = await runRevokeModeCCommand(
+		client,
+		{
+			walletId: walletId!,
+			ownerAuthorizationKey: ownerAuthorizationKey!,
+			mandateSignerId: mandateSignerId ?? undefined,
+			confirmWalletId,
+			yes,
+			clearAllAdditionalSigners,
+			nonInteractive
+		},
+		{
+			stdout: (line) => console.log(line),
+			stderr: (line) => console.error(line),
+			confirm: promptYesNo
+		}
+	);
 
-	console.log(JSON.stringify(output, null, 2));
+	if (exitCode !== 0) {
+		process.exit(exitCode);
+	}
 }
 
 async function main(): Promise<void> {

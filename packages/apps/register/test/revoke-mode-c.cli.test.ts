@@ -19,4 +19,10 @@ describe('mandate-register privy revoke-mode-c CLI', () => {
 		expect(CLI_SOURCE).toContain('E2E_MODE_C_PRIVY_OWNER_AUTH_KEY');
 		expect(CLI_SOURCE).toContain('MANDATE_PRIVY_APP_ID');
 	});
+
+	it('documents destructive-op guardrail flags (FOR-132)', () => {
+		expect(CLI_SOURCE).toContain('--confirm-wallet-id');
+		expect(CLI_SOURCE).toContain('--yes');
+		expect(CLI_SOURCE).toContain('--clear-all-additional-signers');
+	});
 });
