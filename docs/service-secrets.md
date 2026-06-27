@@ -105,13 +105,15 @@ Binding names match the tables above exactly.
 
 ### `@mandate/agent`
 
-| Secret / var               | Type       | Purpose                                                    |
-| -------------------------- | ---------- | ---------------------------------------------------------- |
-| `COORDINATOR_UPSTREAM_URL` | var        | Coordinator origin                                         |
-| `COORDINATOR_APP_TOKEN`    | secret     | Bearer for material submit                                 |
-| `OPERATOR_ROOT_KEYS`       | secret     | JSON map of per-log signer descriptors (ADR-0003)          |
-| `USER_SIGNER_BEARER`       | secret     | Mode B user remote signer bearer (optional)                |
-| `REQUEST_KEYS`             | KV binding | Webhook dedup; namespace `mandate-agent-prod-request-keys` |
+| Secret / var               | Type       | Purpose                                                                                                                                   |
+| -------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `COORDINATOR_UPSTREAM_URL` | var        | Coordinator origin                                                                                                                        |
+| `COORDINATOR_APP_TOKEN`    | secret     | Bearer for material submit                                                                                                                |
+| `OPERATOR_ROOT_KEYS`       | secret     | JSON map of per-log signer descriptors (ADR-0003)                                                                                         |
+| `USER_SIGNER_BEARER`       | secret     | Mode B user remote signer bearer (optional)                                                                                               |
+| `REQUEST_KEYS`             | KV binding | Webhook **requestKey reservation** (120s TTL via `tryReserve` before sign; 3600s on success); namespace `mandate-agent-prod-request-keys` |
+
+`REQUEST_KEYS` is best-effort dedup only — coordinator certificate submit idempotency is authoritative if two concurrent webhooks both pass reservation.
 
 **Never** deploy `USER_SIGNER_KEYS_JSON` on `@mandate/agent` — root private keys
 belong only on the user remote signer Worker (see `@mandate/reference-user-signer`).
