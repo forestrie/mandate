@@ -21,7 +21,8 @@ export class MemorySeenStore implements SeenStore {
 		return this.seen.has(requestKey);
 	}
 
-	async markSeen(requestKey: string): Promise<void> {
+	async markSeen(requestKey: string, _ttlSeconds?: number): Promise<void> {
+		void _ttlSeconds;
 		this.seen.add(requestKey);
 	}
 
@@ -29,7 +30,8 @@ export class MemorySeenStore implements SeenStore {
 		this.seen.delete(requestKey);
 	}
 
-	async tryReserve(requestKey: string, _ttlSeconds: number): Promise<RequestKeyReservation> {
+	async tryReserve(requestKey: string, ttlSeconds: number): Promise<RequestKeyReservation> {
+		void ttlSeconds;
 		if (this.seen.has(requestKey)) {
 			return 'duplicate';
 		}
@@ -57,10 +59,7 @@ export class KvSeenStore implements SeenStore {
 		await this.kv.delete(requestKey);
 	}
 
-	async tryReserve(
-		requestKey: string,
-		ttlSeconds: number
-	): Promise<RequestKeyReservation> {
+	async tryReserve(requestKey: string, ttlSeconds: number): Promise<RequestKeyReservation> {
 		const existing = await this.kv.get(requestKey);
 		if (existing !== null) {
 			return 'duplicate';

@@ -43,7 +43,8 @@ class RaceSimulatingSeenStore implements SeenStore {
 		this.backing.delete(requestKey);
 	}
 
-	async tryReserve(requestKey: string, _ttlSeconds: number) {
+	async tryReserve(requestKey: string, ttlSeconds: number) {
+		void ttlSeconds;
 		await sleep(this.getDelayMs);
 		if (this.backing.has(requestKey)) {
 			return 'duplicate' as const;
