@@ -67,6 +67,62 @@ jobs:
           fi
           echo "live-signer secrets preflight ok"
 
+  live-onboard-secrets-check:
+    name: Verify live-onboard secrets present
+    runs-on: ubuntu-latest
+    environment: live-signer
+    steps:
+      - name: Fail if required secrets are empty
+        env:
+          E2E_CANOPY_API_URL: ${{ secrets.E2E_CANOPY_API_URL }}
+          E2E_CANOPY_CHAIN_ID: ${{ secrets.E2E_CANOPY_CHAIN_ID }}
+          E2E_CANOPY_UNIVOCITY_ADDR: ${{ secrets.E2E_CANOPY_UNIVOCITY_ADDR }}
+        run: |
+          set -euo pipefail
+          missing=0
+          check() {
+            if [ -z "${1:-}" ]; then
+              echo "missing required secret: $2" >&2
+              missing=1
+            fi
+          }
+          check "$E2E_CANOPY_API_URL" E2E_CANOPY_API_URL
+          check "$E2E_CANOPY_CHAIN_ID" E2E_CANOPY_CHAIN_ID
+          check "$E2E_CANOPY_UNIVOCITY_ADDR" E2E_CANOPY_UNIVOCITY_ADDR
+          if [ "$missing" -ne 0 ]; then
+            echo "Sync Doppler mandate-forestrie (dev + e2e) to GitHub live-signer" >&2
+            exit 1
+          fi
+          echo "live-onboard secrets preflight ok"
+
+  live-onboard:
+    name: Self-service onboard request live test (FOR-177)
+    runs-on: ubuntu-latest
+    environment: live-signer
+    needs: live-onboard-secrets-check
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Run onboard self-service live test
+        env:
+          E2E_CANOPY_API_URL: ${{ secrets.E2E_CANOPY_API_URL }}
+          E2E_CANOPY_CHAIN_ID: ${{ secrets.E2E_CANOPY_CHAIN_ID }}
+          E2E_CANOPY_UNIVOCITY_ADDR: ${{ secrets.E2E_CANOPY_UNIVOCITY_ADDR }}
+          E2E_CANOPY_OPS_ADMIN_TOKEN: ${{ secrets.E2E_CANOPY_OPS_ADMIN_TOKEN }}
+        run: pnpm --filter @mandate/register test:live:onboard
+
   live-owned:
     name: Privy owned-wallet live test
     runs-on: ubuntu-latest
