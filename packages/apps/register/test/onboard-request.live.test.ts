@@ -82,7 +82,10 @@ describe.skipIf(!liveReady)('onboard self-service live', () => {
 });
 
 describe('onboard self-service live preflight', () => {
-	it.skipIf(liveReady)('skipped — set E2E_CANOPY_API_URL, E2E_CANOPY_CHAIN_ID, E2E_CANOPY_UNIVOCITY_ADDR', () => {
-		expect(liveReady).toBe(false);
-	});
+	it.skipIf(liveReady)(
+		'skipped — set E2E_CANOPY_API_URL, E2E_CANOPY_CHAIN_ID, E2E_CANOPY_UNIVOCITY_ADDR',
+		() => {
+			expect(liveReady).toBe(false);
+		}
+	);
 });
