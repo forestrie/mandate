@@ -69,8 +69,8 @@ UI queue that also hosts the Mode C revocation control.
 5. **Per-user pending-delegations UI.** A per-log queue serves both modes: for
    Mode B it is the actionable approve/sign surface; for Mode C it is
    audit/observability plus a prominent **"Revoke mandate's signing access"**
-   control wired to Privy `revokeWallets` / `PATCH /v1/wallets/{id}`
-   (`additional_signers: []`). (ARC-0022 §6, §11.2.)
+   control wired to Privy targeted revoke (default) or full clear via
+   `--clear-all-additional-signers` (FOR-194). (ARC-0022 §6, §11.2.)
 
 6. **Mode C uses the ADR-0003 "S3" owned-wallet authorization signature.**
    `@mandate/signer` implements the Privy `privy-authorization-signature`
@@ -89,11 +89,11 @@ UI queue that also hosts the Mode C revocation control.
    **Privy wallet inventory (mandate-forestrie instance).** Mandate needs exactly
    three Privy wallet roles — no more:
 
-   | Role                                      | Topology                                                              | Purpose                                                                                                            | Mandate Privy activity                                                                                                                                                      |
-   | ----------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-   | **Operator payment-authoritative**        | Ownerless app-controlled (`owner_id: null`); **no** additional signer | Operator's own payment-authoritative log `K(L)`                                                                    | Basic-auth `secp256k1_sign` only; `KEY_DIRECTORY` without `requiresAuthorizationSignature`                                                                                  |
-   | **Mode C user wallet** (per user log)     | User-owned; mandate = **additional signer** + policy                  | User log root `K(L)` under hosted Mode C                                                                           | Onboarding: owner-signed PATCH to add `MANDATE_PRIVY_SIGNER_ID`; signing: owned-wallet `privy-authorization-signature`; revoke: owner-signed PATCH `additional_signers: []` |
-   | **E2E fixtures** (two user-owned wallets) | Same as Mode C user wallet                                            | Stable signer-test wallet (`E2E_SIGNER_TEST_*`, never revoked) + separate kill-switch wallet (`E2E_MODE_C_USER_*`) | Same PATCH/sign/revoke as Mode C; fixtures created outside mandate                                                                                                          |
+   | Role                                      | Topology                                                              | Purpose                                                                                                            | Mandate Privy activity                                                                                                                                                                                    |
+   | ----------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | **Operator payment-authoritative**        | Ownerless app-controlled (`owner_id: null`); **no** additional signer | Operator's own payment-authoritative log `K(L)`                                                                    | Basic-auth `secp256k1_sign` only; `KEY_DIRECTORY` without `requiresAuthorizationSignature`                                                                                                                |
+   | **Mode C user wallet** (per user log)     | User-owned; mandate = **additional signer** + policy                  | User log root `K(L)` under hosted Mode C                                                                           | Onboarding: owner-signed PATCH to add `MANDATE_PRIVY_SIGNER_ID`; signing: owned-wallet `privy-authorization-signature`; revoke: targeted removal of mandate from `additional_signers` (full clear opt-in) |
+   | **E2E fixtures** (two user-owned wallets) | Same as Mode C user wallet                                            | Stable signer-test wallet (`E2E_SIGNER_TEST_*`, never revoked) + separate kill-switch wallet (`E2E_MODE_C_USER_*`) | Same PATCH/sign/revoke as Mode C; fixtures created outside mandate                                                                                                                                        |
 
    Mandate **never creates** Privy wallets (`POST /v1/wallets` is not in
    `@mandate/register`). User wallets are created by the user (or synthetic E2E
@@ -179,25 +179,27 @@ status.
 
 ```sh
 doppler run --project mandate-forestrie --config dev -- task privy:revoke:mode-c -- \
-  --yes --confirm-wallet-id "$E2E_MODE_C_USER_PRIVY_WALLET_ID"
-# or:
+  --yes --confirm-wallet-id "$E2E_MODE_C_USER_PRIVY_WALLET_ID" \
+  --confirm-wallet-address "$WALLET_ADDRESS_FROM_SUMMARY"
+# or (prefer owner key via env, not argv):
 mandate-register privy revoke-mode-c \
   --wallet-id "$E2E_MODE_C_USER_PRIVY_WALLET_ID" \
-  --owner-auth-key "$E2E_MODE_C_PRIVY_OWNER_AUTH_KEY" \
   --mandate-signer-id "$MANDATE_PRIVY_SIGNER_ID" \
-  --yes --confirm-wallet-id "$E2E_MODE_C_USER_PRIVY_WALLET_ID"
+  --yes --confirm-wallet-id "$E2E_MODE_C_USER_PRIVY_WALLET_ID" \
+  --confirm-wallet-address "$WALLET_ADDRESS_FROM_SUMMARY"
 ```
 
-Uses `revokeModeCWallet()` in `@mandate/privy-admin`. With `--mandate-signer-id`
-the revoke is **targeted** (`removeMandateAdditionalSigner` — only mandate is
-removed, other signers preserved, FOR-130); `--clear-all-additional-signers`
-forces a full clear via `removeAllAdditionalSigners`. Requires the **owner**
-authorization key, not mandate's additional-signer key.
+Uses `revokeModeCWallet()` in `@mandate/privy-admin`. `--mandate-signer-id` is
+**required**. Targeted revoke (default) calls `removeMandateAdditionalSigner`;
+`--clear-all-additional-signers` routes through the same library path with
+topology checks (FOR-194). Requires the **owner** authorization key via
+`E2E_MODE_C_PRIVY_OWNER_AUTH_KEY`, not mandate's additional-signer key.
 
 The CLI prints a pre-revoke summary (wallet id, address, signer count, action)
-and, in non-interactive/CI runs, requires both `--yes` and a matching
-`--confirm-wallet-id` before any Privy call (FOR-132). After a successful revoke
-run `mandate-register privy describe-post-revoke-actions` to prune the signer
+and, in non-interactive/CI runs, requires `--yes`, a matching
+`--confirm-wallet-id`, and `--confirm-wallet-address` before any Privy call
+(FOR-132/FOR-194). After a successful revoke run
+`mandate-register privy describe-post-revoke-actions` to prune the signer
 `KEY_DIRECTORY` (FOR-131); see
 [service-secrets.md](../service-secrets.md#post-revoke-secret-hygiene-for-131).
 
@@ -237,7 +239,7 @@ pause and CLI revoke are the supported surfaces today.
 | Live CI secrets + preflight               | Shipped                     | FOR-128; `live-owned-wallet.yml`                           |
 | Targeted mandate-only revoke              | Shipped                     | FOR-130; `removeMandateAdditionalSigner`, preserves others |
 | Post-revoke KEY_DIRECTORY hygiene runbook | Shipped                     | FOR-131; `describe-post-revoke-actions` + service-secrets  |
-| Revoke CLI safety guardrails              | Shipped                     | FOR-132; `--confirm-wallet-id`, `--yes`, full-clear gate   |
+| Revoke CLI safety guardrails              | Shipped                     | FOR-132/FOR-194; confirm id+address, library-only revoke   |
 
 ## Alternatives considered
 

@@ -26,6 +26,7 @@ interface MockState {
 	patchCount: number;
 	patchBody: unknown;
 	patched: boolean;
+	ownerless: boolean;
 }
 
 function makeClient(state: MockState): PrivyRestClient {
@@ -33,11 +34,9 @@ function makeClient(state: MockState): PrivyRestClient {
 		id: WALLET_ID,
 		address: WALLET_ADDRESS,
 		chain_type: 'ethereum',
-		owner_id: 'kq_user_owner_0000000001',
+		owner_id: state.ownerless ? null : 'kq_user_owner_0000000001',
 		additional_signers: signers
 	});
-	// Realistic Privy semantics: GET reflects current state — mandate is present
-	// until a PATCH clears the additional signers, then absent afterwards.
 	const fetchImpl: typeof fetch = async (input, init) => {
 		const url = String(input);
 		const method = init?.method ?? 'GET';
@@ -87,13 +86,28 @@ function baseOptions(
 	};
 }
 
+function freshState(overrides: Partial<MockState> = {}): MockState {
+	return {
+		getCount: 0,
+		patchCount: 0,
+		patchBody: undefined,
+		patched: false,
+		ownerless: false,
+		...overrides
+	};
+}
+
 describe('runRevokeModeCCommand', () => {
 	it('AT-132-1: --confirm-wallet-id mismatch exits 1 with no Privy call', async () => {
-		const state: MockState = { getCount: 0, patchCount: 0, patchBody: undefined, patched: false };
+		const state = freshState();
 		const lines = { out: [] as string[], err: [] as string[] };
 		const code = await runRevokeModeCCommand(
 			makeClient(state),
-			baseOptions({ confirmWalletId: 'wallet_other', yes: true }),
+			baseOptions({
+				confirmWalletId: 'wallet_other',
+				yes: true,
+				confirmWalletAddress: WALLET_ADDRESS
+			}),
 			makeIo(lines)
 		);
 		expect(code).toBe(1);
@@ -102,24 +116,47 @@ describe('runRevokeModeCCommand', () => {
 		expect(lines.err.join('\n')).toContain('does not match');
 	});
 
-	it('AT-132-2: non-interactive without --yes exits 1 before PATCH', async () => {
-		const state: MockState = { getCount: 0, patchCount: 0, patchBody: undefined, patched: false };
+	it('AT-R02-1: missing mandateSignerId exits 1 with no Privy call', async () => {
+		const state = freshState();
 		const lines = { out: [] as string[], err: [] as string[] };
 		const code = await runRevokeModeCCommand(
 			makeClient(state),
-			baseOptions({ confirmWalletId: WALLET_ID, yes: false, nonInteractive: true }),
+			baseOptions({
+				mandateSignerId: '',
+				yes: true,
+				confirmWalletId: WALLET_ID,
+				confirmWalletAddress: WALLET_ADDRESS
+			}),
+			makeIo(lines)
+		);
+		expect(code).toBe(1);
+		expect(state.getCount).toBe(0);
+		expect(lines.err.join('\n')).toContain('mandate-signer-id');
+	});
+
+	it('AT-132-2: non-interactive without --yes exits 1 before PATCH', async () => {
+		const state = freshState();
+		const lines = { out: [] as string[], err: [] as string[] };
+		const code = await runRevokeModeCCommand(
+			makeClient(state),
+			baseOptions({
+				confirmWalletId: WALLET_ID,
+				confirmWalletAddress: WALLET_ADDRESS,
+				yes: false,
+				nonInteractive: true
+			}),
 			makeIo(lines)
 		);
 		expect(code).toBe(1);
 		expect(state.patchCount).toBe(0);
 	});
 
-	it('non-interactive with --yes but no --confirm-wallet-id exits 1', async () => {
-		const state: MockState = { getCount: 0, patchCount: 0, patchBody: undefined, patched: false };
+	it('non-interactive without --confirm-wallet-id exits 1', async () => {
+		const state = freshState();
 		const lines = { out: [] as string[], err: [] as string[] };
 		const code = await runRevokeModeCCommand(
 			makeClient(state),
-			baseOptions({ yes: true, confirmWalletId: undefined, nonInteractive: true }),
+			baseOptions({ yes: true, confirmWalletAddress: WALLET_ADDRESS, nonInteractive: true }),
 			makeIo(lines)
 		);
 		expect(code).toBe(1);
@@ -127,26 +164,61 @@ describe('runRevokeModeCCommand', () => {
 		expect(lines.err.join('\n')).toContain('--confirm-wallet-id');
 	});
 
-	it('non-interactive happy path: targeted revoke PATCHes and prints address', async () => {
-		const state: MockState = { getCount: 0, patchCount: 0, patchBody: undefined, patched: false };
+	it('non-interactive without --confirm-wallet-address exits 1', async () => {
+		const state = freshState();
+		const lines = { out: [] as string[], err: [] as string[] };
+		const code = await runRevokeModeCCommand(
+			makeClient(state),
+			baseOptions({ yes: true, confirmWalletId: WALLET_ID, nonInteractive: true }),
+			makeIo(lines)
+		);
+		expect(code).toBe(1);
+		expect(state.patchCount).toBe(0);
+		expect(lines.err.join('\n')).toContain('--confirm-wallet-address');
+	});
+
+	it('--confirm-wallet-address mismatch exits 1 before PATCH', async () => {
+		const state = freshState();
+		const lines = { out: [] as string[], err: [] as string[] };
+		const code = await runRevokeModeCCommand(
+			makeClient(state),
+			baseOptions({
+				yes: true,
+				confirmWalletId: WALLET_ID,
+				confirmWalletAddress: '0xdead'
+			}),
+			makeIo(lines)
+		);
+		expect(code).toBe(1);
+		expect(state.patchCount).toBe(0);
+		expect(lines.err.join('\n')).toContain('confirm-wallet-address');
+	});
+
+	it('AT-R03-1: non-interactive happy path PATCHes via revokeModeCWallet', async () => {
+		const state = freshState();
 		const lines = { out: [] as string[], err: [] as string[] };
 		const key = ownerAuthorizationKey();
 		const code = await runRevokeModeCCommand(
 			makeClient(state),
-			baseOptions({ yes: true, confirmWalletId: WALLET_ID, ownerAuthorizationKey: key }),
+			baseOptions({
+				yes: true,
+				confirmWalletId: WALLET_ID,
+				confirmWalletAddress: WALLET_ADDRESS,
+				ownerAuthorizationKey: key
+			}),
 			makeIo(lines)
 		);
 		expect(code).toBe(0);
 		expect(state.patchCount).toBe(1);
 		expect(state.patchBody).toEqual({ additional_signers: [] });
 		expect(lines.out.join('\n')).toContain(WALLET_ADDRESS);
-		// R-B-02: owner authorization key must never be echoed.
+		expect(lines.out.join('\n')).toContain('"action": "targeted"');
 		expect(lines.out.join('\n')).not.toContain(key);
 		expect(lines.err.join('\n')).not.toContain(key);
 	});
 
 	it('interactive prompt declined exits 1 without PATCH', async () => {
-		const state: MockState = { getCount: 0, patchCount: 0, patchBody: undefined, patched: false };
+		const state = freshState();
 		const lines = { out: [] as string[], err: [] as string[] };
 		const code = await runRevokeModeCCommand(
 			makeClient(state),
@@ -157,16 +229,40 @@ describe('runRevokeModeCCommand', () => {
 		expect(state.patchCount).toBe(0);
 	});
 
-	it('clear-all escape hatch PATCHes empty signer list', async () => {
-		const state: MockState = { getCount: 0, patchCount: 0, patchBody: undefined, patched: false };
+	it('AT-R01-1: clear-all on ownerless wallet exits via library error', async () => {
+		const state = freshState({ ownerless: true });
+		const lines = { out: [] as string[], err: [] as string[] };
+		await expect(
+			runRevokeModeCCommand(
+				makeClient(state),
+				baseOptions({
+					yes: true,
+					confirmWalletId: WALLET_ID,
+					confirmWalletAddress: WALLET_ADDRESS,
+					clearAllAdditionalSigners: true
+				}),
+				makeIo(lines)
+			)
+		).rejects.toThrow();
+		expect(state.patchCount).toBe(0);
+	});
+
+	it('clear-all escape hatch routes through revokeModeCWallet', async () => {
+		const state = freshState();
 		const lines = { out: [] as string[], err: [] as string[] };
 		const code = await runRevokeModeCCommand(
 			makeClient(state),
-			baseOptions({ yes: true, confirmWalletId: WALLET_ID, clearAllAdditionalSigners: true }),
+			baseOptions({
+				yes: true,
+				confirmWalletId: WALLET_ID,
+				confirmWalletAddress: WALLET_ADDRESS,
+				clearAllAdditionalSigners: true
+			}),
 			makeIo(lines)
 		);
 		expect(code).toBe(0);
 		expect(state.patchBody).toEqual({ additional_signers: [] });
+		expect(lines.out.join('\n')).toContain('"action": "full-clear"');
 		expect(lines.out.join('\n')).toContain('full clear');
 	});
 });

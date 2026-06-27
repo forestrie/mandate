@@ -13,4 +13,6 @@ export interface RevokeModeCOutput {
 	revoked: boolean;
 	/** True when mandateSignerId was listed in additional_signers before revoke. */
 	hadMandateSigner: boolean;
+	/** Whether mandate only was removed or all additional signers were cleared. */
+	action: 'targeted' | 'full-clear';
 }

@@ -4,6 +4,7 @@ import type { KeyQuorum } from './key-quorum.js';
 import type { PrivyRestClient } from './privy-rest.js';
 import { PrivyRestError } from './privy-rest-error.js';
 import { OwnerTopologyError } from './owner-topology-error.js';
+import { assertWalletIsUserOwned } from './owner-topology.js';
 
 export interface WalletUpdateBody {
 	display_name?: string | null;
@@ -107,9 +108,12 @@ export async function removeMandateAdditionalSigner(
 	client: PrivyRestClient,
 	walletId: string,
 	mandateSignerId: string,
-	ownerAuthorizationKey: string
+	ownerAuthorizationKey: string,
+	/** When the caller already fetched the wallet (avoids a redundant GET). */
+	walletSnapshot?: Wallet
 ): Promise<Wallet> {
-	const wallet = await getWallet(client, walletId);
+	const wallet = walletSnapshot ?? (await getWallet(client, walletId));
+	assertWalletIsUserOwned(wallet);
 	const current = wallet.additional_signers ?? [];
 	const next = withoutSigner(current, mandateSignerId);
 	if (next.length === current.length) {

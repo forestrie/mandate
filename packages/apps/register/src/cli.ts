@@ -102,12 +102,14 @@ Options (env fallbacks in parentheses):
   --owner-auth-key                Owner authorization key for wallet PATCH (E2E_MODE_C_PRIVY_OWNER_AUTH_KEY)
   --mandate-signer-id             Mandate key quorum id; enables targeted revoke (MANDATE_PRIVY_SIGNER_ID)
   --confirm-wallet-id             Must equal --wallet-id; required in non-interactive/CI runs
+  --confirm-wallet-address        Must equal Privy wallet address; required in non-interactive/CI
   --yes                           Skip the interactive prompt (required in non-interactive/CI runs)
   --clear-all-additional-signers  Ops escape hatch: remove ALL additional signers (full clear)
 
-Targeted revoke (default with --mandate-signer-id) preserves other authorized
-signers; full clear requires --clear-all-additional-signers. In CI pass
---yes --confirm-wallet-id "$E2E_MODE_C_USER_PRIVY_WALLET_ID".
+Targeted revoke (default) preserves other authorized signers; full clear requires
+--clear-all-additional-signers. --mandate-signer-id is always required.
+Prefer E2E_MODE_C_PRIVY_OWNER_AUTH_KEY env over --owner-auth-key (argv is visible in ps).
+In CI pass --yes --confirm-wallet-id and --confirm-wallet-address from the pre-revoke summary.
 `);
 	process.exit(1);
 }
@@ -122,6 +124,7 @@ Options (env fallbacks in parentheses):
   --wallet-id                   Revoked Privy wallet id (E2E_MODE_C_USER_PRIVY_WALLET_ID)
   --key-ref                     KEY_DIRECTORY keyRef to retire (default: user-log-wallet)
   --key-directory-json          KEY_DIRECTORY JSON (KEY_DIRECTORY env)
+  --operator-root-keys-json     OPERATOR_ROOT_KEYS JSON (OPERATOR_ROOT_KEYS env)
   --emit-updated-key-directory  Print only the pruned KEY_DIRECTORY for piping
 `);
 	process.exit(1);
@@ -340,16 +343,27 @@ async function runOnboardModeC(): Promise<void> {
 
 async function runRevokeModeC(): Promise<void> {
 	const walletId = readFlag('--wallet-id') ?? process.env.E2E_MODE_C_USER_PRIVY_WALLET_ID;
-	const ownerAuthorizationKey =
-		readFlag('--owner-auth-key') ?? process.env.E2E_MODE_C_PRIVY_OWNER_AUTH_KEY;
+	const ownerAuthFromArgv = readFlag('--owner-auth-key');
+	const ownerAuthorizationKey = ownerAuthFromArgv ?? process.env.E2E_MODE_C_PRIVY_OWNER_AUTH_KEY;
 	const mandateSignerId = readFlag('--mandate-signer-id') ?? process.env.MANDATE_PRIVY_SIGNER_ID;
 	const confirmWalletId = readFlag('--confirm-wallet-id');
+	const confirmWalletAddress = readFlag('--confirm-wallet-address');
 	const yes = hasFlag('--yes');
 	const clearAllAdditionalSigners = hasFlag('--clear-all-additional-signers');
 	const privy = requirePrivyClientConfig();
 
 	if (!walletId || !ownerAuthorizationKey) {
 		usageRevokeModeC();
+	}
+	if (!mandateSignerId) {
+		console.error('Missing --mandate-signer-id / MANDATE_PRIVY_SIGNER_ID');
+		usageRevokeModeC();
+	}
+	if (ownerAuthFromArgv !== undefined) {
+		console.error(
+			'warning: --owner-auth-key on the command line is visible in process listings; ' +
+				'prefer E2E_MODE_C_PRIVY_OWNER_AUTH_KEY from the environment'
+		);
 	}
 
 	const client = new PrivyRestClient(privy);
@@ -360,8 +374,9 @@ async function runRevokeModeC(): Promise<void> {
 		{
 			walletId: walletId!,
 			ownerAuthorizationKey: ownerAuthorizationKey!,
-			mandateSignerId: mandateSignerId ?? undefined,
+			mandateSignerId: mandateSignerId!,
 			confirmWalletId,
+			confirmWalletAddress,
 			yes,
 			clearAllAdditionalSigners,
 			nonInteractive
@@ -382,6 +397,8 @@ async function runDescribePostRevokeActions(): Promise<void> {
 	const walletId = readFlag('--wallet-id') ?? process.env.E2E_MODE_C_USER_PRIVY_WALLET_ID;
 	const keyRef = readFlag('--key-ref') ?? 'user-log-wallet';
 	const keyDirectoryJson = readFlag('--key-directory-json') ?? process.env.KEY_DIRECTORY;
+	const operatorRootKeysJson =
+		readFlag('--operator-root-keys-json') ?? process.env.OPERATOR_ROOT_KEYS;
 	const emitUpdatedKeyDirectory = hasFlag('--emit-updated-key-directory');
 
 	if (!walletId) {
@@ -389,7 +406,13 @@ async function runDescribePostRevokeActions(): Promise<void> {
 	}
 
 	const exitCode = runDescribePostRevokeActionsCommand(
-		{ walletId: walletId!, keyRef, keyDirectoryJson, emitUpdatedKeyDirectory },
+		{
+			walletId: walletId!,
+			keyRef,
+			keyDirectoryJson,
+			operatorRootKeysJson,
+			emitUpdatedKeyDirectory
+		},
 		{
 			stdout: (line) => console.log(line),
 			stderr: (line) => console.error(line)

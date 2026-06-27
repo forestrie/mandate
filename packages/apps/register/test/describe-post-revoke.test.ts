@@ -57,6 +57,28 @@ describe('describePostRevokeActions', () => {
 			})
 		).toThrow(PostRevokeActionsError);
 	});
+
+	it('AT-KS12: emits OPERATOR_ROOT_KEYS pruning hints for orphaned logIds', () => {
+		const operatorRootKeys = {
+			[LOG_ID]: {
+				alg: 'KS256' as const,
+				rootSignerAddress: ROOT_ADDR,
+				kind: 'remote' as const,
+				signerUrl: 'https://signer.example/v1/sign',
+				keyRef: 'user-log-wallet'
+			}
+		};
+		const actions = describePostRevokeActions({
+			walletId: WALLET_ID,
+			keyRef: 'user-log-wallet',
+			keyDirectory: KEY_DIRECTORY,
+			operatorRootKeys
+		});
+		expect(actions.logIdsOrphaned).toEqual([LOG_ID]);
+		expect(actions.operatorRootKeysEntriesToRemove[LOG_ID]?.keyRef).toBe('user-log-wallet');
+		expect(actions.emitUpdatedOperatorRootKeys).toEqual({});
+		expect(actions.wranglerHints.join('\n')).toContain('OPERATOR_ROOT_KEYS');
+	});
 });
 
 describe('runDescribePostRevokeActionsCommand', () => {
