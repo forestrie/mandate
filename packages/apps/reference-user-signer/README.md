@@ -9,9 +9,9 @@ Mode B users run their own KMS/HSM bridge with the same contract.
 
 ## Secrets
 
-| Binding | Purpose |
-| ------- | ------- |
-| `USER_SIGNER_BEARER` | Bearer token for `Authorization` header |
+| Binding                 | Purpose                                                             |
+| ----------------------- | ------------------------------------------------------------------- |
+| `USER_SIGNER_BEARER`    | Bearer token for `Authorization` header                             |
 | `USER_SIGNER_KEYS_JSON` | `{ "<logId>": { "privateKeyHex", "rootSignerAddress", "keyRef" } }` |
 
 See [docs/service-secrets.md](../../../docs/service-secrets.md).

@@ -147,10 +147,10 @@ Mode B user remote signer descriptor (uses `USER_SIGNER_BEARER` via `bearerEnvKe
 
 ### `@mandate/reference-user-signer` (FOR-209)
 
-| Secret / var            | Type   | Purpose                                                              |
-| ----------------------- | ------ | -------------------------------------------------------------------- |
+| Secret / var            | Type   | Purpose                                                               |
+| ----------------------- | ------ | --------------------------------------------------------------------- |
 | `USER_SIGNER_BEARER`    | secret | Bearer auth on `POST /v1/sign` (distinct from `MANDATE_SIGNER_TOKEN`) |
-| `USER_SIGNER_KEYS_JSON` | secret | `{ "<logId>": { "privateKeyHex", "rootSignerAddress", "keyRef" } }`  |
+| `USER_SIGNER_KEYS_JSON` | secret | `{ "<logId>": { "privateKeyHex", "rootSignerAddress", "keyRef" } }`   |
 
 Deploy: `task deploy:reference-user-signer`. E2e URL: `E2E_USER_SIGNER_URL` in Doppler `e2e`.
 
