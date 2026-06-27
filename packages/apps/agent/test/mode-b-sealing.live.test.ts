@@ -147,14 +147,21 @@ describe.skipIf(!LIVE)('Mode B live sealing (reference user signer)', () => {
 	);
 
 	it(
-		'L2–L4: seals via user signer bearer and verifies certificate against publicRoot',
+		'L3: provisioned Mode B signerUrl is not mandate-signer URL',
+		() => {
+			const descriptor = provisioned.descriptors.operatorRootKeys[provisioned.logIdHex32]!;
+			expect(descriptor.signerUrl).not.toBe(MANDATE_SIGNER_URL);
+			expect(descriptor.signerUrl).toBe(userSignerUrl);
+		},
+		TIMEOUT_MS
+	);
+
+	it(
+		'L2/L4: seals via user signer bearer and verifies certificate against publicRoot',
 		async () => {
 			const logId = provisioned.logIdHex32;
 			const operatorKeysJson = JSON.stringify(provisioned.descriptors.operatorRootKeys);
 			const descriptor = provisioned.descriptors.operatorRootKeys[logId]!;
-
-			expect(descriptor.signerUrl).not.toBe(MANDATE_SIGNER_URL);
-			expect(descriptor.signerUrl).toBe(userSignerUrl);
 
 			const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
 			const { privateKey, publicJwk } = await generateWebhookSigningKeyPair();

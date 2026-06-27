@@ -113,6 +113,9 @@ Binding names match the tables above exactly.
 | `USER_SIGNER_BEARER`       | secret     | Mode B user remote signer bearer (optional)                |
 | `REQUEST_KEYS`             | KV binding | Webhook dedup; namespace `mandate-agent-prod-request-keys` |
 
+**Never** deploy `USER_SIGNER_KEYS_JSON` on `@mandate/agent` — root private keys
+belong only on the user remote signer Worker (see `@mandate/reference-user-signer`).
+
 Prod resource ids live in gitignored `packages/apps/agent/wrangler.env.prod.json`
 (from `task repo-init`). Template: `wrangler.env.prod.json.example`.
 

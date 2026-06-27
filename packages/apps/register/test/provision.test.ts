@@ -95,7 +95,7 @@ describe('provisionInstance', () => {
 		expect(signer).toBeInstanceOf(RemoteKs256Signer);
 	});
 
-	it('Mode B emits remote user-signer descriptor without KEY_DIRECTORY', async () => {
+	it('R-E-14: Mode B emits remote user-signer descriptor without KEY_DIRECTORY', async () => {
 		const coordinator = { publicRoot: 'ok' as const, webhook: 'ok' as const };
 		const fetchImpl = vi.fn(
 			async () =>
@@ -132,5 +132,7 @@ describe('provisionInstance', () => {
 			'https://user-signer.example/v1/sign'
 		);
 		expect(result.descriptors.operatorRootKeys[LOG_ID]?.bearerEnvKey).toBe('USER_SIGNER_BEARER');
+		expect(result.descriptors.operatorRootKeys[LOG_ID]?.kind).toBe('remote');
+		expect(result.descriptors.operatorRootKeys[LOG_ID]?.keyRef).toBe('user-remote');
 	});
 });
