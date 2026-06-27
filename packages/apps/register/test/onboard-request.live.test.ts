@@ -1,6 +1,6 @@
 /**
- * Live e2e: self-service onboard request → ops approve → redeem → provision.
- * Skips when canopy ops env incomplete (same pattern as provision-e2e.live.test.ts).
+ * Live e2e: self-service onboard request → approve (ops or dev auto-approve) → redeem.
+ * Skips when E2E_CANOPY_API_URL, chain, and Univocity addr are unset.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -15,7 +15,47 @@ const opsToken = process.env.E2E_CANOPY_OPS_ADMIN_TOKEN?.trim();
 const chainId = process.env.E2E_CANOPY_CHAIN_ID?.trim();
 const univocityAddr = process.env.E2E_CANOPY_UNIVOCITY_ADDR?.trim();
 
-const liveReady = !!canopyBaseUrl && !!opsToken && !!chainId && !!univocityAddr;
+const liveReady = !!canopyBaseUrl && !!chainId && !!univocityAddr;
+
+async function ensureApproved(requestId: string, initialStatus: string): Promise<void> {
+	if (initialStatus === 'approved') {
+		return;
+	}
+
+	let status = initialStatus;
+	for (let attempt = 0; attempt < 5 && status === 'pending'; attempt += 1) {
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		const polled = await getOnboardRequestStatus(canopyBaseUrl!, requestId);
+		status = polled.status;
+		if (status === 'approved') {
+			return;
+		}
+	}
+
+	if (status !== 'pending') {
+		throw new Error(`onboard live: unexpected status ${status} before approve`);
+	}
+
+	if (!opsToken) {
+		throw new Error(
+			'onboard live: request still pending — set E2E_CANOPY_OPS_ADMIN_TOKEN or enable dev ONBOARD_AUTO_APPROVE'
+		);
+	}
+
+	const { encode } = await import('cbor-x');
+	const approveRes = await fetch(
+		`${canopyBaseUrl!.replace(/\/$/, '')}/api/onboarding/requests/${requestId}/approve`,
+		{
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${opsToken}`,
+				'Content-Type': 'application/cbor'
+			},
+			body: new Uint8Array(encode(new Map()))
+		}
+	);
+	expect(approveRes.status).toBe(200);
+}
 
 describe.skipIf(!liveReady)('onboard self-service live', () => {
 	it('request → approve → redeem returns usable token', async () => {
@@ -27,20 +67,7 @@ describe.skipIf(!liveReady)('onboard self-service live', () => {
 			contactEmail: 'live-test@forestrie.dev'
 		});
 
-		// Ops approve via CBOR route
-		const { encode } = await import('cbor-x');
-		const approveRes = await fetch(
-			`${canopyBaseUrl!.replace(/\/$/, '')}/api/onboarding/requests/${requested.requestId}/approve`,
-			{
-				method: 'POST',
-				headers: {
-					Authorization: `Bearer ${opsToken}`,
-					'Content-Type': 'application/cbor'
-				},
-				body: new Uint8Array(encode(new Map()))
-			}
-		);
-		expect(approveRes.status).toBe(200);
+		await ensureApproved(requested.requestId, requested.status);
 
 		const status = await getOnboardRequestStatus(canopyBaseUrl!, requested.requestId);
 		expect(status.status).toBe('approved');
@@ -55,7 +82,10 @@ describe.skipIf(!liveReady)('onboard self-service live', () => {
 });
 
 describe('onboard self-service live preflight', () => {
-	it.skipIf(liveReady)('skipped — set E2E_CANOPY_* + E2E_CANOPY_OPS_ADMIN_TOKEN', () => {
-		expect(liveReady).toBe(false);
-	});
+	it.skipIf(liveReady)(
+		'skipped — set E2E_CANOPY_API_URL, E2E_CANOPY_CHAIN_ID, E2E_CANOPY_UNIVOCITY_ADDR',
+		() => {
+			expect(liveReady).toBe(false);
+		}
+	);
 });
