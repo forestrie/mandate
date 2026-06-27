@@ -22,7 +22,7 @@ token even for public packages.
 
 ## Status
 
-| Check                                      | Result                                              |
-| ------------------------------------------ | --------------------------------------------------- |
-| `publish-delegation-cose.yml` (2026-06-27) | `@forestrie/delegation-cose@0.1.1` public (FOR-218) |
-| Mandate CI with `GITHUB_TOKEN` + Actions access | Registry semver install (FOR-109)              |
+| Check                                           | Result                                              |
+| ----------------------------------------------- | --------------------------------------------------- |
+| `publish-delegation-cose.yml` (2026-06-27)      | `@forestrie/delegation-cose@0.1.1` public (FOR-218) |
+| Mandate CI with `GITHUB_TOKEN` + Actions access | Registry semver install (FOR-109)                   |

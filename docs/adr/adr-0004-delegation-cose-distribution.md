@@ -32,7 +32,7 @@ GitHub Packages requires the npm scope to match the owning GitHub org
 
    Mandate pins **`0.1.1`** via **git tag** until registry auth is verified;
    run **`refresh-delegation-cose-lockfile`** workflow to switch to exact semver
-   + lockfile tarball.
+   - lockfile tarball.
 
    **Historical:** Default `GITHUB_TOKEN` returned 403 until package Actions
    access was configured (FOR-218 public publish + package settings).
