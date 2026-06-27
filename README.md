@@ -14,6 +14,7 @@ packages/
     ui/        @mandate/ui — operator console (Cloudflare Pages)
     agent/     @mandate/agent — webhook receiver + signer (Worker, FOR-98)
     signer/    @mandate/signer — Privy remote signer (Worker, ADR-0003)
+    reference-user-signer/  @mandate/reference-user-signer — Mode B reference signer (FOR-209)
     register/  @mandate/register — instance provisioning (FOR-100)
   libs/
     coordinator-types/  shared coordinator API types (@mandate/coordinator-types)
@@ -82,6 +83,7 @@ Requires [go-task](https://taskfile.dev). Doppler project defaults to
 | `task test:live:hands-off`  | Agent hands-off sealing live test                 |
 | `task test:live:mode-c`     | Mode C onboard + revoke live test                 |
 | `task test:live:provision`  | Provision + genesis live e2e                      |
+| `task deploy:reference-user-signer` | Deploy Mode B reference user signer Worker |
 | `task privy:onboard:mode-c` | Attach mandate additional signer to a user wallet |
 | `task privy:revoke:mode-c`  | Mode C kill switch (owner-signed PATCH)           |
 | `task provision`            | `mandate-register provision` (`dev` + `e2e`)      |

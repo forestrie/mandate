@@ -79,6 +79,7 @@ signer; renamed **`mandate-forestrie-archived`** in Privy) must not be reference
 | `E2E_CANOPY_CHAIN_ID`               | EIP-155 chain id for dev Canopy genesis                             | `live-provision`                                                  |
 | `E2E_DELEGATION_COORDINATOR_URL`    | Dev coordinator origin                                              | `live-provision`                                                  |
 | `E2E_MANDATE_AGENT_WEBHOOK_URL`     | Agent webhook for genesis `?webhookUrl=`                            | `live-provision`                                                  |
+| `E2E_USER_SIGNER_URL`               | Mode B reference user signer `POST /v1/sign` URL                    | `live-mode-b` (FOR-210)                                           |
 
 Reuse `E2E_MODE_C_PRIVY_POLICY_ID` across provision, mode-c revoke-restore, and
 hands-off kill-switch restore to avoid policy sprawl.
@@ -143,6 +144,15 @@ Mode B user remote signer descriptor (uses `USER_SIGNER_BEARER` via `bearerEnvKe
 	}
 }
 ```
+
+### `@mandate/reference-user-signer` (FOR-209)
+
+| Secret / var            | Type   | Purpose                                                              |
+| ----------------------- | ------ | -------------------------------------------------------------------- |
+| `USER_SIGNER_BEARER`    | secret | Bearer auth on `POST /v1/sign` (distinct from `MANDATE_SIGNER_TOKEN`) |
+| `USER_SIGNER_KEYS_JSON` | secret | `{ "<logId>": { "privateKeyHex", "rootSignerAddress", "keyRef" } }`  |
+
+Deploy: `task deploy:reference-user-signer`. E2e URL: `E2E_USER_SIGNER_URL` in Doppler `e2e`.
 
 ### `@mandate/signer`
 

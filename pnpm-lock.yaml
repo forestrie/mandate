@@ -82,6 +82,37 @@ importers:
         specifier: ^4.81.0
         version: 4.94.0(@cloudflare/workers-types@4.20260524.1)
 
+  packages/apps/reference-user-signer:
+    dependencies:
+      '@mandate/signer-contract':
+        specifier: workspace:*
+        version: link:../../libs/signer-contract
+      '@noble/curves':
+        specifier: ^1.9.7
+        version: 1.9.7
+      '@noble/hashes':
+        specifier: ^1.7.1
+        version: 1.8.0
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20260228.0
+        version: 4.20260524.1
+      '@forestrie/delegation-cose':
+        specifier: github:forestrie/canopy#delegation-cose-v0.1.0&path:packages/libs/delegation-cose
+        version: https://codeload.github.com/forestrie/canopy/tar.gz/971c995e269403ec2e4d8b4934f2e6b6113e4a40#path:packages/libs/delegation-cose
+      '@types/node':
+        specifier: ^22
+        version: 22.19.19
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.3
+        version: 4.1.7(@types/node@22.19.19)(vite@8.0.14(@types/node@22.19.19)(esbuild@0.27.3)(jiti@2.7.0))
+      wrangler:
+        specifier: ^4.81.0
+        version: 4.94.0(@cloudflare/workers-types@4.20260524.1)
+
   packages/apps/register:
     dependencies:
       '@mandate/privy-admin':
