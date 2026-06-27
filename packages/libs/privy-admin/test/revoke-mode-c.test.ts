@@ -87,6 +87,7 @@ describe('revokeModeCWallet', () => {
 		expect(output.additionalSignersAfter).toEqual([]);
 		expect(output.revoked).toBe(true);
 		expect(output.hadMandateSigner).toBe(true);
+		expect(output.action).toBe('targeted');
 	});
 
 	it('AT-130-1: targeted revoke removes only mandate and preserves other signers', async () => {
@@ -141,6 +142,7 @@ describe('revokeModeCWallet', () => {
 		expect(output.additionalSignersAfter).toEqual([{ signer_id: OTHER_SIGNER }]);
 		expect(output.revoked).toBe(true);
 		expect(output.hadMandateSigner).toBe(true);
+		expect(output.action).toBe('targeted');
 	});
 
 	it('AT-130-2: clearAllAdditionalSigners forces full clear PATCH', async () => {
@@ -194,6 +196,7 @@ describe('revokeModeCWallet', () => {
 
 		expect(patchBody).toEqual({ additional_signers: [] });
 		expect(output.additionalSignersAfter).toEqual([]);
+		expect(output.action).toBe('full-clear');
 	});
 
 	it('throws when mandate signer was not listed before revoke', async () => {
@@ -258,7 +261,8 @@ describe('revokeModeCWallet', () => {
 		await expect(
 			revokeModeCWallet(client, {
 				walletId: WALLET_ID,
-				ownerAuthorizationKey
+				ownerAuthorizationKey,
+				mandateSignerId: MANDATE_SIGNER
 			})
 		).rejects.toBeInstanceOf(OwnerTopologyError);
 	});
@@ -346,6 +350,35 @@ describe('removeMandateAdditionalSigner', () => {
 					JSON.stringify(userOwnedWallet({ additional_signers: [{ signer_id: OTHER_SIGNER }] })),
 					{ status: 200 }
 				);
+			}
+			if (method === 'PATCH') {
+				patchCalled = true;
+				return new Response('{}', { status: 200 });
+			}
+			return new Response(`unexpected ${method} ${url}`, { status: 500 });
+		};
+		const client = new PrivyRestClient({
+			appId: 'app_test',
+			appSecret: 'secret_test',
+			apiBase: TEST_PRIVY_API_BASE,
+			fetchImpl
+		});
+
+		await expect(
+			removeMandateAdditionalSigner(client, WALLET_ID, MANDATE_SIGNER, ownerAuthorizationKey)
+		).rejects.toBeInstanceOf(OwnerTopologyError);
+		expect(patchCalled).toBe(false);
+	});
+
+	it('throws OwnerTopologyError on ownerless wallet before PATCH', async () => {
+		let patchCalled = false;
+		const fetchImpl: typeof fetch = async (input, init) => {
+			const url = String(input);
+			const method = init?.method ?? 'GET';
+			if (method === 'GET' && url.includes(`/v1/wallets/${WALLET_ID}`)) {
+				return new Response(JSON.stringify(userOwnedWallet({ owner_id: null, owner: null })), {
+					status: 200
+				});
 			}
 			if (method === 'PATCH') {
 				patchCalled = true;

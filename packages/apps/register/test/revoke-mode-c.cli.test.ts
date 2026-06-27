@@ -22,7 +22,9 @@ describe('mandate-register privy revoke-mode-c CLI', () => {
 
 	it('documents destructive-op guardrail flags (FOR-132)', () => {
 		expect(CLI_SOURCE).toContain('--confirm-wallet-id');
+		expect(CLI_SOURCE).toContain('--confirm-wallet-address');
 		expect(CLI_SOURCE).toContain('--yes');
 		expect(CLI_SOURCE).toContain('--clear-all-additional-signers');
+		expect(CLI_SOURCE).toContain('visible in process listings');
 	});
 });

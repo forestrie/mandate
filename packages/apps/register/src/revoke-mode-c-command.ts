@@ -1,22 +1,23 @@
-import {
-	getWallet,
-	removeAllAdditionalSigners,
-	revokeModeCWallet,
-	type PrivyRestClient
-} from '@mandate/privy-admin';
+import { getWallet, revokeModeCWallet, type PrivyRestClient } from '@mandate/privy-admin';
 
 /** Resolved options for the Mode C revoke command (FOR-132 guardrails). */
 export interface RevokeModeCCommandOptions {
 	walletId: string;
 	ownerAuthorizationKey: string;
-	mandateSignerId?: string;
+	/** Required — identifies mandate for targeted revoke and post-revoke checks. */
+	mandateSignerId: string;
 	/** Operator-supplied wallet id that must equal walletId before any Privy call. */
 	confirmWalletId?: string;
+	/**
+	 * Operator-supplied wallet address that must equal the Privy wallet address
+	 * (independent second factor alongside --confirm-wallet-id).
+	 */
+	confirmWalletAddress?: string;
 	/** Skip the interactive confirmation prompt. */
 	yes: boolean;
 	/** Ops escape hatch: clear ALL additional signers instead of targeted revoke. */
 	clearAllAdditionalSigners: boolean;
-	/** No interactive TTY (CI or piped) — requires both --yes and --confirm-wallet-id. */
+	/** No interactive TTY (CI or piped) — requires --yes and confirmation flags. */
 	nonInteractive: boolean;
 }
 
@@ -26,6 +27,10 @@ export interface RevokeModeCCommandIo {
 	stderr(line: string): void;
 	/** Interactive confirmation; only called when interactive and --yes is absent. */
 	confirm?(prompt: string): Promise<boolean>;
+}
+
+function addressesEqual(a: string, b: string): boolean {
+	return a.toLowerCase() === b.toLowerCase();
 }
 
 /**
@@ -40,6 +45,14 @@ export async function runRevokeModeCCommand(
 	options: RevokeModeCCommandOptions,
 	io: RevokeModeCCommandIo
 ): Promise<number> {
+	if (!options.mandateSignerId) {
+		io.stderr(
+			'revoke requires --mandate-signer-id / MANDATE_PRIVY_SIGNER_ID ' +
+				'(mandatory for targeted and full-clear revoke paths)'
+		);
+		return 1;
+	}
+
 	// Wrong-wallet protection: a mismatching confirmation aborts before any
 	// Privy call so an operator can never revoke a wallet they did not name.
 	if (options.confirmWalletId !== undefined && options.confirmWalletId !== options.walletId) {
@@ -54,10 +67,21 @@ export async function runRevokeModeCCommand(
 	const wallet = await getWallet(client, options.walletId);
 	const before = wallet.additional_signers ?? [];
 
+	if (
+		options.confirmWalletAddress !== undefined &&
+		!addressesEqual(options.confirmWalletAddress, wallet.address)
+	) {
+		io.stderr(
+			`--confirm-wallet-address (${options.confirmWalletAddress}) does not match ` +
+				`Privy wallet address (${wallet.address}); aborting without contacting Privy`
+		);
+		return 1;
+	}
+
 	io.stdout('Mode C revoke — custody kill switch (ARC-0022 I3)');
 	io.stdout(`  walletId:                 ${options.walletId}`);
 	io.stdout(`  walletAddress:            ${wallet.address}`);
-	io.stdout(`  mandateSigner:            ${options.mandateSignerId ?? '(not specified)'}`);
+	io.stdout(`  mandateSigner:            ${options.mandateSignerId}`);
 	io.stdout(`  additionalSigners before: ${before.length}`);
 	io.stdout(`  action:                   ${action}`);
 
@@ -65,12 +89,19 @@ export async function runRevokeModeCCommand(
 		if (!options.yes) {
 			io.stderr(
 				'refusing to revoke in non-interactive mode without --yes ' +
-					'(pass --yes --confirm-wallet-id <wallet-id>)'
+					'(pass --yes --confirm-wallet-id <wallet-id> --confirm-wallet-address <address>)'
 			);
 			return 1;
 		}
 		if (options.confirmWalletId === undefined) {
 			io.stderr('non-interactive revoke requires --confirm-wallet-id <wallet-id>');
+			return 1;
+		}
+		if (options.confirmWalletAddress === undefined) {
+			io.stderr(
+				'non-interactive revoke requires --confirm-wallet-address <address> ' +
+					'(must match the Privy wallet address from the pre-revoke summary)'
+			);
 			return 1;
 		}
 	} else if (!options.yes) {
@@ -81,29 +112,11 @@ export async function runRevokeModeCCommand(
 		}
 	}
 
-	if (options.clearAllAdditionalSigners) {
-		await removeAllAdditionalSigners(client, options.walletId, options.ownerAuthorizationKey);
-		io.stdout(
-			JSON.stringify(
-				{
-					walletId: options.walletId,
-					walletAddress: wallet.address,
-					action: 'full-clear',
-					additionalSignersAfter: []
-				},
-				null,
-				2
-			)
-		);
-		emitPostRevokeHint(io, options.walletId);
-		return 0;
-	}
-
 	const output = await revokeModeCWallet(client, {
 		walletId: options.walletId,
 		ownerAuthorizationKey: options.ownerAuthorizationKey,
 		mandateSignerId: options.mandateSignerId,
-		warn: (message) => io.stderr(message)
+		clearAllAdditionalSigners: options.clearAllAdditionalSigners
 	});
 	io.stdout(JSON.stringify(output, null, 2));
 	emitPostRevokeHint(io, options.walletId);

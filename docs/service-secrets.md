@@ -203,6 +203,12 @@ address(es), wrangler hints, and a pruned `emitUpdatedKeyDirectory`. Then:
    `printf '%s' '<pruned json>' | wrangler secret put KEY_DIRECTORY --name mandate-signer`.
 4. **Verify fail-closed cleared** — confirm agent logs show no new sign attempts
    for the logId (signer now returns 404 for the unknown `keyRef`).
+
+**Retry semantics:** If a revoke PATCH succeeds at Privy but the post-revoke GET
+fails (network blip), a immediate re-run may report "mandate not registered —
+nothing to revoke". Treat that as success at the custody layer; proceed to
+KEY_DIRECTORY pruning (step 2) rather than repeating the Privy revoke.
+
 5. **Re-onboard only to reverse** the kill switch (`privy onboard-mode-c`).
 
 If the removed entry was the last user of an `OPERATOR_ROOT_KEYS` descriptor,

@@ -87,7 +87,8 @@ tasks:
     desc: >-
       Mode C kill switch — targeted removal of mandate as additional signer
       (preserves other signers). Destructive: in CI/non-interactive runs pass
-      `-- --yes --confirm-wallet-id "$E2E_MODE_C_USER_PRIVY_WALLET_ID"`; add
+      `-- --yes --confirm-wallet-id "$E2E_MODE_C_USER_PRIVY_WALLET_ID"
+      --confirm-wallet-address "<wallet-address-from-summary>"`; add
       `--clear-all-additional-signers` for the full-clear escape hatch. Requires
       E2E_MODE_C_PRIVY_OWNER_AUTH_KEY in Doppler e2e config (FOR-114/FOR-132)
     cmds:

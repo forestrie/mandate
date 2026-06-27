@@ -1,7 +1,8 @@
 import {
 	describePostRevokeActions,
 	PostRevokeActionsError,
-	type KeyDirectoryMap
+	type KeyDirectoryMap,
+	type OperatorRootKeysMap
 } from './describe-post-revoke-actions.js';
 
 export interface DescribePostRevokeOptions {
@@ -9,6 +10,8 @@ export interface DescribePostRevokeOptions {
 	keyRef: string;
 	/** Raw KEY_DIRECTORY JSON (from --key-directory-json or the KEY_DIRECTORY env). */
 	keyDirectoryJson?: string;
+	/** Raw OPERATOR_ROOT_KEYS JSON (from --operator-root-keys-json or env). */
+	operatorRootKeysJson?: string;
 	/** Print only the pruned KEY_DIRECTORY (for piping into a secret update). */
 	emitUpdatedKeyDirectory?: boolean;
 }
@@ -50,10 +53,17 @@ export function runDescribePostRevokeActionsCommand(
 
 	try {
 		const keyDirectory = parseKeyDirectory(options.keyDirectoryJson);
+		let operatorRootKeys: OperatorRootKeysMap | undefined;
+		if (options.operatorRootKeysJson) {
+			operatorRootKeys = parseKeyDirectory(
+				options.operatorRootKeysJson
+			) as unknown as OperatorRootKeysMap;
+		}
 		const actions = describePostRevokeActions({
 			walletId: options.walletId,
 			keyRef: options.keyRef,
-			keyDirectory
+			keyDirectory,
+			operatorRootKeys
 		});
 		if (options.emitUpdatedKeyDirectory) {
 			io.stdout(JSON.stringify(actions.emitUpdatedKeyDirectory, null, 2));
