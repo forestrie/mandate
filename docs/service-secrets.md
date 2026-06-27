@@ -168,6 +168,7 @@ Deploy: `task deploy:reference-user-signer`. E2e URL: `E2E_USER_SIGNER_URL` in D
 | `KEY_DIRECTORY`                   | secret | JSON `{ keyRef: { walletId, rootSignerAddress, logIds[], requiresAuthorizationSignature? } }` |
 | `MANDATE_PRIVY_API_BASE`          | var    | Privy API base URL (required)                                                                 |
 | `MANDATE_PRIVY_AUTHORIZATION_KEY` | secret | Required when any entry has `requiresAuthorizationSignature: true`                            |
+| `SIGNER_RATE_LIMITER`             | binding | Optional Cloudflare Rate Limit API (`wrangler.jsonc`); per-`keyRef` on `POST /v1/sign` (30/min default) |
 
 Mode C `KEY_DIRECTORY` entry:
 
