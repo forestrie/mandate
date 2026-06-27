@@ -7,4 +7,8 @@ export interface Env {
 	KEY_DIRECTORY: string;
 	/** Optional `wallet-auth:`-prefixed base64 PKCS#8 DER P-256 key for owned-wallet RPC. */
 	MANDATE_PRIVY_AUTHORIZATION_KEY?: string;
+	/** Optional per-keyRef rate limit binding (see wrangler.jsonc). */
+	SIGNER_RATE_LIMITER?: {
+		limit(options: { key: string }): Promise<{ success: boolean }>;
+	};
 }

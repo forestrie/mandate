@@ -3,6 +3,7 @@ import type { Env } from './env.js';
 import { isValidLogIdHex32, MAX_SIG_STRUCTURE_B64_LENGTH, timingSafeEqualString } from './auth.js';
 import { KeyDirectory, KeyDirectoryError } from './key-directory.js';
 import { privySecp256k1Sign, PrivySignError } from './privy/privy-sign.js';
+import { checkSignerRateLimit } from './signer-rate-limit.js';
 import {
 	addressesEqual,
 	base64ToBytes,
@@ -71,6 +72,11 @@ export async function handleSign(request: Request, deps: HandleSignDeps): Promis
 			return jsonResponse(error.status, { ok: false, error: error.message });
 		}
 		throw error;
+	}
+
+	const rateLimited = await checkSignerRateLimit(body.keyRef, deps.env);
+	if (rateLimited) {
+		return rateLimited;
 	}
 
 	const requiresAuth = entry.requiresAuthorizationSignature === true;
