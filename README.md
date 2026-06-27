@@ -261,9 +261,14 @@ Fork-friendly Cloudflare Workers deploy for **mandate-agent** and
 3. Bind secrets per [docs/service-secrets.md](docs/service-secrets.md).
 
 `@forestrie/delegation-cose` is installed from GitHub Packages (exact version pin;
-see [ADR-0004](docs/adr/adr-0004-delegation-cose-distribution.md)). Forks need
+see [ADR-0004](docs/adr/adr-0004-delegation-cose-distribution.md)). **CI** mints a
+short-lived org GitHub App token (`GITAPP_ID`, `GITAPP_PRIVATE_KEY` — same app as
+arbor-flux / canopy); see
+[docs/agents/github-packages-delegation-cose.md](docs/agents/github-packages-delegation-cose.md).
+The app needs **Packages: Read** on the forestrie installation. **Forks** need
 root `.npmrc` and `NODE_AUTH_TOKEN` with `read:packages` (`gh auth token` or a
-PAT; run `gh auth refresh -s read:packages -h github.com` if install returns 403) before `pnpm install`.
+PAT; run `gh auth refresh -s read:packages -h github.com` if install returns 403)
+before `pnpm install`.
 
 ## Coordinator types
 

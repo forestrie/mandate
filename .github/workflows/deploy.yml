@@ -29,10 +29,19 @@ jobs:
         with:
           node-version: 22.14.0
           cache: pnpm
+          registry-url: https://npm.pkg.github.com
+          scope: '@forestrie'
+
+      - name: Mint GitHub Packages token
+        id: packages-token
+        uses: ./.github/actions/github-packages-token
+        with:
+          app_id: ${{ vars.GITAPP_ID }}
+          private_key: ${{ secrets.GITAPP_PRIVATE_KEY }}
 
       - name: Install
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ steps.packages-token.outputs.token }}
         run: pnpm install --frozen-lockfile
 
       - name: Build
