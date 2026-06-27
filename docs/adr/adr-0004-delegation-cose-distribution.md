@@ -29,8 +29,9 @@ GitHub Packages requires the npm scope to match the owning GitHub org
    `vars.GITAPP_ID` + `secrets.GITAPP_PRIVATE_KEY` →
    `.github/actions/github-packages-token` → `NODE_AUTH_TOKEN` at
    `pnpm install`. The org app must have **`packages: read`** and be installed
-   on `forestrie`. Mandate pins exact semver **`0.1.1`** from GitHub Packages
-   (FOR-109).
+   on `forestrie`. Mandate pins **`0.1.1`** via **git tag** until the app has
+   **Packages: Read**; then run `refresh-delegation-cose-lockfile` workflow to
+   switch to exact semver + lockfile tarball (FOR-109).
 
    **Historical:** Default `GITHUB_TOKEN` cannot read packages published from
    another repository (403). Git tag pins were an interim workaround until this
