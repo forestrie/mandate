@@ -316,7 +316,7 @@ describe('handleDelegationRequired', () => {
 		expect(await seenStore.has(requestKey)).toBe(false);
 	});
 
-	it('routes Mode B log to user signer bearer and Mode C log to mandate token', async () => {
+	it('T-207-1: routes Mode B log to user signer bearer and Mode C log to mandate token', async () => {
 		const rootModeC = await generateTestKs256Root();
 		const rootModeB = await generateTestKs256Root();
 		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
@@ -420,6 +420,97 @@ describe('handleDelegationRequired', () => {
 		);
 
 		expect(response.status).toBe(502);
+		expect(await seenStore.has(requestKey)).toBe(false);
+	});
+
+	it('returns 502 when user signer fetch aborts and clears requestKey reservation', async () => {
+		const root = await generateTestKs256Root();
+		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+		const { privateKey, publicJwk } = await generateWebhookSigningKeyPair();
+		const seenStore = new MemorySeenStore();
+		const signerUrl = 'http://user-signer.test/v1/sign';
+		const requestKey = 'remote-signer-timeout-key';
+
+		const operatorKeys = JSON.stringify({
+			[TEST_LOG_ID]: {
+				alg: 'KS256',
+				rootSignerAddress: root.rootSignerAddress,
+				kind: 'remote',
+				signerUrl,
+				keyRef: 'mode-b-key-ref',
+				bearerEnvKey: 'USER_SIGNER_BEARER'
+			}
+		});
+
+		const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url === signerUrl) {
+				throw new DOMException('The operation was aborted', 'AbortError');
+			}
+			throw new Error(`unexpected fetch: ${url}`);
+		});
+
+		const event = buildDelegationRequiredEvent({
+			root,
+			delegatedPublicKeyCbor,
+			requestKey
+		});
+
+		const response = await handleDelegationRequired(
+			await signedWebhookRequest({ eventBody: JSON.stringify(event), privateKey }),
+			{
+				jwksResolver: createJwksResolver(publicJwk),
+				keyRegistry: new KeyRegistry(operatorKeys),
+				seenStore,
+				...TEST_AGENT_DEPS,
+				fetchImpl,
+				remoteBearerEnv: { USER_SIGNER_BEARER: 'user-bearer-token' },
+				nowSeconds: NOW
+			}
+		);
+
+		expect(response.status).toBe(502);
+		expect(await response.json()).toEqual({ ok: false, error: 'delegation signing failed' });
+		expect(await seenStore.has(requestKey)).toBe(false);
+	});
+
+	it('returns 502 when coordinator rejects certificate submit and clears requestKey reservation', async () => {
+		const root = await generateTestKs256Root();
+		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+		const { privateKey, publicJwk } = await generateWebhookSigningKeyPair();
+		const seenStore = new MemorySeenStore();
+		const requestKey = 'coordinator-reject-key';
+
+		const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url.endsWith('/api/delegations/certificate')) {
+				return new Response('coordinator secret detail', { status: 400 });
+			}
+			throw new Error(`unexpected fetch: ${url}`);
+		});
+
+		const event = buildDelegationRequiredEvent({
+			root,
+			delegatedPublicKeyCbor,
+			requestKey
+		});
+
+		const response = await handleDelegationRequired(
+			await signedWebhookRequest({ eventBody: JSON.stringify(event), privateKey }),
+			{
+				jwksResolver: createJwksResolver(publicJwk),
+				keyRegistry: new KeyRegistry(operatorKeysJson(root)),
+				seenStore,
+				...TEST_AGENT_DEPS,
+				fetchImpl,
+				nowSeconds: NOW
+			}
+		);
+
+		expect(response.status).toBe(502);
+		const body = (await response.json()) as { ok?: boolean; error?: string };
+		expect(body.error).toMatch(/^certificate submit failed: 400$/);
+		expect(JSON.stringify(body)).not.toContain('secret');
 		expect(await seenStore.has(requestKey)).toBe(false);
 	});
 

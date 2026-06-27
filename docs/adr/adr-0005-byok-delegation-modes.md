@@ -228,6 +228,19 @@ and, in non-interactive/CI runs, requires `--yes`, a matching
 Programmatic UI revoke (user session → BFF → Privy REST) is deferred; coordinator
 pause and CLI revoke are the supported surfaces today.
 
+### Implementation status (Mode B reference / FOR-206)
+
+| Surface                             | Status  | Notes                                                 |
+| ----------------------------------- | ------- | ----------------------------------------------------- |
+| Mode B `bearerEnvKey` agent routing | Shipped | FOR-208; `USER_SIGNER_BEARER`, fail closed when empty |
+| `@mandate/reference-user-signer`    | Shipped | FOR-209; dev/e2e reference Worker, ADR-0003 contract  |
+| Live Mode B sealing e2e + CI        | Shipped | FOR-210; `task test:live:mode-b`                      |
+| FORKING §5b purist BYOK fork path   | Shipped | FOR-211; `task provision:mode-b`                      |
+| Package E review pass (R-E-01…17)   | Shipped | FOR-212                                               |
+
+Runbook: [FORKING.md §5b](../../FORKING.md#5b--mode-b-user-log-purist-byok). Plan:
+[plan-0045-package-e-mode-b-reference.md](plans/plan-0045-package-e-mode-b-reference.md).
+
 ### Implementation status (FOR-114 / FOR-117 / FOR-115 / FOR-128)
 
 | Surface                                   | Status                      | Notes                                                      |

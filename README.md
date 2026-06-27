@@ -17,7 +17,7 @@ packages/
     ui/        @mandate/ui — operator console (Cloudflare Pages)
     agent/     @mandate/agent — webhook receiver + signer (Worker, FOR-98)
     signer/    @mandate/signer — Privy remote signer (Worker, ADR-0003)
-    reference-user-signer/  @mandate/reference-user-signer — Mode B reference signer (FOR-209)
+    reference-user-signer/  @mandate/reference-user-signer — dev/e2e Mode B reference signer only (FOR-209)
     register/  @mandate/register — instance provisioning (FOR-100)
   libs/
     coordinator-types/  shared coordinator API types (@mandate/coordinator-types)
