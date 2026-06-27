@@ -161,7 +161,6 @@ describe.skipIf(!LIVE)('Mode B live sealing (reference user signer)', () => {
 		async () => {
 			const logId = provisioned.logIdHex32;
 			const operatorKeysJson = JSON.stringify(provisioned.descriptors.operatorRootKeys);
-			const descriptor = provisioned.descriptors.operatorRootKeys[logId]!;
 
 			const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
 			const { privateKey, publicJwk } = await generateWebhookSigningKeyPair();
