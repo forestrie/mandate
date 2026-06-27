@@ -1,4 +1,4 @@
-import type { Env } from './env.js';
+import { buildRemoteBearerEnv, type Env } from './env.js';
 import { createJwksResolver } from './webhook/jwks-resolver.js';
 import { KeyRegistry } from './signer/key-registry.js';
 import { KvSeenStore } from './dedup/seen-store.js';
@@ -17,7 +17,8 @@ export default {
 				seenStore: new KvSeenStore(env.REQUEST_KEYS),
 				coordinatorUpstreamUrl: env.COORDINATOR_UPSTREAM_URL,
 				coordinatorAppToken: env.COORDINATOR_APP_TOKEN,
-				mandateSignerToken: env.MANDATE_SIGNER_TOKEN
+				mandateSignerToken: env.MANDATE_SIGNER_TOKEN,
+				remoteBearerEnv: buildRemoteBearerEnv(env)
 			});
 		}
 		return new Response('Not Found', { status: 404 });

@@ -31,6 +31,7 @@ Doppler `mandate-forestrie` configs **`dev`** and **`prod`**.
 | `MANDATE_PRIVY_API_BASE`          | Privy API base URL (required; no code default)                                                                                                  |
 | `MANDATE_SIGNER_URL`              | Deployed `@mandate/signer` `POST /v1/sign` URL (CI live tests)                                                                                  |
 | `MANDATE_SIGNER_TOKEN`            | Bearer auth on signer `POST /v1/sign`                                                                                                           |
+| `USER_SIGNER_BEARER`              | Mode B user remote signer bearer (when descriptor sets `bearerEnvKey`)                                                                          |
 | `COORDINATOR_APP_TOKEN`           | Bearer for coordinator material submit                                                                                                          |
 | `COORDINATOR_UPSTREAM_URL`        | Coordinator origin (agent var)                                                                                                                  |
 | `OPERATOR_ROOT_KEYS`              | JSON map of per-log signer descriptors                                                                                                          |
@@ -108,6 +109,7 @@ Binding names match the tables above exactly.
 | `COORDINATOR_UPSTREAM_URL` | var        | Coordinator origin                                         |
 | `COORDINATOR_APP_TOKEN`    | secret     | Bearer for material submit                                 |
 | `OPERATOR_ROOT_KEYS`       | secret     | JSON map of per-log signer descriptors (ADR-0003)          |
+| `USER_SIGNER_BEARER`       | secret     | Mode B user remote signer bearer (optional)                |
 | `REQUEST_KEYS`             | KV binding | Webhook dedup; namespace `mandate-agent-prod-request-keys` |
 
 Prod resource ids live in gitignored `packages/apps/agent/wrangler.env.prod.json`
@@ -123,6 +125,21 @@ Example remote descriptor:
 		"kind": "remote",
 		"signerUrl": "https://mandate-signer-prod.<account>.workers.dev/v1/sign",
 		"keyRef": "privy-wallet-ref"
+	}
+}
+```
+
+Mode B user remote signer descriptor (uses `USER_SIGNER_BEARER` via `bearerEnvKey`):
+
+```json
+{
+	"b2c3d4e5f67890ab1234567890abcdef": {
+		"alg": "KS256",
+		"rootSignerAddress": "0x...",
+		"kind": "remote",
+		"signerUrl": "https://user-signer.example/v1/sign",
+		"keyRef": "user-remote",
+		"bearerEnvKey": "USER_SIGNER_BEARER"
 	}
 }
 ```

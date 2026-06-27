@@ -9,4 +9,6 @@ export interface LogSignerDescriptor {
 	signerUrl?: string;
 	/** Opaque signer key id for ADR-0003 remote signing (required when kind=remote). */
 	keyRef?: string;
+	/** Agent env var name for Bearer auth when kind=remote (Mode B). */
+	bearerEnvKey?: string;
 }

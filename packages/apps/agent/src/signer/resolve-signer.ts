@@ -7,11 +7,12 @@ export function resolveSigner(
 	registry: KeyRegistry,
 	logIdHex32: string,
 	mandateSignerToken: string,
-	fetchImpl: typeof fetch = fetch
+	fetchImpl: typeof fetch = fetch,
+	remoteBearerEnv: Record<string, string | undefined> = {}
 ): DelegationSigner {
 	const descriptor = registry.get(logIdHex32);
 	if (descriptor.kind === 'remote') {
-		return new RemoteKs256Signer(descriptor, mandateSignerToken, fetchImpl);
+		return new RemoteKs256Signer(descriptor, mandateSignerToken, fetchImpl, remoteBearerEnv);
 	}
 	return new LocalKs256Signer(descriptor);
 }
