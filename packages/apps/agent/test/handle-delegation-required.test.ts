@@ -216,12 +216,14 @@ describe('handleDelegationRequired', () => {
 		expect(response.status).toBe(401);
 	});
 
-	it('rejects unknown logId', async () => {
+	it('rejects unknown logId and clears requestKey reservation', async () => {
 		const root = await generateTestKs256Root();
 		const { privateKey, publicJwk } = await generateWebhookSigningKeyPair();
+		const seenStore = new MemorySeenStore();
 		const event = buildDelegationRequiredEvent({
 			root,
-			delegatedPublicKeyCbor: await generateDelegatedPublicKeyCbor()
+			delegatedPublicKeyCbor: await generateDelegatedPublicKeyCbor(),
+			requestKey: 'unknown-log-reservation-key'
 		});
 		event.logId = 'ffffffffffffffffffffffffffffffff';
 		const eventBody = JSON.stringify(event);
@@ -231,12 +233,13 @@ describe('handleDelegationRequired', () => {
 			{
 				jwksResolver: createJwksResolver(publicJwk),
 				keyRegistry: new KeyRegistry(operatorKeysJson(root)),
-				seenStore: new MemorySeenStore(),
+				seenStore,
 				...TEST_AGENT_DEPS,
 				nowSeconds: NOW
 			}
 		);
 		expect(response.status).toBe(404);
+		expect(await seenStore.has('unknown-log-reservation-key')).toBe(false);
 	});
 
 	it('rejects unsupported event type', async () => {
