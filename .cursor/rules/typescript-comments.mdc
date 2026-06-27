@@ -1,0 +1,63 @@
+---
+description: TypeScript comment policy — purpose, cross-repo signposts, and coverage
+globs: **/*.ts
+alwaysApply: false
+---
+
+# TypeScript comments
+
+Forestrie is a **highly distributed system**. Mandate apps integrate with
+Canopy, the delegation coordinator, Privy, and on-chain Univocity behaviour.
+Comments must make that context reachable without duplicating platform docs.
+
+## Principles
+
+1. **Signpost, don't silo.** At file and function level, state how the local
+   code fits the wider onboarding and delegation flow.
+2. **Brief with a pointer.** One or two sentences plus a reference is enough
+   in most cases.
+3. **Explain purpose, not syntax.** Comments describe the **problem** or
+   **role** of the following code — not a line-by-line narration.
+4. **Non-obvious details only at line level.** Surprising wire formats,
+   session/token constraints, and BFF allowlist rules warrant inline comments.
+5. **Full coverage of public surfaces.** Every exported **function**, **method**,
+   and **type** must have a comment. Use `@param` / `@returns` when types alone
+   are insufficient.
+
+## Cross-repo signposts
+
+Prefer stable **GitHub blob links**:
+
+```typescript
+/**
+ * Proxies control-plane calls to the Canopy delegation coordinator.
+ * Session exchange contract:
+ * https://github.com/forestrie/canopy/blob/main/docs/plans/plan-0039-self-service-onboard-provisioning.md
+ */
+```
+
+| Target | Link form |
+|--------|-----------|
+| Canopy API / coordinator | `https://github.com/forestrie/canopy/blob/main/docs/…` |
+| Platform ADR/ARC | `https://github.com/forestrie/devdocs/blob/main/arc/…` |
+| On-chain grants | `https://github.com/forestrie/univocity/blob/main/docs/arc/…` |
+| Mandate docs | `https://github.com/forestrie/mandate/blob/main/…` |
+
+Name the **remote component**, **contract** (HTTP route, COSE field, Privy API),
+and what this code **assumes** vs **guarantees**.
+
+## Options and config
+
+Document **env bindings** and **options fields** at the innermost function that
+reads each field.
+
+## JSDoc conventions
+
+- Module banner on files that define a public boundary (BFF proxy, coordinator
+  client, provision pipeline).
+- `{@link Name}` for local symbols; markdown links for cross-repo docs.
+
+## When editing
+
+- Cross-service behaviour → update signpost comments in the same change.
+- If an exported symbol lacks a comment, add one before merging.

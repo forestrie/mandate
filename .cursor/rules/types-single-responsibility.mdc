@@ -1,0 +1,25 @@
+---
+description: One type/interface per file; types.ts as re-export barrel only
+alwaysApply: true
+---
+
+# Types and single responsibility
+
+Do **not** use monolithic `types.ts`-style files.
+
+## Rule
+
+- Put each **type** or **interface** in a **single-responsibility file** (one main type/interface per file).
+- Include **closely related** constants or helper types in the same file (e.g. `SessionExchangeRequest` and its nested payload types when inseparable).
+- Use **`types.ts`** only as a **consumer convenience re-export**: re-export from single-responsibility modules; no local type definitions.
+- Applies under **`packages/`** and app `src/lib/` trees.
+
+## File naming
+
+- Name the file after the primary type (e.g. `session-exchange-request.ts`, `delegation-required-event.ts`).
+- Prefer kebab-case for multi-word names.
+
+## Imports
+
+- Prefer importing from the concrete module when the dependency is direct; use the barrel for consumers that need several types.
+- When splitting an overloaded `types.ts`, migrate one exported type per commit where practical.
