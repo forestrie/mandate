@@ -93,6 +93,15 @@ tasks:
     cmds:
       - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- doppler run --project {{.DOPPLER_PROJECT}} --config e2e -- pnpm --filter @mandate/register exec mandate-register privy revoke-mode-c {{.CLI_ARGS}}
 
+  privy:describe-post-revoke:
+    desc: >-
+      Emit the post-revoke operator checklist (KEY_DIRECTORY entry to prune,
+      affected operator root keys, wrangler hints). Read-only; reads
+      KEY_DIRECTORY from Doppler. Pass `-- --wallet-id <id> --key-ref <ref>`
+      (FOR-131)
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- pnpm --filter @mandate/register exec mandate-register privy describe-post-revoke-actions {{.CLI_ARGS}}
+
   test:live:owned:
     desc: Owned-wallet signer live test (dev + e2e Doppler; E2E_SIGNER_TEST_*)
     cmds:

@@ -173,6 +173,42 @@ doppler run --project mandate-forestrie --config dev -- \
   --log-id <32-hex-log-id> --key-ref user-log-wallet
 ```
 
+### Post-revoke secret hygiene (FOR-131)
+
+A Privy revoke (`privy revoke-mode-c`, ARC-0022 I3) takes effect **immediately**
+at the custody layer, but the signer Worker keeps its `KEY_DIRECTORY` entry until
+an operator rotates the secret. Between revoke and rotation the signer rejects RPC
+(Privy 401/403) and the agent **fails closed with 502** on sign for that logId —
+this is expected, not an outage. The platform deliberately does **not**
+auto-mutate Cloudflare/Doppler secrets from the revoke CLI (blast radius +
+wrong-account risk); rotation is a reviewed operator step.
+
+Generate the checklist (read-only — no secret mutation):
+
+```sh
+doppler run --project mandate-forestrie --config dev -- \
+  pnpm --filter @mandate/register exec mandate-register privy \
+  describe-post-revoke-actions --wallet-id <revoked-wallet-id> --key-ref user-log-wallet
+```
+
+It prints the `KEY_DIRECTORY` entry to remove, the affected operator root key
+address(es), wrangler hints, and a pruned `emitUpdatedKeyDirectory`. Then:
+
+1. **(Optional) Pause registration** — coordinator `enabled: false` to stop new
+   `delegation.required` webhooks for the log (soft stop; see FOR-114 step 1).
+2. **Prune `KEY_DIRECTORY`** — remove the `keyRef` from the `KEY_DIRECTORY` JSON
+   in Doppler (mandate config). Use `--emit-updated-key-directory` to get the
+   pruned JSON directly.
+3. **Rotate the signer secret** — push the pruned directory to the signer Worker:
+   `printf '%s' '<pruned json>' | wrangler secret put KEY_DIRECTORY --name mandate-signer`.
+4. **Verify fail-closed cleared** — confirm agent logs show no new sign attempts
+   for the logId (signer now returns 404 for the unknown `keyRef`).
+5. **Re-onboard only to reverse** the kill switch (`privy onboard-mode-c`).
+
+If the removed entry was the last user of an `OPERATOR_ROOT_KEYS` descriptor,
+prune that descriptor too once its `logIds` are no longer served. See
+[FORKING.md](../FORKING.md) for the broader secrets rotation flow.
+
 ## Doppler + GitHub sync
 
 Project: **`mandate-forestrie`**.

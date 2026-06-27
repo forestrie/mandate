@@ -8,6 +8,7 @@ import {
 } from './onboard-client.js';
 import { onboardModeCWallet, PrivyRestClient } from '@mandate/privy-admin';
 import { runRevokeModeCCommand } from './revoke-mode-c-command.js';
+import { runDescribePostRevokeActionsCommand } from './describe-post-revoke-command.js';
 import type { DelegationMode } from './delegation-mode.js';
 
 function usageOnboardRequest(): void {
@@ -107,6 +108,21 @@ Options (env fallbacks in parentheses):
 Targeted revoke (default with --mandate-signer-id) preserves other authorized
 signers; full clear requires --clear-all-additional-signers. In CI pass
 --yes --confirm-wallet-id "$E2E_MODE_C_USER_PRIVY_WALLET_ID".
+`);
+	process.exit(1);
+}
+
+function usageDescribePostRevoke(): void {
+	console.error(`Usage: mandate-register privy describe-post-revoke-actions [options]
+
+Emit the operator checklist for retiring a revoked Mode C wallet's signer
+secrets. Read-only: never mutates Cloudflare or Doppler secrets.
+
+Options (env fallbacks in parentheses):
+  --wallet-id                   Revoked Privy wallet id (E2E_MODE_C_USER_PRIVY_WALLET_ID)
+  --key-ref                     KEY_DIRECTORY keyRef to retire (default: user-log-wallet)
+  --key-directory-json          KEY_DIRECTORY JSON (KEY_DIRECTORY env)
+  --emit-updated-key-directory  Print only the pruned KEY_DIRECTORY for piping
 `);
 	process.exit(1);
 }
@@ -362,6 +378,29 @@ async function runRevokeModeC(): Promise<void> {
 	}
 }
 
+async function runDescribePostRevokeActions(): Promise<void> {
+	const walletId = readFlag('--wallet-id') ?? process.env.E2E_MODE_C_USER_PRIVY_WALLET_ID;
+	const keyRef = readFlag('--key-ref') ?? 'user-log-wallet';
+	const keyDirectoryJson = readFlag('--key-directory-json') ?? process.env.KEY_DIRECTORY;
+	const emitUpdatedKeyDirectory = hasFlag('--emit-updated-key-directory');
+
+	if (!walletId) {
+		usageDescribePostRevoke();
+	}
+
+	const exitCode = runDescribePostRevokeActionsCommand(
+		{ walletId: walletId!, keyRef, keyDirectoryJson, emitUpdatedKeyDirectory },
+		{
+			stdout: (line) => console.log(line),
+			stderr: (line) => console.error(line)
+		}
+	);
+
+	if (exitCode !== 0) {
+		process.exit(exitCode);
+	}
+}
+
 async function main(): Promise<void> {
 	const sub = process.argv[2];
 	const cmd = process.argv[3];
@@ -396,6 +435,11 @@ async function main(): Promise<void> {
 		return;
 	}
 
+	if (sub === 'privy' && cmd === 'describe-post-revoke-actions') {
+		await runDescribePostRevokeActions();
+		return;
+	}
+
 	console.log('mandate-register: Univocity instance provisioning (FOR-100)');
 	console.log('  subcommands:');
 	console.log('    onboard request          Self-service onboard token request (FOR-173)');
@@ -405,6 +449,9 @@ async function main(): Promise<void> {
 	console.log('    privy onboard-mode-c   Mode C Privy wallet onboarding only (FOR-112)');
 	console.log(
 		'    privy revoke-mode-c    Mode C kill switch — remove additional signers (FOR-114)'
+	);
+	console.log(
+		'    privy describe-post-revoke-actions  Post-revoke KEY_DIRECTORY checklist (FOR-131)'
 	);
 	process.exit(sub ? 1 : 0);
 }

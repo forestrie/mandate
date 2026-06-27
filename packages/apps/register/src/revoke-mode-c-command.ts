@@ -95,6 +95,7 @@ export async function runRevokeModeCCommand(
 				2
 			)
 		);
+		emitPostRevokeHint(io, options.walletId);
 		return 0;
 	}
 
@@ -105,5 +106,15 @@ export async function runRevokeModeCCommand(
 		warn: (message) => io.stderr(message)
 	});
 	io.stdout(JSON.stringify(output, null, 2));
+	emitPostRevokeHint(io, options.walletId);
 	return 0;
+}
+
+/** Remind the operator to prune KEY_DIRECTORY after a successful revoke (FOR-131). */
+function emitPostRevokeHint(io: RevokeModeCCommandIo, walletId: string): void {
+	io.stderr(
+		'next: run `mandate-register privy describe-post-revoke-actions ' +
+			`--wallet-id ${walletId} --key-ref <keyRef>` +
+			'` to prune the KEY_DIRECTORY entry and rotate signer Worker secrets'
+	);
 }
