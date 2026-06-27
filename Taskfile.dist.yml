@@ -156,3 +156,18 @@ tasks:
       emits KEY_DIRECTORY + OPERATOR_ROOT_KEYS (FOR-100); needs dev + e2e
     cmds:
       - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- doppler run --project {{.DOPPLER_PROJECT}} --config e2e -- pnpm --filter @mandate/register exec mandate-register provision {{.CLI_ARGS}}
+
+  deploy:reference-user-signer:
+    desc: >-
+      Deploy @mandate/reference-user-signer Worker and push USER_SIGNER_* secrets
+      from Doppler dev config (FOR-209)
+    dir: packages/apps/reference-user-signer
+    preconditions:
+      - sh: test -n "${CLOUDFLARE_API_TOKEN:-}"
+        msg: CLOUDFLARE_API_TOKEN must be set
+      - sh: test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+        msg: CLOUDFLARE_ACCOUNT_ID must be set
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- pnpm exec wrangler deploy
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- sh -c 'printf "%s" "$USER_SIGNER_BEARER" | pnpm exec wrangler secret put USER_SIGNER_BEARER'
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- sh -c 'printf "%s" "$USER_SIGNER_KEYS_JSON" | pnpm exec wrangler secret put USER_SIGNER_KEYS_JSON'

@@ -1,0 +1,27 @@
+{
+	"name": "@mandate/reference-user-signer",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"description": "Reference Mode B user remote KS256 signer Worker (ADR-0003, FOR-209)",
+	"scripts": {
+		"dev": "wrangler dev",
+		"build": "tsc --noEmit",
+		"check": "tsc --noEmit",
+		"test": "vitest run",
+		"deploy": "wrangler deploy"
+	},
+	"dependencies": {
+		"@mandate/signer-contract": "workspace:*",
+		"@noble/curves": "^1.9.7",
+		"@noble/hashes": "^1.7.1"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20260228.0",
+		"@forestrie/delegation-cose": "github:forestrie/canopy#delegation-cose-v0.1.0&path:packages/libs/delegation-cose",
+		"@types/node": "^22",
+		"typescript": "^6.0.2",
+		"vitest": "^4.1.3",
+		"wrangler": "^4.81.0"
+	}
+}

@@ -1,0 +1,3 @@
+# Local dev secrets (copy to .dev.vars; never commit .dev.vars)
+USER_SIGNER_BEARER=replace-with-user-signer-bearer-token
+USER_SIGNER_KEYS_JSON={"b2c3d4e5f67890ab1234567890abcdef":{"privateKeyHex":"0000000000000000000000000000000000000000000000000000000000000001","rootSignerAddress":"0x7E5F4552091A69125d5DfCb7b8C2659029395BDF","keyRef":"user-remote"}}
