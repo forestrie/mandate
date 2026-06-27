@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingEntry } from '@mandate/coordinator-types';
-import { buildSubmitMaterialBody } from './submit-payload.js';
+import { buildSubmitCertificateBody } from './submit-payload.js';
 
 const ZERO_BYTES_B64 = Buffer.alloc(32).toString('base64');
 
@@ -18,10 +18,10 @@ function pendingEntry(overrides: Partial<PendingEntry> = {}): PendingEntry {
 	};
 }
 
-describe('buildSubmitMaterialBody', () => {
+describe('buildSubmitCertificateBody', () => {
 	it('uses entry.delegatedPublicKey, not zero bytes', () => {
 		const entry = pendingEntry({ delegatedPublicKey: 'ZGVsZWdhdGVkLWtleQ==' });
-		const body = buildSubmitMaterialBody(entry, 'cert-bytes', 1_700_000_100);
+		const body = buildSubmitCertificateBody(entry, 'cert-bytes', 1_700_000_100);
 
 		expect(body.delegatedPublicKey).toBe(entry.delegatedPublicKey);
 		expect(body.delegatedPublicKey).not.toBe(ZERO_BYTES_B64);

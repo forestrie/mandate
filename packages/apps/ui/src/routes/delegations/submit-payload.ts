@@ -17,6 +17,3 @@ export function buildSubmitCertificateBody(
 		expiresAt: nowSeconds + ttlSeconds
 	};
 }
-
-/** @deprecated use buildSubmitCertificateBody */
-export const buildSubmitMaterialBody = buildSubmitCertificateBody;

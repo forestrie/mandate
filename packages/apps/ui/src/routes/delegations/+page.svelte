@@ -8,8 +8,13 @@
 	import {
 		listPendingDelegations,
 		setLogDelegationEnabled,
-		submitDelegationMaterial
+		submitDelegationCertificate
 	} from '$lib/coordinator/client.js';
+	import {
+		buildBrowserDelegationCertificate,
+		pendingEntryToDelegationInput
+	} from '$lib/signing/build-browser-delegation-certificate.js';
+	import { bytesToBase64 } from '$lib/signing/bytes.js';
 	import type { PendingEntry } from '@mandate/coordinator-types';
 	import {
 		getPrivySessionState,
@@ -17,9 +22,8 @@
 		loginWithEmail,
 		logoutPrivy
 	} from '$lib/privy/stores.svelte.js';
-	import { buildKs256SigStructureHash, bytesToBase64 } from '$lib/signing/ks256-payload.js';
 	import { PrivyEoaBackend } from '$lib/signing/privy-eoa-backend.js';
-	import { buildSubmitMaterialBody } from './submit-payload.js';
+	import { buildSubmitCertificateBody } from './submit-payload.js';
 	import { onMount } from 'svelte';
 
 	type RowStatus = 'pending' | 'signing' | 'signed' | 'failed';
@@ -147,7 +151,7 @@
 	}
 
 	async function signAndSubmit(entry: PendingEntry) {
-		if (!session.authenticated) {
+		if (!session.authenticated || !session.address) {
 			error = 'Connect a wallet before signing';
 			return;
 		}
@@ -156,21 +160,15 @@
 		error = null;
 		message = null;
 		try {
-			const payload = new TextEncoder().encode(
-				`${entry.logIdHex32}:${entry.mmrStart}:${entry.mmrEnd}:${entry.delegatedPublicKeyHash}`
-			);
-			const hash = buildKs256SigStructureHash(payload);
-			const backend = new PrivyEoaBackend();
-			const signature = await backend.signKs256Hash(hash);
-			const signatureBytes = Uint8Array.from(
-				(signature.slice(2).match(/.{1,2}/g) ?? []).map((byte) => parseInt(byte, 16))
-			);
 			const now = Math.floor(Date.now() / 1000);
-			await submitDelegationMaterial(
-				buildSubmitMaterialBody(entry, bytesToBase64(signatureBytes), now)
+			const input = pendingEntryToDelegationInput(entry, now);
+			const backend = new PrivyEoaBackend();
+			const certificate = await buildBrowserDelegationCertificate(input, session.address, backend);
+			await submitDelegationCertificate(
+				buildSubmitCertificateBody(entry, bytesToBase64(certificate), now)
 			);
 			rowStatus = { ...rowStatus, [entry.id]: 'signed' };
-			message = `Submitted material for ${entry.logIdHex32.slice(0, 8)}…`;
+			message = `Submitted certificate for ${entry.logIdHex32.slice(0, 8)}…`;
 			await loadPending();
 		} catch (err) {
 			rowStatus = { ...rowStatus, [entry.id]: 'failed' };

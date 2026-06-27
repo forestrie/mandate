@@ -140,9 +140,18 @@ importers:
 
   packages/apps/ui:
     dependencies:
+      '@forestrie/delegation-cose':
+        specifier: github:forestrie/canopy#delegation-cose-v0.1.0&path:packages/libs/delegation-cose
+        version: https://codeload.github.com/forestrie/canopy/tar.gz/971c995e269403ec2e4d8b4934f2e6b6113e4a40#path:packages/libs/delegation-cose
       '@mandate/coordinator-types':
         specifier: workspace:*
         version: link:../../libs/coordinator-types
+      '@noble/curves':
+        specifier: ^1.9.7
+        version: 1.9.7
+      '@noble/hashes':
+        specifier: ^1.7.1
+        version: 1.8.0
       '@privy-io/js-sdk-core':
         specifier: ^0.65.1
         version: 0.65.1(viem@2.50.4(typescript@6.0.3)(zod@3.25.76))
