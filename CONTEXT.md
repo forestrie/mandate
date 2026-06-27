@@ -57,6 +57,33 @@ infra (synthetic Mode C test user wallet, dev Canopy/coordinator endpoints).
 Stored in Doppler config `e2e` and GitHub `live-signer` — never production.
 Prefixed `E2E_` (see ADR-0006).
 
+## Mode B descriptor
+
+Per-log operator configuration for **purist BYOK**: an `OPERATOR_ROOT_KEYS` entry
+with `kind: "remote"` and `signerUrl` pointing at the **user's** signing
+endpoint. Mandate holds no user root key and no `KEY_DIRECTORY` entry for that
+log. See ADR-0005 and ARC-0022 §4.1.
+
+## user remote signer
+
+A signing HTTP service the **user** operates (their KMS, HSM bridge, or
+reference deployment). It holds `K(L)` and implements the ADR-0003
+`POST /v1/sign` contract. Distinct from **mandate-signer**, which is
+mandate-operated and used on the Mode C hosted path.
+
+## mandate-signer
+
+The mandate-operated `@mandate/signer` Worker: thin signer holding Privy or
+vendor credentials via `KEY_DIRECTORY`. Used when Mode C (or operator logs)
+route `signerUrl` here — not the Mode B user remote signer.
+
+## remote bearer auth
+
+Optional per-log bearer credential the agent sends when calling a remote
+`signerUrl`. Mode C defaults to the mandate instance token; Mode B uses a
+user-configured secret so the user signer does not trust mandate's signer
+token. See ADR-0003 §5.
+
 ## Mode C user wallet
 
 A user's root authority `K(L)` held in a Privy wallet they control via an owner

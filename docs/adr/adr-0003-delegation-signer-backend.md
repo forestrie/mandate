@@ -52,10 +52,11 @@ Extend the FOR-98 minimal contract:
 
 **Errors:** `4xx` for unknown `logId`/`keyRef`; `5xx` for vendor failures.
 
-**Auth (agent → signer):** `Authorization: Bearer <MANDATE_SIGNER_TOKEN>` on
-the thin signer (Privy credentials stay on signer, not in the agent). For direct
-Privy-from-agent (dev only), agent holds `MANDATE_PRIVY_APP_SECRET` — not fork
-production path.
+**Auth (agent → signer):** `Authorization: Bearer <token>` on every remote
+`POST /v1/sign`. Default token is `MANDATE_SIGNER_TOKEN` (mandate-operated
+**mandate-signer**, Mode C). Mode B user remote signers use a **separate**
+bearer configured per descriptor (§5). Privy credentials stay on mandate-signer,
+not in the agent.
 
 ### 3. Agent behaviour
 
@@ -83,6 +84,23 @@ production path.
 	}
 }
 ```
+
+### 5. Mode B remote bearer (FOR-207 / Package E)
+
+Mode B descriptors may set optional `bearerEnvKey`: the name of an agent Worker
+secret/env var whose value is sent as `Authorization: Bearer …` when posting to
+that log's `signerUrl`. When `bearerEnvKey` is **absent**, the agent uses
+`MANDATE_SIGNER_TOKEN` (unchanged Mode C and mandate-signer behaviour).
+
+| Mode          | `signerUrl` target | Typical bearer                                          |
+| ------------- | ------------------ | ------------------------------------------------------- |
+| Mode C hosted | mandate-signer     | `MANDATE_SIGNER_TOKEN`                                  |
+| Mode B BYOK   | user remote signer | env named by `bearerEnvKey` (e.g. `USER_SIGNER_BEARER`) |
+
+If `bearerEnvKey` is set but the resolved env value is empty, the agent **fails
+closed** (does not fall back to `MANDATE_SIGNER_TOKEN`).
+
+Reference user signer for dev/e2e: `@mandate/reference-user-signer` (FOR-209).
 
 ## Alternatives considered
 
