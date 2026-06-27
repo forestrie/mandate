@@ -271,8 +271,19 @@ Warm-log grant flow matches
 
 ## 5 — Register the first user log
 
-Each user log has its own `logId` and root key `K(L)`. Mode C (hosted sealing)
-is the typical mandate fork path.
+Each user log has its own `logId` and root key `K(L)`. Choose one delegation
+mode per user log:
+
+| Mode  | Typical use                        | Where `K(L)` lives      | Mandate sealing path                           |
+| ----- | ---------------------------------- | ----------------------- | ---------------------------------------------- |
+| **C** | Hosted sealing (default fork path) | User-owned Privy wallet | `@mandate/signer` via `MANDATE_SIGNER_TOKEN`   |
+| **B** | Purist BYOK (reference fork path)  | User signer / HSM only  | User `signerUrl` via `bearerEnvKey` env bearer |
+
+**§5a** below is Mode C. **§5b** is Mode B — see
+[ADR-0005](docs/adr/adr-0005-byok-delegation-modes.md) and
+[CONTEXT.md](CONTEXT.md) (Mode B descriptor, user remote signer).
+
+### 5a — Mode C (hosted sealing)
 
 ```mermaid
 sequenceDiagram
@@ -305,12 +316,155 @@ doppler run --project mandate-forestrie --config dev -- \
   --signer-url "$MANDATE_SIGNER_URL"
 ```
 
-**Mode B (true BYOK):** user runs their own signer; you point
-`OPERATOR_ROOT_KEYS` at their URL — see `mandate-register provision --mode B`.
+Mode C adds a `KEY_DIRECTORY` entry on `@mandate/signer` and points
+`OPERATOR_ROOT_KEYS.signerUrl` at `MANDATE_SIGNER_URL`. Mandate holds Privy
+credentials for signing only — not the user's root private key.
 
 **Separate regular forest per customer:** endorse on `R` with `GF_DERIVED`, then
 genesis `R'` ([ARC-021.3](../devdocs/arc/arc-021-payment-onboarding/03-phase-b-regular-forest.md)).
 Many forks issue **child grants under the same `R`** instead.
+
+### 5b — Mode B user log (purist BYOK)
+
+In Mode B the user (or their security team) holds `K(L)` in a signer they operate.
+Mandate **never** stores the root private key and **does not** add a
+`KEY_DIRECTORY` entry for that log. The agent routes delegation signing to the
+user's `POST /v1/sign` endpoint with a **separate bearer** (`USER_SIGNER_BEARER`),
+not `MANDATE_SIGNER_TOKEN`.
+
+Reference implementation:
+[`@mandate/reference-user-signer`](packages/apps/reference-user-signer/README.md)
+(FOR-209). Production users may run their own HSM/KMS bridge implementing the same
+[ADR-0003](docs/adr/adr-0003-delegation-signer-backend.md) contract.
+
+```mermaid
+sequenceDiagram
+    participant U as User / security team
+    participant M as Mandate operator
+    participant US as User remote signer
+    participant Agent as @mandate/agent
+    participant Canopy as Canopy SCRAPI
+
+    U->>U: Generate or import KS256 root K(L)
+    U->>US: Deploy signer (reference-user-signer or HSM bridge)
+    U->>M: Share rootSignerAddress, signerUrl, keyRef, bearer token
+
+    M->>M: task provision:mode-b<br/>(--mode B, user-signer-url, root-address)
+    M->>M: Set agent OPERATOR_ROOT_KEYS + USER_SIGNER_BEARER<br/>(no KEY_DIRECTORY for this log)
+
+    M->>Canopy: Register grant with user statement signer
+    loop Until completed Forestrie-Grant
+        M->>Canopy: Poll grant status
+        Canopy-->>M: Receipt ready
+    end
+
+    Note over Canopy,Agent: Checkpoint needs delegation
+    Canopy->>Agent: delegation.required webhook
+    Agent->>US: POST /v1/sign<br/>Authorization: Bearer USER_SIGNER_BEARER
+    US-->>Agent: 65-byte KS256 signature
+    Agent->>Canopy: Submit delegation certificate
+```
+
+#### Reader FAQ (Mode B)
+
+| Question                                   | Answer                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **D1 — Where is my root key?**             | Only in the user-operated signer (`USER_SIGNER_KEYS_JSON` on the reference Worker, or your KMS). Mandate Workers hold descriptors and bearer tokens, not `K(L)`.                                                                                                                                                 |
+| **D2 — What does mandate-signer do?**      | Nothing for this user log. `signerUrl` must **not** be `MANDATE_SIGNER_URL`. `@mandate/signer` remains for Mode C logs and the operator PA wallet only.                                                                                                                                                          |
+| **D3 — Same key after Mode C revoke?**     | Yes — [ADR-0005 exit step 3](docs/adr/adr-0005-byok-delegation-modes.md#operational-appendix--mode-c-kill-switch-and-exits-for-114): revoke mandate at Privy, point `OPERATOR_ROOT_KEYS.signerUrl` at the user's signer, set `bearerEnvKey: USER_SIGNER_BEARER`. `publicRoot` is unchanged — no re-registration. |
+| **D4 — Which bearer does the agent send?** | The env named by `bearerEnvKey` on the descriptor (default `USER_SIGNER_BEARER`). It must match the user signer's bearer. Empty env → agent fails closed (no fallback to `MANDATE_SIGNER_TOKEN`).                                                                                                                |
+
+#### Mode B vs Mode C — what mandate never holds (user log)
+
+| Secret / config                    | Mode C (hosted)                 | Mode B (purist BYOK)                      |
+| ---------------------------------- | ------------------------------- | ----------------------------------------- |
+| User root private key              | Never (Privy TEE)               | **Never** (user signer only)              |
+| `KEY_DIRECTORY` entry for user log | Yes (`walletId`, auth key path) | **No** — empty `{}` from Mode B provision |
+| `OPERATOR_ROOT_KEYS.signerUrl`     | `MANDATE_SIGNER_URL`            | User `signerUrl` (≠ mandate-signer)       |
+| Agent bearer for remote sign       | `MANDATE_SIGNER_TOKEN`          | `USER_SIGNER_BEARER` via `bearerEnvKey`   |
+| Privy additional-signer policy     | Required                        | Not used for this log                     |
+
+#### Deploy reference user signer
+
+```bash
+# Doppler dev: USER_SIGNER_BEARER + USER_SIGNER_KEYS_JSON
+task deploy:reference-user-signer
+# Record deployed URL as E2E_USER_SIGNER_URL (e2e) or operator secret
+```
+
+See [packages/apps/reference-user-signer/README.md](packages/apps/reference-user-signer/README.md).
+
+#### Provision Mode B user log
+
+Use the user's `rootSignerAddress` as genesis `bootstrapKey`. Align `forest-r`
+(or the generated `logIdHex32`) with the log id in `USER_SIGNER_KEYS_JSON`.
+
+```bash
+doppler run --project mandate-forestrie --config dev -- \
+  doppler run --project mandate-forestrie --config e2e -- \
+  task provision:mode-b -- \
+  --onboard-token "$CANOPY_PAYMENTS_ONBOARD_TOKEN" \
+  --canopy-url "$CANOPY_API_URL" \
+  --coordinator-url "$DELEGATION_COORDINATOR_URL" \
+  --webhook-url "$MANDATE_AGENT_WEBHOOK_URL" \
+  --univocity-addr "$CANOPY_UNIVOCITY_ADDR" \
+  --chain-id "$CANOPY_CHAIN_ID" \
+  --root-address "0x<UserKs256RootAddress>" \
+  --user-signer-url "$USER_SIGNER_URL" \
+  --key-ref "user-remote" \
+  --forest-r "<dashed-uuid-matching-signer-keys-json-log-id>"
+```
+
+Expect provision output:
+
+| Field                                              | Mode B expectation                       |
+| -------------------------------------------------- | ---------------------------------------- |
+| `descriptors.keyDirectory`                         | `{}`                                     |
+| `descriptors.operatorRootKeys[logId].signerUrl`    | User signer URL (≠ `MANDATE_SIGNER_URL`) |
+| `descriptors.operatorRootKeys[logId].bearerEnvKey` | `USER_SIGNER_BEARER`                     |
+
+Merge into agent Worker secrets:
+
+- `OPERATOR_ROOT_KEYS` — JSON from provision (or append per-log entry)
+- `USER_SIGNER_BEARER` — same bearer the user signer expects
+- Do **not** add a user-log row to signer `KEY_DIRECTORY`
+
+Example descriptor (one log):
+
+```json
+{
+	"a1b2c3d4e5f678901234567890abcdef0": {
+		"alg": "KS256",
+		"rootSignerAddress": "0x…",
+		"kind": "remote",
+		"signerUrl": "https://mandate-reference-user-signer.<account>.workers.dev/v1/sign",
+		"keyRef": "user-remote",
+		"bearerEnvKey": "USER_SIGNER_BEARER"
+	}
+}
+```
+
+#### Grant registration and sealing
+
+After provision, register the user's statement-signing grant on Canopy (same
+shape as §5a). When checkpoints require delegation, the coordinator webhook
+hits `@mandate/agent`, which POSTs to the **user signer URL** with
+`USER_SIGNER_BEARER`. Live verification: `task test:live:mode-b` (FOR-210).
+
+#### Exit from Mode C to Mode B (same key)
+
+After [Privy revoke](docs/service-secrets.md#post-revoke-secret-hygiene-for-131)
+(ADR-0005 exit step 2), an operator may switch the log to Mode B without
+re-registering grants:
+
+1. Deploy or expose the user's `POST /v1/sign` endpoint.
+2. Update `OPERATOR_ROOT_KEYS` for that `logId`: `signerUrl` → user URL,
+   `bearerEnvKey: USER_SIGNER_BEARER`, remove Mode C `keyRef` mapping to Privy.
+3. Set agent `USER_SIGNER_BEARER`; prune the Mode C `KEY_DIRECTORY` entry on
+   `@mandate/signer` if no other log uses it.
+4. Confirm sealing via webhook (or `task test:live:mode-b` in CI).
+
+Thin agent index: [docs/agents/mode-b-fork.md](docs/agents/mode-b-fork.md).
 
 ---
 
@@ -420,4 +574,5 @@ sequenceDiagram
 - [CONTEXT.md](CONTEXT.md) — mandate glossary
 - [canopy grants.md](../canopy/docs/grants.md) — grant shapes and register rules
 - [ARC-021 end-to-end](../devdocs/arc/arc-021-payment-onboarding/06-end-to-end.md) — registration control plane
-- [scitt-hackathon.md](../canopy/docs/demo/scitt-hackathon.md) — participant SCRAPI demo (future decks link here for bootstrap)
+- [scitt-hackathon.md](../canopy/docs/demo/scitt-hackathon.md) — participant SCRAPI demo
+- [docs/agents/mode-b-fork.md](docs/agents/mode-b-fork.md) — Mode B agent index (→ §5b)
