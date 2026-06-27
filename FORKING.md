@@ -84,9 +84,8 @@ sequenceDiagram
         M->>C: Ask for chainId + contract address on their lane
         C-->>M: chainId, univocityAddr
     else B — Deploy from official release (independent fork)
-        M->>Rel: Download deployer binary + release tag
-        M->>Rel: Fetch deploy-manifest (or build archive)
-        M->>M: deploy imutable --from-release (EOA)
+        M->>Rel: Download deployer binary for release tag
+        M->>M: deploy imutable --from-release (downloads + verifies manifest)
         M->>Chain: Sign deploy transaction
         Chain-->>M: Deployed contract address
     else C — Build from univocity source
@@ -119,13 +118,17 @@ verify the `.sha256` sidecar, then run one-shot EOA deploy:
   --rpc-url "$RPC_URL"
 ```
 
+For ES256 bootstrap, add `--bootstrap-alg es256` and
+`--bootstrap-es256-pem "$BOOTSTRAP_PEM_ES256"`.
+
 The command fetches `deploy-manifest-<tag>.json` from the
 [Univocity release](https://github.com/forestrie/univocity/releases) when present
 (preferred), otherwise the `univocity-<tag>.tar.gz` build archive. Foundry is
 not required on the operator machine.
 
 For Safe multisig deploys, use `deploy propose imutable` / `deploy approve` with
-`--release-root` or `--from-manifest` instead; see
+`--release-root` or `--from-manifest` (pass `--manifest-sidecar` with the local
+`.sha256` file when using a downloaded manifest); see
 [univocity-tools CLI docs](https://github.com/forestrie/univocity-tools/blob/main/docs/agents/cli.md).
 
 ---
