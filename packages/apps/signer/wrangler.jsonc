@@ -3,5 +3,15 @@
 	"name": "mandate-signer",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-04-01",
-	"compatibility_flags": ["nodejs_compat"]
+	"compatibility_flags": ["nodejs_compat"],
+	"ratelimits": [
+		{
+			"name": "SIGNER_RATE_LIMITER",
+			"namespace_id": "1002",
+			"simple": {
+				"limit": 30,
+				"period": 60
+			}
+		}
+	]
 }

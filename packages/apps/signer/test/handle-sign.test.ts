@@ -363,4 +363,21 @@ describe('handleSign', () => {
 			)
 		).toBe(true);
 	});
+
+	it('returns 429 when SIGNER_RATE_LIMITER rejects keyRef', async () => {
+		const privateKey = secp256k1.utils.randomPrivateKey();
+		const env: Env = {
+			...createEnv({ privateKey }),
+			SIGNER_RATE_LIMITER: {
+				limit: async () => ({ success: false })
+			}
+		};
+		const response = await handleSign(signRequest({ privateKey }), {
+			env,
+			fetchImpl: mockPrivyFetch(privateKey, new Uint8Array([1, 2, 3, 4]))
+		});
+		expect(response.status).toBe(429);
+		const body = (await response.json()) as { ok: boolean; error: string };
+		expect(body).toEqual({ ok: false, error: 'rate limit exceeded' });
+	});
 });
