@@ -5,4 +5,5 @@ export interface OperatorRootKeyEntry {
 	kind: 'remote';
 	signerUrl: string;
 	keyRef: string;
+	bearerEnvKey?: string;
 }

@@ -131,5 +131,6 @@ describe('provisionInstance', () => {
 		expect(result.descriptors.operatorRootKeys[LOG_ID]?.signerUrl).toBe(
 			'https://user-signer.example/v1/sign'
 		);
+		expect(result.descriptors.operatorRootKeys[LOG_ID]?.bearerEnvKey).toBe('USER_SIGNER_BEARER');
 	});
 });
