@@ -12,11 +12,11 @@ authorization key?
 
 ## Findings
 
-| Surface | Capability | Custody revoke? |
-|---------|------------|-----------------|
-| `@privy-io/js-sdk-core` embedded wallet | `personal_sign`, `secp256k1_sign` via provider | No wallet-admin APIs |
+| Surface                                    | Capability                                                    | Custody revoke?                                                                  |
+| ------------------------------------------ | ------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `@privy-io/js-sdk-core` embedded wallet    | `personal_sign`, `secp256k1_sign` via provider                | No wallet-admin APIs                                                             |
 | `@mandate/privy-admin` `revokeModeCWallet` | Server `PATCH /v1/wallets/{id}` with `additional_signers: []` | Requires **owner authorization key** (P-256) via `privy-authorization-signature` |
-| Mandate UI BFF | No Privy admin routes; must not hold owner key (ARC-0022 I3) | N/A |
+| Mandate UI BFF                             | No Privy admin routes; must not hold owner key (ARC-0022 I3)  | N/A                                                                              |
 
 **Conclusion:** In-browser custody revoke is **not viable** without either (a)
 exposing the owner authorization key to the browser (violates I3) or (b) a new

@@ -18,9 +18,7 @@ export function enabledBadgeLabels(response: EnabledResponse): EnabledBadgeLabel
 	};
 }
 
-export function effectiveEnabledVariant(
-	enabled: boolean
-): 'default' | 'secondary' | 'outline' {
+export function effectiveEnabledVariant(enabled: boolean): 'default' | 'secondary' | 'outline' {
 	return enabled ? 'default' : 'outline';
 }
 

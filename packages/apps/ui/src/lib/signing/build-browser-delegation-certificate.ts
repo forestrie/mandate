@@ -31,8 +31,12 @@ export async function buildBrowserDelegationCertificate(
 	backend: SigningBackend
 ): Promise<Uint8Array> {
 	const rootSignerAddress = parseEthAddress(rootSignerAddressHex);
-	return buildDelegationCertificateKs256WithSigner(input, rootSignerAddress, async (sigStructureBytes) => {
-		const signatureHex = await backend.signKs256SigStructure(sigStructureBytes);
-		return normalizePrivyKs256Signature(signatureHex);
-	});
+	return buildDelegationCertificateKs256WithSigner(
+		input,
+		rootSignerAddress,
+		async (sigStructureBytes) => {
+			const signatureHex = await backend.signKs256SigStructure(sigStructureBytes);
+			return normalizePrivyKs256Signature(signatureHex);
+		}
+	);
 }

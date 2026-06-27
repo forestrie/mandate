@@ -18,8 +18,7 @@ import { buildBrowserDelegationCertificate } from './build-browser-delegation-ce
 import type { SigningBackend } from './signing-backend.js';
 import { bytesToBase64 } from './bytes.js';
 
-const TEST_PRIVATE_KEY_HEX =
-	'0000000000000000000000000000000000000000000000000000000000000001';
+const TEST_PRIVATE_KEY_HEX = '0000000000000000000000000000000000000000000000000000000000000001';
 
 function testRootFromPrivateKey(privateKeyHex: string) {
 	const sk = Uint8Array.from(Buffer.from(privateKeyHex, 'hex'));
@@ -30,11 +29,10 @@ function testRootFromPrivateKey(privateKeyHex: string) {
 }
 
 async function generateDelegatedPublicKeyCbor(): Promise<Uint8Array> {
-	const keyPair = await crypto.subtle.generateKey(
-		{ name: 'ECDSA', namedCurve: 'P-256' },
-		true,
-		['sign', 'verify']
-	);
+	const keyPair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, [
+		'sign',
+		'verify'
+	]);
 	const raw = new Uint8Array(await crypto.subtle.exportKey('raw', keyPair.publicKey));
 	return encodeIntKeyCbor(
 		new Map<number, unknown>([

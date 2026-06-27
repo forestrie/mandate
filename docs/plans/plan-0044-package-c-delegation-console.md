@@ -1,6 +1,6 @@
 # Plan 0044 — Delegation console (Package C)
 
-**Status:** IN PROGRESS — orchestration pointer only  
+**Status:** COMPLETE  
 **Date:** 2026-06-27  
 **Authoritative spec:** [FOR-115](https://linear.app/forestrie/issue/FOR-115) (Linear)
 
@@ -19,13 +19,13 @@ One branch per Linear issue. Graphite stacks use the same format.
 
 ## Stack
 
-| Issue | Branch |
-|-------|--------|
+| Issue   | Branch                                  |
+| ------- | --------------------------------------- |
 | FOR-195 | `robin/for-195-ui-delegation-cose-cert` |
-| FOR-196 | `robin/for-196-ui-console-status` |
-| FOR-197 | `robin/for-197-ui-modec-revoke` |
-| FOR-198 | `robin/for-198-ui-review` |
-| FOR-199 | merge + epic close (no branch) |
+| FOR-196 | `robin/for-196-ui-console-status`       |
+| FOR-197 | `robin/for-197-ui-modec-revoke`         |
+| FOR-198 | `robin/for-198-ui-review`               |
+| FOR-199 | merge + epic close (no branch)          |
 
 ## Worktree
 

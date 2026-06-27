@@ -12,7 +12,10 @@ import {
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
 import type { PendingEntry } from '@mandate/coordinator-types';
-import { buildSubmitCertificateBody, buildSubmitCertificateBodyFromCert } from './submit-payload.js';
+import {
+	buildSubmitCertificateBody,
+	buildSubmitCertificateBodyFromCert
+} from './submit-payload.js';
 
 const ZERO_BYTES_B64 = Buffer.alloc(32).toString('base64');
 
@@ -51,11 +54,10 @@ describe('buildSubmitCertificateBodyFromCert', () => {
 		const sk = secp256k1.utils.randomPrivateKey();
 		const pub = secp256k1.getPublicKey(sk, false);
 		const rootSignerAddress = keccak_256(pub.slice(1)).slice(-20);
-		const keyPair = await crypto.subtle.generateKey(
-			{ name: 'ECDSA', namedCurve: 'P-256' },
-			true,
-			['sign', 'verify']
-		);
+		const keyPair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, [
+			'sign',
+			'verify'
+		]);
 		const raw = new Uint8Array(await crypto.subtle.exportKey('raw', keyPair.publicKey));
 		const delegatedPublicKeyCbor = encodeIntKeyCbor(
 			new Map<number, unknown>([
@@ -79,7 +81,9 @@ describe('buildSubmitCertificateBodyFromCert', () => {
 			rootSignerAddress,
 			Buffer.from(sk).toString('hex')
 		);
-		const entry = pendingEntry({ delegatedPublicKey: Buffer.from(delegatedPublicKeyCbor).toString('base64') });
+		const entry = pendingEntry({
+			delegatedPublicKey: Buffer.from(delegatedPublicKeyCbor).toString('base64')
+		});
 		const body = buildSubmitCertificateBodyFromCert(entry, certificate);
 		expect(body.issuedAt).toBe(issuedAt);
 		expect(body.expiresAt).toBe(issuedAt + 3600);

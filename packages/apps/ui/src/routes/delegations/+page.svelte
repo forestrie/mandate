@@ -56,6 +56,10 @@
 	const session = $derived(getPrivySessionState());
 	const killSwitch = $derived(killSwitchGuidance());
 
+	function openKillSwitchRunbook() {
+		window.open(KILL_SWITCH_RUNBOOK_URL, '_blank', 'noopener,noreferrer');
+	}
+
 	const filteredEntries = $derived(
 		entries.filter((entry) => {
 			const matchesLog =
@@ -260,13 +264,11 @@
 				<p class="text-sm text-zinc-600">{killSwitch.custodyBody}</p>
 				<p class="mt-2 text-sm text-zinc-600">
 					CLI:
-					<code class="rounded bg-zinc-100 px-1 py-0.5 text-xs">{killSwitch.custodyCliCommand}</code>
+					<code class="rounded bg-zinc-100 px-1 py-0.5 text-xs">{killSwitch.custodyCliCommand}</code
+					>
 					·
-					<a
-						href={KILL_SWITCH_RUNBOOK_URL}
-						class="text-blue-600 underline"
-						target="_blank"
-						rel="noopener noreferrer">exit runbook</a
+					<button type="button" class="text-blue-600 underline" onclick={openKillSwitchRunbook}
+						>exit runbook</button
 					>
 				</p>
 			</div>
