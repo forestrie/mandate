@@ -6,6 +6,9 @@ SvelteKit app that talks to the
 [delegation coordinator](https://github.com/forestrie/canopy) through a same-origin
 BFF; private keys stay in the browser via [Privy](https://privy.io).
 
+**Forking a mandate instance:** [FORKING.md](FORKING.md) — Mode C hosted sealing
+(§5a) and Mode B purist BYOK (§5b).
+
 ## Monorepo layout
 
 ```text
@@ -75,19 +78,20 @@ See [docs/plans/plan-0003-for-97-package-split.md](docs/plans/plan-0003-for-97-p
 Requires [go-task](https://taskfile.dev). Doppler project defaults to
 `mandate-forestrie` / config `dev` (see `Taskfile.dist.yml`).
 
-| Task                                | Purpose                                           |
-| ----------------------------------- | ------------------------------------------------- |
-| `task dev:doppler`                  | UI dev server with Doppler `dev` secrets          |
-| `task repo-init:doppler`            | Provision KV + `wrangler.env.prod.json` overlays  |
-| `task test:live:owned`              | Signer owned-wallet live test (`dev` + `e2e`)     |
-| `task test:live:hands-off`          | Agent hands-off sealing live test                 |
-| `task test:live:mode-c`             | Mode C onboard + revoke live test                 |
-| `task test:live:provision`          | Provision + genesis live e2e                      |
-| `task test:live:mode-b`             | Mode B reference user signer live test            |
-| `task deploy:reference-user-signer` | Deploy Mode B reference user signer Worker        |
-| `task privy:onboard:mode-c`         | Attach mandate additional signer to a user wallet |
-| `task privy:revoke:mode-c`          | Mode C kill switch (owner-signed PATCH)           |
-| `task provision`                    | `mandate-register provision` (`dev` + `e2e`)      |
+| Task                                | Purpose                                                                                  |
+| ----------------------------------- | ---------------------------------------------------------------------------------------- |
+| `task dev:doppler`                  | UI dev server with Doppler `dev` secrets                                                   |
+| `task repo-init:doppler`            | Provision KV + `wrangler.env.prod.json` overlays                                         |
+| `task test:live:owned`              | Signer owned-wallet live test (`dev` + `e2e`)                                            |
+| `task test:live:hands-off`          | Agent hands-off sealing live test                                                        |
+| `task test:live:mode-c`             | Mode C onboard + revoke live test                                                        |
+| `task test:live:provision`          | Provision + genesis live e2e                                                             |
+| `task test:live:mode-b`             | Mode B reference user signer live test                                                   |
+| `task deploy:reference-user-signer` | Deploy Mode B reference user signer Worker                                               |
+| `task privy:onboard:mode-c`         | Attach mandate additional signer to a user wallet                                      |
+| `task privy:revoke:mode-c`          | Mode C kill switch (owner-signed PATCH)                                                  |
+| `task provision`                    | `mandate-register provision` (`dev` + `e2e`)                                             |
+| `task provision:mode-b`             | Mode B user log provision ([FORKING.md §5b](FORKING.md#5b--mode-b-user-log-purist-byok)) |
 
 Live tests that touch Privy or Canopy fixtures use **nested Doppler**:
 `doppler run --config dev -- doppler run --config e2e -- …` (wrapped by the

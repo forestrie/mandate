@@ -162,6 +162,13 @@ tasks:
     cmds:
       - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- doppler run --project {{.DOPPLER_PROJECT}} --config e2e -- pnpm --filter @mandate/register exec mandate-register provision {{.CLI_ARGS}}
 
+  provision:mode-b:
+    desc: >-
+      Provision a user log in Mode B (purist BYOK); see FORKING.md §5b.
+      Requires --root-address, --user-signer-url, --key-ref (and usual URLs).
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- doppler run --project {{.DOPPLER_PROJECT}} --config e2e -- pnpm --filter @mandate/register exec mandate-register provision --mode B {{.CLI_ARGS}}
+
   deploy:reference-user-signer:
     desc: >-
       Deploy @mandate/reference-user-signer Worker and push USER_SIGNER_* secrets
