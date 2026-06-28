@@ -1,12 +1,12 @@
-import { E2E_AUTH_LOG_ID, expect, loadPending, test } from '@forestrie/mandate-ui-e2e-kit';
+import { expect, loadPending, test } from '@forestrie/mandate-ui-e2e-kit';
 
-test('shows login affordance before wallet connect', async ({ page }) => {
-	await page.goto(`/delegations?authLogId=${encodeURIComponent(E2E_AUTH_LOG_ID)}`);
-	await expect(page.getByRole('button', { name: 'Connect wallet' })).toBeVisible();
+test('shows login affordance before wallet connect', async ({ consolePage: page }) => {
+	await expect(page.getByPlaceholder('Email for Privy login')).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Send code' })).toBeVisible();
 });
 
-test('load pending without login keeps login affordance', async ({ page }) => {
-	await page.goto(`/delegations?authLogId=${encodeURIComponent(E2E_AUTH_LOG_ID)}`);
+test('load pending without login keeps login affordance', async ({ consolePage: page }) => {
 	await loadPending(page);
-	await expect(page.getByRole('button', { name: 'Connect wallet' })).toBeVisible();
+	await expect(page.getByPlaceholder('Email for Privy login')).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Send code' })).toBeVisible();
 });
