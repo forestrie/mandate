@@ -9,12 +9,7 @@ interface MockPrivyClient {
 	auth: {
 		email: {
 			sendCode(email: string): Promise<void>;
-			loginWithCode(
-				email: string,
-				code: string,
-				mode: string,
-				options: unknown
-			): Promise<void>;
+			loginWithCode(email: string, code: string, mode: string, options: unknown): Promise<void>;
 		};
 		logout(): Promise<void>;
 	};
@@ -41,8 +36,14 @@ export async function createMockPrivyClient(): Promise<MockPrivyClient> {
 		async initialize() {},
 		auth: {
 			email: {
-				async sendCode(_email: string) {},
-				async loginWithCode(_email, _code, _mode, _options) {
+				async sendCode(email: string) {
+					void email;
+				},
+				async loginWithCode(email: string, code: string, mode: string, options: unknown) {
+					void email;
+					void code;
+					void mode;
+					void options;
 					mockAuthenticated = true;
 				}
 			},
@@ -56,7 +57,8 @@ export async function createMockPrivyClient(): Promise<MockPrivyClient> {
 			}
 		},
 		embeddedWallet: {
-			async getEthereumProvider(_args) {
+			async getEthereumProvider(args: unknown) {
+				void args;
 				return {
 					async request({ method }) {
 						if (method === 'personal_sign' || method === 'secp256k1_sign') {

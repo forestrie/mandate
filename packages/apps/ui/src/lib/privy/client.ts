@@ -3,10 +3,7 @@ import Privy, {
 	getEntropyDetailsFromUser,
 	getUserEmbeddedEthereumWallet
 } from '@privy-io/js-sdk-core';
-import {
-	PUBLIC_MANDATE_PRIVY_APP_ID,
-	PUBLIC_MANDATE_PRIVY_CLIENT_ID
-} from '$env/static/public';
+import { PUBLIC_MANDATE_PRIVY_APP_ID, PUBLIC_MANDATE_PRIVY_CLIENT_ID } from '$env/static/public';
 
 /** Build-time only — set for Playwright preview builds; omitted from production CI. */
 const E2E_PRIVY_MOCK = import.meta.env.VITE_E2E_PRIVY_MOCK === 'true';

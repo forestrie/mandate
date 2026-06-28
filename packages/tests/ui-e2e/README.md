@@ -19,11 +19,11 @@ Or: `task test:e2e:ui` (after Taskfile install).
 
 ## Agent preview (pass/fail + failures)
 
-| Artifact | Path |
-|----------|------|
-| HTML report | `packages/tests/ui-e2e/playwright-report/index.html` |
-| JSON results | `packages/tests/ui-e2e/test-results/results.json` |
-| Traces / screenshots / video | `packages/tests/ui-e2e/test-results/<spec>/` |
+| Artifact                     | Path                                                 |
+| ---------------------------- | ---------------------------------------------------- |
+| HTML report                  | `packages/tests/ui-e2e/playwright-report/index.html` |
+| JSON results                 | `packages/tests/ui-e2e/test-results/results.json`    |
+| Traces / screenshots / video | `packages/tests/ui-e2e/test-results/<spec>/`         |
 
 ```bash
 pnpm --filter @mandate/ui-e2e report
@@ -33,9 +33,9 @@ On failure: read `results.json` for status, open HTML report or `trace.zip` in t
 
 ## Projects
 
-| Project | Purpose |
-|---------|---------|
+| Project        | Purpose                                                   |
+| -------------- | --------------------------------------------------------- |
 | `ui` (default) | Hermetic — local `wrangler pages dev`, mocked BFF + Privy |
-| `integration` | Reserved (no specs in Phase 1) |
+| `integration`  | Reserved (no specs in Phase 1)                            |
 
 Scripts are plain `playwright test` — no `doppler run` in package.json.

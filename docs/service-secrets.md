@@ -10,11 +10,11 @@ CLI). **Hard cutover** — no legacy aliases. CI enforces via
 
 ## Secret taxonomy
 
-| Prefix                   | Meaning                                                    | Doppler config    | GitHub environment                          |
-| ------------------------ | ---------------------------------------------------------- | ----------------- | ------------------------------------------- |
-| `MANDATE_`               | Long-lived mandate **instance** secrets                    | `dev`, `prod`     | `prod`; operational subset on `live-signer` |
-| `E2E_`                   | Synthetic users, test wallets, dev Canopy/coordinator URLs | **`e2e` only**    | **`live-signer` only** — never `prod`       |
-| `PUBLIC_MANDATE_PRIVY_*` | UI Privy SDK ids (public, not secret)                      | `dev`/`prod` vars | GitHub `vars` on Pages deploy               |
+| Prefix                   | Meaning                                                            | Doppler config    | GitHub environment                          |
+| ------------------------ | ------------------------------------------------------------------ | ----------------- | ------------------------------------------- |
+| `MANDATE_`               | Long-lived mandate **instance** secrets                            | `dev`, `prod`     | `prod`; operational subset on `live-signer` |
+| `E2E_`                   | Synthetic users, test wallets, dev Canopy/coordinator URLs         | **`e2e` only**    | **`live-signer` only** — never `prod`       |
+| `PUBLIC_MANDATE_PRIVY_*` | UI Privy SDK ids (public, not secret)                              | `dev`/`prod` vars | GitHub `vars` on Pages deploy               |
 | `VITE_E2E_PRIVY_MOCK`    | Build-time mock Privy for Playwright (`true` only); **never prod** | local / CI only   | ui-e2e workflow only — not Doppler `prod`   |
 
 Never sync `E2E_*` secrets to production Workers or the `prod` GitHub environment.
@@ -42,7 +42,7 @@ Doppler `mandate-forestrie` configs **`dev`** and **`prod`**.
 | `PUBLIC_MANDATE_PRIVY_APP_ID`     | UI client Privy app id                                                                                                                          |
 | `PUBLIC_MANDATE_PRIVY_CLIENT_ID`  | UI client Privy client id                                                                                                                       |
 | `PUBLIC_DEFAULT_CHAIN_ID`         | UI default chain id                                                                                                                             |
-| `VITE_E2E_PRIVY_MOCK`             | Set to `true` for hermetic Playwright ui-e2e preview build only; omit in prod CI (see plan-0047)                                                  |
+| `VITE_E2E_PRIVY_MOCK`             | Set to `true` for hermetic Playwright ui-e2e preview build only; omit in prod CI (see plan-0047)                                                |
 
 `MANDATE_PRIVY_AUTHORIZATION_KEY` is **operational**, not per-user. Real Mode C
 users never store owner keys in Doppler; only the synthetic test user owner key is

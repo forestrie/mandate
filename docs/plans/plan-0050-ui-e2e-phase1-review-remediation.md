@@ -9,16 +9,16 @@ FOR-220, FOR-221, FOR-222, FOR-223, FOR-224, branch
 
 ## Remediation items
 
-| ID | Sev | Status | Summary |
-| -- | --- | ------ | ------- |
-| R1 | High | Done | Mock Privy gated by build-time `VITE_E2E_PRIVY_MOCK=true`; prod CI build + `audit:client-secrets` pass |
-| R2 | High | Done | Playwright `webServer.env` passes `VITE_E2E_PRIVY_MOCK` to build + preview |
-| R3 | High | Done | Commit, push, PR (FOR-220–224) |
-| R4 | Medium | Done | Unauthenticated spec asserts login affordance after Load pending (empty state covered elsewhere) |
-| R5 | Medium | Done | `@mandate/ui/e2e/mock-client` export; ui-e2e imports package surface |
-| R6 | Medium | Done | No `PUBLIC_E2E_PRIVY` in prod CI — mock uses Vite env only |
-| R7 | Low | Deferred | Wrangler coordinator vars in webServer |
-| R8 | Low | Deferred | Logout e2e; global-setup run-id; vite-dev fast path |
+| ID  | Sev    | Status   | Summary                                                                                                |
+| --- | ------ | -------- | ------------------------------------------------------------------------------------------------------ |
+| R1  | High   | Done     | Mock Privy gated by build-time `VITE_E2E_PRIVY_MOCK=true`; prod CI build + `audit:client-secrets` pass |
+| R2  | High   | Done     | Playwright `webServer.env` passes `VITE_E2E_PRIVY_MOCK` to build + preview                             |
+| R3  | High   | Done     | Commit, push, PR (FOR-220–224)                                                                         |
+| R4  | Medium | Done     | Unauthenticated spec asserts login affordance after Load pending (empty state covered elsewhere)       |
+| R5  | Medium | Done     | `@mandate/ui/e2e/mock-client` export; ui-e2e imports package surface                                   |
+| R6  | Medium | Done     | No `PUBLIC_E2E_PRIVY` in prod CI — mock uses Vite env only                                             |
+| R7  | Low    | Deferred | Wrangler coordinator vars in webServer                                                                 |
+| R8  | Low    | Deferred | Logout e2e; global-setup run-id; vite-dev fast path                                                    |
 
 ## R1 notes
 

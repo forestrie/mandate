@@ -60,7 +60,11 @@ export async function installCoordinatorMocks(
 			domain: '127.0.0.1',
 			coordinatorOrigin: 'http://127.0.0.1:4173'
 		};
-		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) });
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify(response)
+		});
 	});
 
 	await page.route('**/api/auth/session', async (route) => {
@@ -68,7 +72,9 @@ export async function installCoordinatorMocks(
 			await route.fallback();
 			return;
 		}
-		const body = route.request().postDataJSON() as { envelope: { authLogId: string; scopes: string[] } };
+		const body = route.request().postDataJSON() as {
+			envelope: { authLogId: string; scopes: string[] };
+		};
 		const now = Math.floor(Date.now() / 1000);
 		const response: SessionExchangeResponse = {
 			token: 'e2e-session-token',
@@ -76,7 +82,11 @@ export async function installCoordinatorMocks(
 			authLogId: body.envelope.authLogId,
 			scopes: body.envelope.scopes as SessionExchangeResponse['scopes']
 		};
-		await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) });
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify(response)
+		});
 	});
 
 	await page.route('**/api/coordinator/**', async (route) => {

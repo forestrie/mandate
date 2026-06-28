@@ -273,7 +273,12 @@
 		{:else}
 			<div class="flex flex-col gap-3">
 				<div class="flex flex-col gap-3 sm:flex-row">
-					<Input bind:value={email} type="email" placeholder="Email for Privy login" class="flex-1" />
+					<Input
+						bind:value={email}
+						type="email"
+						placeholder="Email for Privy login"
+						class="flex-1"
+					/>
 					<Button variant="outline" disabled={otpBusy || !email.trim()} onclick={sendLoginCode}>
 						{otpSent ? 'Resend code' : 'Send code'}
 					</Button>

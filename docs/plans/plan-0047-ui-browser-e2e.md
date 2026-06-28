@@ -32,7 +32,7 @@ Two facts shape this plan:
    [plan-0003](plan-0003-for-97-package-split.md) (UI vs register split) and
    [plan-0045 mode-c-browser-revoke-spike](plan-0045-mode-c-browser-revoke-spike.md)
    (browser-side Privy custody ops are not viable). The browser Privy flow that
-   *does* exist and is worth automating is the **delegation console login +
+   _does_ exist and is worth automating is the **delegation console login +
    signing** path. A true end-to-end "register an instance" test is inherently
    cross-repo and belongs in the system-testing layer (arc-0024), not here.
 2. The platform mandates **Playwright Test** for e2e
@@ -142,12 +142,12 @@ Scripts (mirror canopy — **no `doppler run` in package.json**):
 
 ```json
 {
-  "scripts": {
-    "test:e2e": "playwright test --project=ui",
-    "test:e2e:ui": "playwright test --project=ui",
-    "test:e2e:integration": "playwright test --project=integration",
-    "report": "playwright show-report"
-  }
+	"scripts": {
+		"test:e2e": "playwright test --project=ui",
+		"test:e2e:ui": "playwright test --project=ui",
+		"test:e2e:integration": "playwright test --project=integration",
+		"report": "playwright show-report"
+	}
 }
 ```
 
