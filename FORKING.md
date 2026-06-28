@@ -106,12 +106,12 @@ sequenceDiagram
 | **D** | Local smoke only — not production                                                                                                |
 
 **B (detail):** download `deployer-darwin-arm64` or `deployer-linux-x64` from
-[univocity-tools releases](https://github.com/forestrie/univocity-tools/releases),
-verify the `.sha256` sidecar, then run one-shot EOA deploy:
+the [univocity-tools v0.6.0 release](https://github.com/forestrie/univocity-tools/releases/tag/v0.6.0)
+(or a newer tag), verify the `.sha256` sidecar, then run one-shot EOA deploy:
 
 ```shell
 ./deployer-darwin-arm64 deploy imutable \
-  --from-release v0.4.0 \
+  --from-release v0.1.4 \
   --bootstrap-alg ks256 \
   --bootstrap-ks256-signer 0xYourBootstrapSigner \
   --deploy-key "$DEPLOY_KEY" \
