@@ -102,6 +102,7 @@ sequenceDiagram
 | ----- | -------------------------------------------------------------------------------------------------------------------------------- |
 | **A** | Fork on a shared Forestrie dev lane                                                                                              |
 | **B** | Independent fork; prebuilt deployer + release tag — no Foundry — see [releases](https://github.com/forestrie/univocity/releases) |
+| **B′** | Same as **B** but in the browser — [univocity-deploy](https://univocity-deploy.pages.dev) (EOA only; manifest + sidecar verified in-page) |
 | **C** | Custom contract changes                                                                                                          |
 | **D** | Local smoke only — not production                                                                                                |
 
@@ -130,6 +131,14 @@ For Safe multisig deploys, use `deploy propose imutable` / `deploy approve` with
 `--release-root` or `--from-manifest` (pass `--manifest-sidecar` with the local
 `.sha256` file when using a downloaded manifest); see
 [univocity-tools CLI docs](https://github.com/forestrie/univocity-tools/blob/main/docs/agents/cli.md).
+Safe deploy is **CLI-only** (no browser Safe path).
+
+**B′ (browser):** open [univocity-deploy](https://univocity-deploy.pages.dev),
+connect a wallet (Privy or injected MetaMask), verify `deploy-manifest-<tag>.json`
+and its `.sha256` sidecar (fetched from GitHub or drag-dropped offline), deploy
+**ImutableUnivocity** via EOA, then download `{ chainId, univocityAddr,
+bootstrapAlg }` for Step 2 below. Integrity model matches CLI Path B
+([ADR-0010](https://github.com/forestrie/univocity-tools/blob/main/docs/adr/adr-0010-deploy-manifest-format.md)).
 
 ---
 
