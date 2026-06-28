@@ -31,8 +31,8 @@ One branch per Linear issue. Graphite stacks use the same format.
 ## Worktree
 
 ```bash
-git worktree add ~/Dev/personal/forestrie-wt/mandate-kill-switch main
-cd ~/Dev/personal/forestrie-wt/mandate-kill-switch
+git worktree add ~/Dev/personal/forestrie/.worktrees/mandate-kill-switch main
+cd ~/Dev/personal/forestrie/.worktrees/mandate-kill-switch
 gt trunk
 gt create robin/for-130-targeted-revoke -m "feat(privy-admin): targeted mandate revoke (FOR-130)"
 gt create robin/for-132-cli-safety -m "feat(register): revoke CLI guardrails (FOR-132)"

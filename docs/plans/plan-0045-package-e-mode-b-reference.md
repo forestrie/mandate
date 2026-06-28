@@ -37,8 +37,8 @@ by the stack above.
 ## Worktree
 
 ```bash
-git worktree add ~/Dev/personal/forestrie-wt/mandate-mode-b main
-cd ~/Dev/personal/forestrie-wt/mandate-mode-b
+git worktree add ~/Dev/personal/forestrie/.worktrees/mandate-mode-b main
+cd ~/Dev/personal/forestrie/.worktrees/mandate-mode-b
 ```
 
 See [FOR-206](https://linear.app/forestrie/issue/FOR-206) for full `gt` stack

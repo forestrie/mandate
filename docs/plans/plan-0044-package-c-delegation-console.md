@@ -30,8 +30,8 @@ One branch per Linear issue. Graphite stacks use the same format.
 ## Worktree
 
 ```bash
-git worktree add ~/Dev/personal/forestrie-wt/mandate-delegations-ui origin/main
-cd ~/Dev/personal/forestrie-wt/mandate-delegations-ui
+git worktree add ~/Dev/personal/forestrie/.worktrees/mandate-delegations-ui origin/main
+cd ~/Dev/personal/forestrie/.worktrees/mandate-delegations-ui
 git switch -c robin/for-195-ui-delegation-cose-cert
 # ... stack branches ...
 ```
