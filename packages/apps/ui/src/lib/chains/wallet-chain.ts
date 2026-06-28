@@ -40,25 +40,17 @@ function isChainNotAddedError(error: unknown): boolean {
 		return (error as { code: number }).code === 4902;
 	}
 	const message = error instanceof Error ? error.message : String(error);
-	return (
-		message.includes('4902') || message.toLowerCase().includes('unrecognized chain')
-	);
+	return message.includes('4902') || message.toLowerCase().includes('unrecognized chain');
 }
 
-async function addWalletChain(
-	provider: EthereumProvider,
-	chain: SupportedChain
-): Promise<void> {
+async function addWalletChain(provider: EthereumProvider, chain: SupportedChain): Promise<void> {
 	await provider.request({
 		method: 'wallet_addEthereumChain',
 		params: [chain.addChainParams]
 	});
 }
 
-async function switchWalletChain(
-	provider: EthereumProvider,
-	chainId: number
-): Promise<void> {
+async function switchWalletChain(provider: EthereumProvider, chainId: number): Promise<void> {
 	await provider.request({
 		method: 'wallet_switchEthereumChain',
 		params: [{ chainId: chainIdToHex(chainId) }]
