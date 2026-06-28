@@ -35,7 +35,9 @@ export async function getPrivyClient(): Promise<Privy> {
 	}
 	if (E2E_PRIVY_MOCK) {
 		if (!mockInitPromise) {
-			mockInitPromise = import('./mock-client.js').then((m) => m.createMockPrivyClient());
+			mockInitPromise = import('./mock-client.js').then(
+				(m) => m.createMockPrivyClient() as unknown as Privy
+			);
 		}
 		return (await mockInitPromise) as unknown as Privy;
 	}
