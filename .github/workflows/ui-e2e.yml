@@ -43,7 +43,7 @@ jobs:
           PUBLIC_COORDINATOR_BFF_BASE: /api/coordinator
           PUBLIC_MANDATE_PRIVY_APP_ID: ci-placeholder
           PUBLIC_MANDATE_PRIVY_CLIENT_ID: ci-placeholder
-          PUBLIC_DEFAULT_CHAIN_ID: '11155111'
+          PUBLIC_DEFAULT_CHAIN_ID: '84532'
           VITE_E2E_PRIVY_MOCK: 'true'
           COORDINATOR_AUTH_MODE: app_token_bff
           COORDINATOR_APP_TOKEN: e2e-placeholder

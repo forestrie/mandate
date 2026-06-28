@@ -41,7 +41,7 @@ Doppler `mandate-forestrie` configs **`dev`** and **`prod`**.
 | `CLOUDFLARE_ACCOUNT_ID`           | Target Cloudflare account                                                                                                                       |
 | `PUBLIC_MANDATE_PRIVY_APP_ID`     | UI client Privy app id                                                                                                                          |
 | `PUBLIC_MANDATE_PRIVY_CLIENT_ID`  | UI client Privy client id                                                                                                                       |
-| `PUBLIC_DEFAULT_CHAIN_ID`         | UI default chain id                                                                                                                             |
+| `PUBLIC_DEFAULT_CHAIN_ID`         | UI default EVM chain id (`84532` = Base Sepolia dev; used for Privy wallet alignment) |
 | `VITE_E2E_PRIVY_MOCK`             | Set to `true` for hermetic Playwright ui-e2e preview build only; omit in prod CI (see plan-0047)                                                |
 
 `MANDATE_PRIVY_AUTHORIZATION_KEY` is **operational**, not per-user. Real Mode C

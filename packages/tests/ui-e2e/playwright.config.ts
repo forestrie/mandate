@@ -8,7 +8,7 @@ const e2ePublicEnv = {
 	PUBLIC_MANDATE_PRIVY_APP_ID: 'e2e-placeholder',
 	PUBLIC_MANDATE_PRIVY_CLIENT_ID: 'e2e-placeholder',
 	PUBLIC_COORDINATOR_BFF_BASE: '/api/coordinator',
-	PUBLIC_DEFAULT_CHAIN_ID: '11155111',
+	PUBLIC_DEFAULT_CHAIN_ID: '84532',
 	CF_PAGES: '1',
 	COORDINATOR_AUTH_MODE: 'app_token_bff',
 	COORDINATOR_APP_TOKEN: 'e2e-placeholder',

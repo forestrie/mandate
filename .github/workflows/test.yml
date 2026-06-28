@@ -40,7 +40,7 @@ jobs:
           PUBLIC_COORDINATOR_BFF_BASE: /api/coordinator
           PUBLIC_MANDATE_PRIVY_APP_ID: ci-placeholder
           PUBLIC_MANDATE_PRIVY_CLIENT_ID: ci-placeholder
-          PUBLIC_DEFAULT_CHAIN_ID: '11155111'
+          PUBLIC_DEFAULT_CHAIN_ID: '84532'
         run: pnpm check
 
       - name: Unit tests
@@ -52,7 +52,7 @@ jobs:
           PUBLIC_COORDINATOR_BFF_BASE: /api/coordinator
           PUBLIC_MANDATE_PRIVY_APP_ID: ci-placeholder
           PUBLIC_MANDATE_PRIVY_CLIENT_ID: ci-placeholder
-          PUBLIC_DEFAULT_CHAIN_ID: '11155111'
+          PUBLIC_DEFAULT_CHAIN_ID: '84532'
         run: pnpm build:ui
 
       - name: Audit client bundle for secret names

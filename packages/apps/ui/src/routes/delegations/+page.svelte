@@ -18,10 +18,12 @@
 	import type { EnabledResponse, PendingEntry } from '@mandate/coordinator-types';
 	import {
 		getPrivySessionState,
+		getSupportedMandateChains,
 		initPrivySession,
 		sendEmailLoginCode,
 		completeEmailLogin,
-		logoutPrivy
+		logoutPrivy,
+		setSelectedChainId
 	} from '$lib/privy/stores.svelte.js';
 	import { PrivyEoaBackend } from '$lib/signing/privy-eoa-backend.js';
 	import { buildSubmitCertificateBodyFromCert } from './submit-payload.js';
@@ -58,6 +60,7 @@
 	let enabledByLogId = $state<Record<string, EnabledResponse>>({});
 
 	const session = $derived(getPrivySessionState());
+	const supportedChains = $derived(getSupportedMandateChains());
 	const killSwitch = $derived(killSwitchGuidance());
 
 	function openKillSwitchRunbook() {
@@ -139,6 +142,11 @@
 		await logoutPrivy();
 		otpSent = false;
 		otpCode = '';
+	}
+
+	async function onChainChange(event: Event) {
+		const chainId = Number((event.currentTarget as HTMLSelectElement).value);
+		await setSelectedChainId(chainId);
 	}
 
 	async function loadPending() {
@@ -267,6 +275,26 @@
 		</div>
 		{#if session.error}
 			<Alert variant="destructive" title="Privy">{session.error}</Alert>
+		{/if}
+		<label class="flex flex-col gap-1 text-sm">
+			<span class="font-medium text-zinc-800">Network</span>
+			<select
+				class="rounded-md border border-zinc-300 bg-white px-3 py-2"
+				value={String(session.selectedChainId)}
+				onchange={onChainChange}
+			>
+				{#each supportedChains as chain (chain.chainId)}
+					<option value={String(chain.chainId)}>{chain.name} ({chain.chainId})</option>
+				{/each}
+			</select>
+		</label>
+		{#if session.chainId !== null}
+			<p class="text-sm text-zinc-600">
+				Wallet network: chainId {session.chainId}
+				{#if session.chainId === session.selectedChainId}
+					(aligned)
+				{/if}
+			</p>
 		{/if}
 		{#if session.authenticated}
 			<Button variant="outline" onclick={() => disconnectWallet()}>Disconnect</Button>
