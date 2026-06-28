@@ -46,11 +46,15 @@ export async function refreshPrivySession(): Promise<void> {
 	};
 }
 
-export async function loginWithEmail(email: string): Promise<void> {
+/** Request an email OTP via Privy (step 1 of login). */
+export async function sendEmailLoginCode(email: string): Promise<void> {
 	const privy = await getPrivyClient();
 	await privy.auth.email.sendCode(email);
-	const code = window.prompt('Enter the verification code sent to your email');
-	if (!code) throw new Error('Verification code required');
+}
+
+/** Complete email OTP login (step 2). */
+export async function completeEmailLogin(email: string, code: string): Promise<void> {
+	const privy = await getPrivyClient();
 	await privy.auth.email.loginWithCode(email, code.trim(), 'login-or-sign-up', {
 		embedded: { ethereum: { createOnLogin: 'users-without-wallets' } }
 	});

@@ -1,0 +1,68 @@
+name: UI e2e
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  ui-e2e:
+    name: Playwright browser e2e (hermetic)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+          registry-url: https://npm.pkg.github.com
+          scope: '@forestrie'
+
+      - name: Install
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        working-directory: packages/tests/ui-e2e
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Hermetic ui e2e
+        env:
+          CI: true
+          CF_PAGES: '1'
+          PUBLIC_COORDINATOR_BFF_BASE: /api/coordinator
+          PUBLIC_MANDATE_PRIVY_APP_ID: ci-placeholder
+          PUBLIC_MANDATE_PRIVY_CLIENT_ID: ci-placeholder
+          PUBLIC_DEFAULT_CHAIN_ID: '11155111'
+          VITE_E2E_PRIVY_MOCK: 'true'
+          COORDINATOR_AUTH_MODE: app_token_bff
+          COORDINATOR_APP_TOKEN: e2e-placeholder
+          COORDINATOR_UPSTREAM_URL: http://127.0.0.1:9
+        run: pnpm --filter @mandate/ui-e2e test:e2e:ui -- --forbid-only
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-ui-e2e-${{ github.run_id }}
+          path: packages/tests/ui-e2e/playwright-report/
+          retention-days: 14
+
+      - name: Upload Playwright test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results-ui-e2e-${{ github.run_id }}
+          path: packages/tests/ui-e2e/test-results/
+          retention-days: 14
+          if-no-files-found: ignore

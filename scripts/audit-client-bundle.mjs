@@ -10,7 +10,12 @@ import { dirname } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const clientDir = resolve(__dirname, '../packages/apps/ui/.svelte-kit/output/client');
-const forbidden = ['COORDINATOR_APP_TOKEN', 'MANDATE_PRIVY_APP_SECRET'];
+const forbidden = [
+	'COORDINATOR_APP_TOKEN',
+	'MANDATE_PRIVY_APP_SECRET',
+	'e2e-mock-user',
+	'Unsupported mock provider method'
+];
 
 if (!existsSync(clientDir)) {
 	console.log('No client output yet; run pnpm build first.');

@@ -14,6 +14,7 @@
 		"lint": "prettier --check . && eslint . && node scripts/check-legacy-secret-names.mjs",
 		"format": "prettier --write .",
 		"test": "pnpm -r --filter './packages/**' test",
+		"test:e2e:ui": "pnpm --filter @mandate/ui-e2e test:e2e:ui",
 		"sync:coordinator-types": "node scripts/sync-coordinator-types.mjs",
 		"audit:client-secrets": "node scripts/audit-client-bundle.mjs",
 		"repo-init": "node scripts/repo-init.mjs"

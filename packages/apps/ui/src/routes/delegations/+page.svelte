@@ -19,7 +19,8 @@
 	import {
 		getPrivySessionState,
 		initPrivySession,
-		loginWithEmail,
+		sendEmailLoginCode,
+		completeEmailLogin,
 		logoutPrivy
 	} from '$lib/privy/stores.svelte.js';
 	import { PrivyEoaBackend } from '$lib/signing/privy-eoa-backend.js';
@@ -41,6 +42,9 @@
 
 	let authLogId = $state('');
 	let email = $state('');
+	let otpCode = $state('');
+	let otpSent = $state(false);
+	let otpBusy = $state(false);
 	let entries = $state<PendingEntry[]>([]);
 	let loading = $state(false);
 	let message = $state<string | null>(null);
@@ -106,13 +110,35 @@
 		enabledByLogId = next;
 	}
 
+	async function sendLoginCode() {
+		error = null;
+		otpBusy = true;
+		try {
+			await sendEmailLoginCode(email.trim());
+			otpSent = true;
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to send verification code';
+		} finally {
+			otpBusy = false;
+		}
+	}
+
 	async function connectWallet() {
 		error = null;
+		otpBusy = true;
 		try {
-			await loginWithEmail(email.trim());
+			await completeEmailLogin(email.trim(), otpCode);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Login failed';
+		} finally {
+			otpBusy = false;
 		}
+	}
+
+	async function disconnectWallet() {
+		await logoutPrivy();
+		otpSent = false;
+		otpCode = '';
 	}
 
 	async function loadPending() {
@@ -243,11 +269,32 @@
 			<Alert variant="destructive" title="Privy">{session.error}</Alert>
 		{/if}
 		{#if session.authenticated}
-			<Button variant="outline" onclick={() => logoutPrivy()}>Disconnect</Button>
+			<Button variant="outline" onclick={() => disconnectWallet()}>Disconnect</Button>
 		{:else}
-			<div class="flex flex-col gap-3 sm:flex-row">
-				<Input bind:value={email} type="email" placeholder="Email for Privy login" class="flex-1" />
-				<Button onclick={connectWallet}>Connect wallet</Button>
+			<div class="flex flex-col gap-3">
+				<div class="flex flex-col gap-3 sm:flex-row">
+					<Input bind:value={email} type="email" placeholder="Email for Privy login" class="flex-1" />
+					<Button variant="outline" disabled={otpBusy || !email.trim()} onclick={sendLoginCode}>
+						{otpSent ? 'Resend code' : 'Send code'}
+					</Button>
+				</div>
+				{#if otpSent}
+					<div class="flex flex-col gap-3 sm:flex-row">
+						<Input
+							bind:value={otpCode}
+							data-testid="privy-otp"
+							type="password"
+							inputmode="numeric"
+							maxlength={8}
+							placeholder="Verification code"
+							class="flex-1"
+							autocomplete="one-time-code"
+						/>
+						<Button disabled={otpBusy || !otpCode.trim()} onclick={connectWallet}>
+							Connect wallet
+						</Button>
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</Card>

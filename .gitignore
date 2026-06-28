@@ -26,3 +26,12 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Playwright e2e
+vendor/
+
+playwright-report/
+test-results/
+.e2e-run-id
+**/playwright-report/
+**/test-results/
