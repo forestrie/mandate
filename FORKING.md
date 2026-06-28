@@ -98,13 +98,13 @@ sequenceDiagram
     M->>M: Record chainId + address for genesis
 ```
 
-| Path  | When to use                                                                                                                      |
-| ----- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **A** | Fork on a shared Forestrie dev lane                                                                                              |
-| **B** | Independent fork; prebuilt deployer + release tag — no Foundry — see [releases](https://github.com/forestrie/univocity/releases) |
+| Path   | When to use                                                                                                                               |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **A**  | Fork on a shared Forestrie dev lane                                                                                                       |
+| **B**  | Independent fork; prebuilt deployer + release tag — no Foundry — see [releases](https://github.com/forestrie/univocity/releases)          |
 | **B′** | Same as **B** but in the browser — [univocity-deploy](https://univocity-deploy.pages.dev) (EOA only; manifest + sidecar verified in-page) |
-| **C** | Custom contract changes                                                                                                          |
-| **D** | Local smoke only — not production                                                                                                |
+| **C**  | Custom contract changes                                                                                                                   |
+| **D**  | Local smoke only — not production                                                                                                         |
 
 **B (detail):** download `deployer-darwin-arm64` or `deployer-linux-x64` from
 the [univocity-tools v0.6.0 release](https://github.com/forestrie/univocity-tools/releases/tag/v0.6.0)
