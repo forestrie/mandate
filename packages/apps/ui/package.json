@@ -49,5 +49,8 @@
 		"@noble/hashes": "^1.7.1",
 		"@privy-io/js-sdk-core": "^0.65.1",
 		"viem": "^2.50.4"
+	},
+	"exports": {
+		"./e2e/mock-client": "./src/lib/privy/mock-client.ts"
 	}
 }

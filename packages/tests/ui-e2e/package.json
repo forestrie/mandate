@@ -1,0 +1,22 @@
+{
+	"name": "@mandate/ui-e2e",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"description": "Hermetic Playwright browser e2e for @mandate/ui",
+	"scripts": {
+		"test:e2e": "playwright test --project=ui",
+		"test:e2e:ui": "playwright test --project=ui",
+		"test:e2e:integration": "playwright test --project=integration",
+		"report": "playwright show-report"
+	},
+	"engines": {
+		"node": ">=22.0.0",
+		"pnpm": ">=9.0.0"
+	},
+	"devDependencies": {
+		"@mandate/coordinator-types": "workspace:*",
+		"@playwright/test": "^1.48.0",
+		"typescript": "^5.9.2"
+	}
+}

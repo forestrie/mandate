@@ -61,6 +61,11 @@ tasks:
     cmds:
       - pnpm test
 
+  test:e2e:ui:
+    desc: Hermetic Playwright browser e2e (@mandate/ui-e2e)
+    cmds:
+      - pnpm --filter @mandate/ui-e2e test:e2e:ui
+
   check:
     desc: Typecheck
     cmds:

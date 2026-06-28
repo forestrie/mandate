@@ -30,6 +30,7 @@ When work merges to `main`, remove the worktree:
 - **Install**: `pnpm install`
 - **UI dev**: `pnpm --filter @mandate/ui dev`
 - **Tests**: `pnpm -r test` (per package)
+- **UI browser e2e (hermetic)**: `pnpm test:e2e:ui` or `task test:e2e:ui`
 
 ## Documentation map
 

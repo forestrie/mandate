@@ -5,8 +5,16 @@ import Privy, {
 } from '@privy-io/js-sdk-core';
 import { PUBLIC_MANDATE_PRIVY_APP_ID, PUBLIC_MANDATE_PRIVY_CLIENT_ID } from '$env/static/public';
 
+/** Build-time only — set for Playwright preview builds; omitted from production CI. */
+const E2E_PRIVY_MOCK = import.meta.env.VITE_E2E_PRIVY_MOCK === 'true';
+
 let privyClient: Privy | null = null;
 let initPromise: Promise<Privy> | null = null;
+let mockInitPromise: Promise<Privy> | null = null;
+
+export function isE2ePrivyMock(): boolean {
+	return E2E_PRIVY_MOCK;
+}
 
 export function getPrivyAppId(): string {
 	const appId = PUBLIC_MANDATE_PRIVY_APP_ID?.trim();
@@ -24,6 +32,14 @@ export function getPrivyClientId(): string | undefined {
 export async function getPrivyClient(): Promise<Privy> {
 	if (typeof window === 'undefined') {
 		throw new Error('Privy client is browser-only');
+	}
+	if (E2E_PRIVY_MOCK) {
+		if (!mockInitPromise) {
+			mockInitPromise = import('./mock-client.js').then(
+				(m) => m.createMockPrivyClient() as unknown as Privy
+			);
+		}
+		return (await mockInitPromise) as unknown as Privy;
 	}
 	if (privyClient) return privyClient;
 	if (initPromise) return initPromise;
@@ -47,6 +63,10 @@ export type EthereumProvider = {
 };
 
 export async function getConnectedEthereumProvider(): Promise<EthereumProvider | null> {
+	if (E2E_PRIVY_MOCK) {
+		const { mockEthereumProviderWhenAuthenticated } = await import('./mock-client.js');
+		return mockEthereumProviderWhenAuthenticated();
+	}
 	const privy = await getPrivyClient();
 	const { user } = await privy.user.get();
 	if (!user) return null;
@@ -67,6 +87,10 @@ export async function getConnectedEthereumProvider(): Promise<EthereumProvider |
 }
 
 export async function getConnectedWalletAddress(): Promise<string | null> {
+	if (E2E_PRIVY_MOCK) {
+		const { mockWalletAddressWhenAuthenticated } = await import('./mock-client.js');
+		return mockWalletAddressWhenAuthenticated();
+	}
 	const privy = await getPrivyClient();
 	const { user } = await privy.user.get();
 	if (!user) return null;
@@ -77,4 +101,8 @@ export async function getConnectedWalletAddress(): Promise<string | null> {
 export function resetPrivyClient(): void {
 	privyClient = null;
 	initPromise = null;
+	mockInitPromise = null;
+	if (E2E_PRIVY_MOCK) {
+		void import('./mock-client.js').then((m) => m.resetMockPrivyAuthState());
+	}
 }
