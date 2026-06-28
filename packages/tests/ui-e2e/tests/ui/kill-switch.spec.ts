@@ -1,7 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { loginWithMockPrivy } from '../../fixtures/privy-login.js';
-import { installCoordinatorMocks } from '../../mocks/coordinator-bff.js';
-import { E2E_AUTH_LOG_ID, E2E_USER_LOG_ID } from '../../mocks/fixtures.js';
+import {
+	E2E_AUTH_LOG_ID,
+	E2E_USER_LOG_ID,
+	installCoordinatorMocks,
+	loginWithMockPrivy
+} from '@forestrie/mandate-ui-e2e-kit';
 
 test('pause and resume signing updates via mocked enabled endpoint', async ({ page }) => {
 	await installCoordinatorMocks(page, {});

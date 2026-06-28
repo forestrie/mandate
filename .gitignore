@@ -35,3 +35,4 @@ test-results/
 .e2e-run-id
 **/playwright-report/
 **/test-results/
+packages/tests/ui-e2e-kit/dist/

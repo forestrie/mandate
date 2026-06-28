@@ -1,6 +1,4 @@
-import { expect, test } from '@playwright/test';
-
-const E2E_AUTH_LOG_ID = '11111111-1111-1111-1111-111111111111';
+import { expect, test, E2E_AUTH_LOG_ID } from '@forestrie/mandate-ui-e2e-kit';
 
 test('home page navigates to delegation console with auth log id', async ({ page }) => {
 	await page.goto('/');

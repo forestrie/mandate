@@ -1,6 +1,6 @@
 import { test as base } from '@playwright/test';
-import { installCoordinatorMocks, type CoordinatorMockOptions } from '../mocks/coordinator-bff.js';
-import { E2E_AUTH_LOG_ID } from '../mocks/fixtures.js';
+import { installCoordinatorMocks, type CoordinatorMockOptions } from './coordinator-bff.js';
+import { E2E_AUTH_LOG_ID } from './fixtures.js';
 
 type ConsoleFixtures = {
 	consolePage: import('@playwright/test').Page;
@@ -17,12 +17,3 @@ export const test = base.extend<ConsoleFixtures>({
 });
 
 export { expect } from '@playwright/test';
-export {
-	loginWithMockPrivy,
-	loadPending,
-	E2E_EMAIL,
-	E2E_OTP,
-	E2E_MOCK_WALLET_ADDRESS
-} from './privy-login.js';
-
-export { E2E_AUTH_LOG_ID };
