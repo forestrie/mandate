@@ -1,7 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { loadPending, loginWithMockPrivy } from '../../fixtures/privy-login.js';
-import { installCoordinatorMocks } from '../../mocks/coordinator-bff.js';
-import { E2E_AUTH_LOG_ID } from '../../mocks/fixtures.js';
+import {
+	E2E_AUTH_LOG_ID,
+	installCoordinatorMocks,
+	loadPending,
+	loginWithMockPrivy
+} from '@forestrie/mandate-ui-e2e-kit';
 
 test('surfaces BFF 403 problem detail without crashing', async ({ page }) => {
 	await installCoordinatorMocks(page, {

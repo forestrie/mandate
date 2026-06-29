@@ -1,7 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { loadPending, loginWithMockPrivy } from '../../fixtures/privy-login.js';
-import { installCoordinatorMocks } from '../../mocks/coordinator-bff.js';
-import { E2E_AUTH_LOG_ID, samplePendingEntries } from '../../mocks/fixtures.js';
+import {
+	E2E_AUTH_LOG_ID,
+	installCoordinatorMocks,
+	loadPending,
+	loginWithMockPrivy,
+	samplePendingEntries
+} from '@forestrie/mandate-ui-e2e-kit';
 
 test('renders pending rows from mocked BFF', async ({ page }) => {
 	const pendingEntries = samplePendingEntries(2);

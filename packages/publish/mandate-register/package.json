@@ -1,0 +1,30 @@
+{
+	"name": "@forestrie/mandate-register",
+	"version": "0.1.0",
+	"type": "module",
+	"description": "Bundled mandate-register CLI for cross-repo system tests (ARC-0024)",
+	"bin": {
+		"mandate-register": "./bin/mandate-register.mjs"
+	},
+	"files": ["dist", "bin"],
+	"publishConfig": {
+		"registry": "https://npm.pkg.github.com",
+		"access": "public"
+	},
+	"scripts": {
+		"build": "node build.mjs",
+		"check": "node build.mjs && test -f dist/cli.js",
+		"test": "vitest run",
+		"prepublishOnly": "pnpm run build"
+	},
+	"engines": {
+		"node": ">=22.0.0"
+	},
+	"devDependencies": {
+		"@mandate/register": "workspace:*",
+		"@mandate/privy-admin": "workspace:*",
+		"esbuild": "^0.25.0",
+		"typescript": "^6.0.2",
+		"vitest": "^4.1.3"
+	}
+}

@@ -1,4 +1,4 @@
-import { expect, loadPending, test } from '../../fixtures/app.js';
+import { expect, loadPending, test } from '@forestrie/mandate-ui-e2e-kit';
 
 test('shows login affordance before wallet connect', async ({ consolePage: page }) => {
 	await expect(page.getByPlaceholder('Email for Privy login')).toBeVisible();
