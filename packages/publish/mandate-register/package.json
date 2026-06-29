@@ -6,7 +6,10 @@
 	"bin": {
 		"mandate-register": "./bin/mandate-register.mjs"
 	},
-	"files": ["dist", "bin"],
+	"files": [
+		"dist",
+		"bin"
+	],
 	"publishConfig": {
 		"registry": "https://npm.pkg.github.com",
 		"access": "public"

@@ -33,10 +33,7 @@ export class KeyDirectory {
 		}
 		const normalizedLogId = logId.toLowerCase();
 		const allowsAnyLogId = entry.logIds.some((id) => id === '*');
-		if (
-			!allowsAnyLogId &&
-			!entry.logIds.some((id) => id.toLowerCase() === normalizedLogId)
-		) {
+		if (!allowsAnyLogId && !entry.logIds.some((id) => id.toLowerCase() === normalizedLogId)) {
 			throw new KeyDirectoryError(`logId not authorized for keyRef ${keyRef}`, 404);
 		}
 		const expected = parseEthAddress(entry.rootSignerAddress);
