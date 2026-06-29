@@ -5,11 +5,7 @@
 		"moduleResolution": "bundler",
 		"strict": true,
 		"skipLibCheck": true,
-		"noEmit": true,
-		"paths": {
-			"@e2e-fixtures/*": ["./fixtures/*"],
-			"@e2e-mocks/*": ["./mocks/*"]
-		}
+		"noEmit": true
 	},
 	"include": ["**/*.ts"]
 }

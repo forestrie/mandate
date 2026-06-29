@@ -1,0 +1,39 @@
+{
+	"name": "@forestrie/mandate-ui-e2e-kit",
+	"version": "0.1.0",
+	"type": "module",
+	"description": "Reusable Playwright fixtures and BFF mocks for mandate UI e2e (ARC-0024 Layer 1)",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": ["dist", "README.md"],
+	"publishConfig": {
+		"registry": "https://npm.pkg.github.com",
+		"access": "public"
+	},
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"check": "tsc -p tsconfig.build.json --noEmit",
+		"test": "vitest run",
+		"prepublishOnly": "pnpm run build"
+	},
+	"engines": {
+		"node": ">=22.0.0",
+		"pnpm": ">=9.0.0"
+	},
+	"peerDependencies": {
+		"@mandate/coordinator-types": ">=0.0.1",
+		"@playwright/test": "^1.48.0"
+	},
+	"devDependencies": {
+		"@mandate/coordinator-types": "workspace:*",
+		"@playwright/test": "^1.48.0",
+		"typescript": "^5.9.2",
+		"vitest": "^4.1.3"
+	}
+}

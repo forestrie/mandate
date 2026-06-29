@@ -1,0 +1,45 @@
+name: Publish mandate-register
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'mandate-register-v*'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Publish @forestrie/mandate-register
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          registry-url: https://npm.pkg.github.com
+          scope: '@forestrie'
+          cache: pnpm
+
+      - name: Install
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Test bundle
+        run: pnpm --filter @forestrie/mandate-register test
+
+      - name: Build bundle
+        run: pnpm --filter @forestrie/mandate-register build
+
+      - name: Publish to GitHub Packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm --filter @forestrie/mandate-register publish --no-git-checks

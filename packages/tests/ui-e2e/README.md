@@ -12,8 +12,11 @@ From the mandate repo root:
 ```bash
 pnpm install
 pnpm exec playwright install chromium   # once
-pnpm --filter @mandate/ui-e2e test:e2e:ui
+pnpm test:e2e:ui   # builds @forestrie/mandate-ui-e2e-kit then runs Playwright
 ```
+
+Reusable fixtures live in `@forestrie/mandate-ui-e2e-kit` (see
+[packages/tests/ui-e2e-kit/README.md](../ui-e2e-kit/README.md)).
 
 Or: `task test:e2e:ui` (after Taskfile install).
 

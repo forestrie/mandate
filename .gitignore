@@ -28,6 +28,7 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 # Playwright e2e
+packages/publish/mandate-register/dist
 vendor/
 
 playwright-report/
@@ -35,3 +36,4 @@ test-results/
 .e2e-run-id
 **/playwright-report/
 **/test-results/
+packages/tests/ui-e2e-kit/dist/
