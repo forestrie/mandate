@@ -134,10 +134,12 @@ For Safe multisig deploys, use `deploy propose imutable` / `deploy approve` with
 Safe deploy is **CLI-only** (no browser Safe path).
 
 **B′ (browser):** open [univocity-deploy](https://univocity-deploy.pages.dev),
-connect a wallet (Privy or injected MetaMask), verify `deploy-manifest-<tag>.json`
-and its `.sha256` sidecar (fetched from GitHub or drag-dropped offline), deploy
-**ImutableUnivocity** via EOA, then download `{ chainId, univocityAddr,
-bootstrapAlg }` for Step 2 below. Integrity model matches CLI Path B
+connect a wallet (Privy or injected MetaMask), select **Base Sepolia (84532)** —
+the app switches the wallet off Ethereum mainnet automatically — verify
+`deploy-manifest-<tag>.json` and its `.sha256` sidecar (fetched from GitHub or
+drag-dropped offline), deploy **ImutableUnivocity** via EOA, then download
+`{ chainId, univocityAddr, bootstrapAlg }` for Step 2 below. Integrity model
+matches CLI Path B
 ([ADR-0010](https://github.com/forestrie/univocity-tools/blob/main/docs/adr/adr-0010-deploy-manifest-format.md)).
 
 ---

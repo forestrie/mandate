@@ -59,6 +59,20 @@ describe('KeyDirectory', () => {
 		);
 	});
 
+	it('allows any logId when logIds contains "*"', () => {
+		const otherLogId = 'a1b2c3d4e5f678901234567890abcdef';
+		const directory = new KeyDirectory(
+			JSON.stringify({
+				'wildcard-key': {
+					walletId: 'wallet-1',
+					rootSignerAddress: ROOT,
+					logIds: ['*']
+				}
+			})
+		);
+		expect(directory.resolve('wildcard-key', otherLogId, ROOT).walletId).toBe('wallet-1');
+	});
+
 	it('rejects unknown keyRef', () => {
 		const directory = new KeyDirectory(
 			JSON.stringify({

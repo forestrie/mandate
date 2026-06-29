@@ -21,9 +21,7 @@ describe('installCoordinatorMocks', () => {
 		await page.goto('about:blank');
 
 		const body = await page.evaluate(async () => {
-			const res = await fetch(
-				'https://ui.test/api/coordinator/delegations/pending?logId=abc'
-			);
+			const res = await fetch('https://ui.test/api/coordinator/delegations/pending?logId=abc');
 			return { status: res.status, json: (await res.json()) as { entries: Array<{ id: string }> } };
 		});
 

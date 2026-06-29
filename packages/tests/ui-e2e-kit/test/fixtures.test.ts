@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-	E2E_AUTH_LOG_ID,
-	samplePendingEntries,
-	samplePendingEntry
-} from '../src/fixtures.js';
+import { E2E_AUTH_LOG_ID, samplePendingEntries, samplePendingEntry } from '../src/fixtures.js';
 
 describe('samplePendingEntry', () => {
 	it('uses authority log id without hyphens in authLogIdHex32', () => {

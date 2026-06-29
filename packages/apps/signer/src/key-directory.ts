@@ -32,7 +32,8 @@ export class KeyDirectory {
 			throw new KeyDirectoryError(`unknown keyRef: ${keyRef}`, 404);
 		}
 		const normalizedLogId = logId.toLowerCase();
-		if (!entry.logIds.some((id) => id.toLowerCase() === normalizedLogId)) {
+		const allowsAnyLogId = entry.logIds.some((id) => id === '*');
+		if (!allowsAnyLogId && !entry.logIds.some((id) => id.toLowerCase() === normalizedLogId)) {
 			throw new KeyDirectoryError(`logId not authorized for keyRef ${keyRef}`, 404);
 		}
 		const expected = parseEthAddress(entry.rootSignerAddress);

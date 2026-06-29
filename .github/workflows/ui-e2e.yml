@@ -32,8 +32,11 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright Chromium
-        run: pnpm exec playwright install chromium --with-deps
+      - name: Install Playwright Chromium (ui-e2e kit)
+        run: pnpm --filter @forestrie/mandate-ui-e2e-kit exec playwright install chromium --with-deps
+
+      - name: Install Playwright Chromium (ui e2e)
+        run: pnpm --filter @mandate/ui-e2e exec playwright install chromium --with-deps
 
       - name: Build ui e2e kit
         run: pnpm --filter @forestrie/mandate-ui-e2e-kit build
@@ -48,7 +51,7 @@ jobs:
           PUBLIC_COORDINATOR_BFF_BASE: /api/coordinator
           PUBLIC_MANDATE_PRIVY_APP_ID: ci-placeholder
           PUBLIC_MANDATE_PRIVY_CLIENT_ID: ci-placeholder
-          PUBLIC_DEFAULT_CHAIN_ID: '11155111'
+          PUBLIC_DEFAULT_CHAIN_ID: '84532'
           VITE_E2E_PRIVY_MOCK: 'true'
           COORDINATOR_AUTH_MODE: app_token_bff
           COORDINATOR_APP_TOKEN: e2e-placeholder

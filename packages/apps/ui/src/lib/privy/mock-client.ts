@@ -1,6 +1,9 @@
 /** Fixed embedded-wallet address for hermetic browser e2e (`VITE_E2E_PRIVY_MOCK=true`). */
 export const E2E_MOCK_WALLET_ADDRESS = '0xE2E0000000000000000000000000000000000001';
 
+/** Base Sepolia — matches Mandate / deploy-web dev default. */
+const E2E_MOCK_CHAIN_ID_HEX = '0x14a34';
+
 /** 65-byte hex signature (0x + 130 hex chars) for mock provider responses. */
 export const E2E_MOCK_SIGNATURE_HEX = `0x${'ab'.repeat(65)}`;
 
@@ -24,10 +27,12 @@ interface MockPrivyClient {
 }
 
 let mockAuthenticated = false;
+let mockChainHex = E2E_MOCK_CHAIN_ID_HEX;
 
 /** Reset mock auth state (tests). */
 export function resetMockPrivyAuthState(): void {
 	mockAuthenticated = false;
+	mockChainHex = E2E_MOCK_CHAIN_ID_HEX;
 }
 
 /** In-memory Privy double for hermetic e2e; no network. */
@@ -60,9 +65,19 @@ export async function createMockPrivyClient(): Promise<MockPrivyClient> {
 			async getEthereumProvider(args: unknown) {
 				void args;
 				return {
-					async request({ method }) {
+					async request({ method, params }) {
 						if (method === 'personal_sign' || method === 'secp256k1_sign') {
 							return E2E_MOCK_SIGNATURE_HEX;
+						}
+						if (method === 'eth_chainId') {
+							return mockChainHex;
+						}
+						if (method === 'wallet_switchEthereumChain') {
+							mockChainHex = (params?.[0] as { chainId: string }).chainId;
+							return null;
+						}
+						if (method === 'wallet_addEthereumChain') {
+							return null;
 						}
 						throw new Error(`Unsupported mock provider method: ${method}`);
 					}
@@ -81,9 +96,19 @@ export function mockEthereumProviderWhenAuthenticated(): {
 } | null {
 	if (!mockAuthenticated) return null;
 	return {
-		async request({ method }) {
+		async request({ method, params }) {
 			if (method === 'personal_sign' || method === 'secp256k1_sign') {
 				return E2E_MOCK_SIGNATURE_HEX;
+			}
+			if (method === 'eth_chainId') {
+				return mockChainHex;
+			}
+			if (method === 'wallet_switchEthereumChain') {
+				mockChainHex = (params?.[0] as { chainId: string }).chainId;
+				return null;
+			}
+			if (method === 'wallet_addEthereumChain') {
+				return null;
 			}
 			throw new Error(`Unsupported mock provider method: ${method}`);
 		}
