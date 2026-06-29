@@ -43,6 +43,9 @@ jobs:
           PUBLIC_DEFAULT_CHAIN_ID: '84532'
         run: pnpm check
 
+      - name: Install Playwright Chromium (ui-e2e-kit tests)
+        run: pnpm --filter @forestrie/mandate-ui-e2e-kit exec playwright install chromium --with-deps
+
       - name: Unit tests
         run: pnpm test
 
