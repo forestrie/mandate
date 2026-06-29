@@ -33,6 +33,9 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm install --frozen-lockfile
 
+      - name: Install Playwright Chromium (kit tests)
+        run: pnpm --filter @forestrie/mandate-ui-e2e-kit exec playwright install chromium --with-deps
+
       - name: Test kit
         run: pnpm --filter @forestrie/mandate-ui-e2e-kit test
 
