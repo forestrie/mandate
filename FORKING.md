@@ -178,6 +178,28 @@ Record `chainId`, `univocityAddr` (= manifest `proxy`), `logId`, and
 `deployer` from the post-deploy manifest for Steps 2 and genesis (canopy
 re-derives the address from logId + deployer).
 
+**Provision (Mode B path C):** after deploy, pass counterfactual genesis labels
+via `mandate-register provision`:
+
+```shell
+mandate-register provision --mode B \
+  --onboard-token "$ONBOARD_TOKEN" \
+  --canopy-url "$E2E_CANOPY_API_URL" \
+  --coordinator-url "$E2E_DELEGATION_COORDINATOR_URL" \
+  --webhook-url "$E2E_MANDATE_AGENT_WEBHOOK_URL" \
+  --univocity-addr "$PROXY" \
+  --chain-id "$CHAIN_ID" \
+  --forest-r "$FOREST_LOG_ID" \
+  --univocity-variant uups-counterfactual \
+  --univocity-deployer "$DEPLOYER" \
+  --root-address "$USER_ROOT" \
+  --user-signer-url "$USER_SIGNER_URL" \
+  --key-ref "$KEY_REF"
+```
+
+`--forest-r` must match the logId used at deploy time (canopy binds genesis
+`-68010` from the path segment).
+
 ---
 
 ## 2 — Request an onboard token

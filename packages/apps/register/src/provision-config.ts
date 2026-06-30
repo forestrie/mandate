@@ -1,6 +1,7 @@
 import type { DelegationMode } from './delegation-mode.js';
 import type { KeyDirectoryEntry } from './key-directory-entry.js';
 import type { OperatorRootKeyEntry } from './operator-root-key-entry.js';
+import type { UnivocityGenesisVariant } from './univocity-genesis-variant.js';
 
 /** Operator inputs for instance provisioning (FOR-100). */
 export interface ProvisionConfig {
@@ -11,6 +12,9 @@ export interface ProvisionConfig {
 	mode: DelegationMode;
 	univocityAddr: string;
 	chainId: string;
+	univocityVariant?: UnivocityGenesisVariant;
+	/** CREATE3 deployer address for uups-counterfactual genesis (-68017). */
+	univocityDeployer?: string;
 	/** Forest genesis path segment; generated when omitted. */
 	forestR?: string;
 	fetchImpl?: typeof fetch;

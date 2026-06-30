@@ -43,3 +43,11 @@ export function logIdHex32ToBytes(logIdHex32: string): Uint8Array {
 	}
 	return bytes;
 }
+
+/** 32-byte padded wire log id for genesis bootstrap-logid (-68010). */
+export function logIdPaddedWire32(logIdHex32: string): Uint8Array {
+	const wire = logIdHex32ToBytes(logIdHex32);
+	const padded = new Uint8Array(32);
+	padded.set(wire, 16);
+	return padded;
+}

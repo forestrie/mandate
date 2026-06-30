@@ -4,7 +4,7 @@ import { COSE_ALG_KS256 } from './cose-alg.js';
 import { parseEthAddressToBytes, parseUnivocityAddrHex } from './eth-address.js';
 import { buildGenesisCborBody } from './genesis-request.js';
 import { postGenesis } from './genesis-client.js';
-import { logIdFromR, normalizeForestR } from './log-id.js';
+import { logIdFromR, logIdPaddedWire32, normalizeForestR } from './log-id.js';
 import type { ProvisionConfig } from './provision-config.js';
 import type { ProvisionResult } from './provision-result.js';
 import { GenesisClientError } from './genesis-client-error.js';
@@ -79,11 +79,28 @@ export async function provisionInstance(config: ProvisionConfig): Promise<Provis
 		throw new Error(`unsupported delegation mode: ${config.mode as string}`);
 	}
 
+	const uupsGenesisExtras =
+		config.univocityVariant === 'uups-counterfactual'
+			? {
+					univocityVariant: 'uups-counterfactual' as const,
+					univocityDeployer: parseEthAddressToBytes(
+						config.univocityDeployer ??
+							(() => {
+								throw new Error(
+									'uups-counterfactual provisioning requires univocityDeployer',
+								);
+							})()
+					),
+					bootstrapLogId: logIdPaddedWire32(logIdHex32)
+				}
+			: {};
+
 	const body = buildGenesisCborBody({
 		genesisAlg: COSE_ALG_KS256,
 		bootstrapKey,
 		univocityAddr,
-		chainId: config.chainId
+		chainId: config.chainId,
+		...uupsGenesisExtras
 	});
 
 	let genesis;
