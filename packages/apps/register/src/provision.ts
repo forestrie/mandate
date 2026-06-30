@@ -86,9 +86,7 @@ export async function provisionInstance(config: ProvisionConfig): Promise<Provis
 					univocityDeployer: parseEthAddressToBytes(
 						config.univocityDeployer ??
 							(() => {
-								throw new Error(
-									'uups-counterfactual provisioning requires univocityDeployer',
-								);
+								throw new Error('uups-counterfactual provisioning requires univocityDeployer');
 							})()
 					),
 					bootstrapLogId: logIdPaddedWire32(logIdHex32)

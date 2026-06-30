@@ -88,8 +88,6 @@ describe('buildGenesisCborBody', () => {
 			FOREST_GENESIS_UNIVOCITY_VARIANT_UUPS_COUNTERFACTUAL
 		);
 		expect(map.get(FOREST_GENESIS_LABEL_UNIVOCITY_DEPLOYER)).toEqual(deployer);
-		expect(map.get(FOREST_GENESIS_LABEL_BOOTSTRAP_LOG_ID)).toEqual(
-			logIdPaddedWire32(logIdHex32)
-		);
+		expect(map.get(FOREST_GENESIS_LABEL_BOOTSTRAP_LOG_ID)).toEqual(logIdPaddedWire32(logIdHex32));
 	});
 });

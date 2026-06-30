@@ -2,7 +2,9 @@
 export type UnivocityGenesisVariant = 'imutable' | 'uups-counterfactual';
 
 /** Parse CLI `--univocity-variant` (default imutable when omitted). */
-export function parseUnivocityVariant(raw: string | undefined): UnivocityGenesisVariant | undefined {
+export function parseUnivocityVariant(
+	raw: string | undefined
+): UnivocityGenesisVariant | undefined {
 	if (raw === undefined || raw.trim() === '') {
 		return undefined;
 	}
