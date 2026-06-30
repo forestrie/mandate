@@ -142,6 +142,64 @@ drag-dropped offline), deploy **ImutableUnivocity** via EOA, then download
 matches CLI Path B
 ([ADR-0010](https://github.com/forestrie/univocity-tools/blob/main/docs/adr/adr-0010-deploy-manifest-format.md)).
 
+**C (opt-in — counterfactual UUPS):** for predict-before-deploy and deterministic
+multi-forest anchors, use the Univocity deployer CLI **UUPS** path. Imutable
+paths **B / B′** above remain the **default, highest-assurance** choice.
+
+```shell
+# Predict address before deploy (mint a logId or pass --log-id)
+deployer deploy uups predict \
+  --from-release v0.6.0 \
+  --log-id "$FOREST_LOG_ID" \
+  --deploy-key "$DEPLOY_KEY"
+
+# Deploy to the predicted address; KS256 defaults upgradeAdmin to bootstrap signer
+deployer deploy uups \
+  --from-release v0.6.0 \
+  --log-id "$FOREST_LOG_ID" \
+  --bootstrap-alg ks256 \
+  --bootstrap-ks256-signer 0xYourBootstrapSigner \
+  --deploy-key "$DEPLOY_KEY" \
+  --rpc-url "$RPC_URL" \
+  --deployment-manifest-out ./uups-manifest.json
+
+# Trust-check before canopy genesis
+deployer deploy uups verify \
+  --deployment-manifest ./uups-manifest.json \
+  --from-manifest ./deploy-manifest-v0.6.0.json \
+  --rpc-url "$RPC_URL"
+```
+
+Omit `--log-id` to mint a fresh forest logId (reported on stdout). ES256
+bootstrap requires explicit `--upgrade-admin` (no EOA default). Use
+`--proxy-salt` only for legacy fixed-salt deploys (`…/UUPSUnivocity/0`).
+
+Record `chainId`, `univocityAddr` (= manifest `proxy`), `logId`, and
+`deployer` from the post-deploy manifest for Steps 2 and genesis (canopy
+re-derives the address from logId + deployer).
+
+**Provision (Mode B path C):** after deploy, pass counterfactual genesis labels
+via `mandate-register provision`:
+
+```shell
+mandate-register provision --mode B \
+  --onboard-token "$ONBOARD_TOKEN" \
+  --canopy-url "$E2E_CANOPY_API_URL" \
+  --coordinator-url "$E2E_DELEGATION_COORDINATOR_URL" \
+  --webhook-url "$E2E_MANDATE_AGENT_WEBHOOK_URL" \
+  --univocity-addr "$PROXY" \
+  --chain-id "$CHAIN_ID" \
+  --forest-r "$FOREST_LOG_ID" \
+  --univocity-variant uups-counterfactual \
+  --univocity-deployer "$DEPLOYER" \
+  --root-address "$USER_ROOT" \
+  --user-signer-url "$USER_SIGNER_URL" \
+  --key-ref "$KEY_REF"
+```
+
+`--forest-r` must match the logId used at deploy time (canopy binds genesis
+`-68010` from the path segment).
+
 ---
 
 ## 2 — Request an onboard token
@@ -336,6 +394,11 @@ genesis `R'` ([ARC-021.3](../devdocs/arc/arc-021-payment-onboarding/03-phase-b-r
 Many forks issue **child grants under the same `R`** instead.
 
 ### 5b — Mode B user log (purist BYOK)
+
+Mode B is **agnostic to how the Univocity root was deployed** in §1 — Imutable
+(paths **B / B′**, default) or opt-in counterfactual UUPS (path **C**). Use the
+same `--univocity-addr` and `--chain-id` from your deploy manifest when requesting
+onboard tokens and provisioning.
 
 In Mode B the user (or their security team) holds `K(L)` in a signer they operate.
 Mandate **never** stores the root private key and **does not** add a

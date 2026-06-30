@@ -10,6 +10,7 @@ import { onboardModeCWallet, PrivyRestClient } from '@mandate/privy-admin';
 import { runRevokeModeCCommand } from './revoke-mode-c-command.js';
 import { runDescribePostRevokeActionsCommand } from './describe-post-revoke-command.js';
 import type { DelegationMode } from './delegation-mode.js';
+import { parseUnivocityVariant } from './univocity-genesis-variant.js';
 
 function usageOnboardRequest(): void {
 	console.error(`Usage: mandate-register onboard request [options]
@@ -58,6 +59,8 @@ Options (env fallbacks in parentheses):
   --univocity-addr      40-hex Univocity contract (E2E_CANOPY_UNIVOCITY_ADDR)
   --chain-id            EIP-155 chain id (E2E_CANOPY_CHAIN_ID)
   --forest-r            Optional dashed UUID for genesis R (generated if omitted)
+  --univocity-variant   imutable (default) or uups-counterfactual (path C)
+  --univocity-deployer  CREATE3 deployer 0x… (required with uups-counterfactual)
 
 Mode C (Privy):
   --wallet-id           E2E_MODE_C_USER_PRIVY_WALLET_ID
@@ -243,6 +246,8 @@ async function runProvision(): Promise<void> {
 	const univocityAddr = envOr(readFlag('--univocity-addr'), 'E2E_CANOPY_UNIVOCITY_ADDR');
 	const chainId = envOr(readFlag('--chain-id'), 'E2E_CANOPY_CHAIN_ID');
 	const forestR = readFlag('--forest-r') ?? process.env.MANDATE_FOREST_R;
+	const univocityVariant = parseUnivocityVariant(readFlag('--univocity-variant'));
+	const univocityDeployer = readFlag('--univocity-deployer');
 
 	if (
 		!onboardToken ||
@@ -255,6 +260,11 @@ async function runProvision(): Promise<void> {
 		usageProvision();
 	}
 
+	if (univocityVariant === 'uups-counterfactual' && !univocityDeployer) {
+		console.error('uups-counterfactual provisioning requires --univocity-deployer');
+		usageProvision();
+	}
+
 	const base = {
 		onboardToken: onboardToken!,
 		canopyBaseUrl: canopyBaseUrl!,
@@ -263,7 +273,9 @@ async function runProvision(): Promise<void> {
 		mode,
 		univocityAddr: univocityAddr!,
 		chainId: chainId!,
-		forestR: forestR ?? randomUUID()
+		forestR: forestR ?? randomUUID(),
+		...(univocityVariant ? { univocityVariant } : {}),
+		...(univocityDeployer ? { univocityDeployer } : {})
 	};
 
 	if (mode === 'C') {

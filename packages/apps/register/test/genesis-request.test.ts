@@ -4,12 +4,17 @@ import { COSE_ALG_ES256, COSE_ALG_KS256 } from '../src/cose-alg.js';
 import { buildGenesisCborBody } from '../src/genesis-request.js';
 import {
 	FOREST_GENESIS_LABEL_BOOTSTRAP_KEY,
+	FOREST_GENESIS_LABEL_BOOTSTRAP_LOG_ID,
 	FOREST_GENESIS_LABEL_CHAIN_ID,
 	FOREST_GENESIS_LABEL_GENESIS_ALG,
 	FOREST_GENESIS_LABEL_GENESIS_VERSION,
 	FOREST_GENESIS_LABEL_UNIVOCITY_ADDR,
-	FOREST_GENESIS_SCHEMA_V2
+	FOREST_GENESIS_LABEL_UNIVOCITY_DEPLOYER,
+	FOREST_GENESIS_LABEL_UNIVOCITY_VARIANT,
+	FOREST_GENESIS_SCHEMA_V2,
+	FOREST_GENESIS_UNIVOCITY_VARIANT_UUPS_COUNTERFACTUAL
 } from '../src/forest-genesis-labels.js';
+import { logIdPaddedWire32 } from '../src/log-id.js';
 
 function intKeyMap(body: Uint8Array): Map<number, unknown> {
 	const decoded = decodeCbor(body);
@@ -62,5 +67,27 @@ describe('buildGenesisCborBody', () => {
 				chainId: '84532'
 			})
 		).toThrow(/20 bytes/);
+	});
+
+	it('encodes uups-counterfactual genesis labels (-68016/-68017/-68010)', () => {
+		const logIdHex32 = 'a1b2c3d4e5f67890abcdef1234567890';
+		const bootstrapKey = new Uint8Array(20).fill(0xab);
+		const univocityAddr = new Uint8Array(20).fill(0xcd);
+		const deployer = new Uint8Array(20).fill(0xef);
+		const body = buildGenesisCborBody({
+			genesisAlg: COSE_ALG_KS256,
+			bootstrapKey,
+			univocityAddr,
+			chainId: '84532',
+			univocityVariant: 'uups-counterfactual',
+			univocityDeployer: deployer,
+			bootstrapLogId: logIdPaddedWire32(logIdHex32)
+		});
+		const map = intKeyMap(body);
+		expect(map.get(FOREST_GENESIS_LABEL_UNIVOCITY_VARIANT)).toBe(
+			FOREST_GENESIS_UNIVOCITY_VARIANT_UUPS_COUNTERFACTUAL
+		);
+		expect(map.get(FOREST_GENESIS_LABEL_UNIVOCITY_DEPLOYER)).toEqual(deployer);
+		expect(map.get(FOREST_GENESIS_LABEL_BOOTSTRAP_LOG_ID)).toEqual(logIdPaddedWire32(logIdHex32));
 	});
 });

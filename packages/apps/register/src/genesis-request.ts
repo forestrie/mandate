@@ -3,11 +3,15 @@ import { cborIntKeyBytes } from './cbor-int-key.js';
 import type { GenesisCborInput } from './genesis-cbor-input.js';
 import {
 	FOREST_GENESIS_LABEL_BOOTSTRAP_KEY,
+	FOREST_GENESIS_LABEL_BOOTSTRAP_LOG_ID,
 	FOREST_GENESIS_LABEL_CHAIN_ID,
 	FOREST_GENESIS_LABEL_GENESIS_ALG,
 	FOREST_GENESIS_LABEL_GENESIS_VERSION,
 	FOREST_GENESIS_LABEL_UNIVOCITY_ADDR,
-	FOREST_GENESIS_SCHEMA_V2
+	FOREST_GENESIS_LABEL_UNIVOCITY_DEPLOYER,
+	FOREST_GENESIS_LABEL_UNIVOCITY_VARIANT,
+	FOREST_GENESIS_SCHEMA_V2,
+	FOREST_GENESIS_UNIVOCITY_VARIANT_UUPS_COUNTERFACTUAL
 } from './forest-genesis-labels.js';
 
 function assertBootstrapKey(genesisAlg: number, bootstrapKey: Uint8Array): void {
@@ -36,5 +40,21 @@ export function buildGenesisCborBody(input: GenesisCborInput): Uint8Array {
 		[FOREST_GENESIS_LABEL_UNIVOCITY_ADDR, input.univocityAddr],
 		[FOREST_GENESIS_LABEL_CHAIN_ID, input.chainId]
 	]);
+
+	if (input.univocityVariant === 'uups-counterfactual') {
+		if (!input.univocityDeployer || input.univocityDeployer.length !== 20) {
+			throw new Error('uups-counterfactual genesis requires 20-byte univocityDeployer');
+		}
+		if (!input.bootstrapLogId || input.bootstrapLogId.length !== 32) {
+			throw new Error('uups-counterfactual genesis requires 32-byte bootstrapLogId');
+		}
+		map.set(
+			FOREST_GENESIS_LABEL_UNIVOCITY_VARIANT,
+			FOREST_GENESIS_UNIVOCITY_VARIANT_UUPS_COUNTERFACTUAL
+		);
+		map.set(FOREST_GENESIS_LABEL_UNIVOCITY_DEPLOYER, input.univocityDeployer);
+		map.set(FOREST_GENESIS_LABEL_BOOTSTRAP_LOG_ID, input.bootstrapLogId);
+	}
+
 	return cborIntKeyBytes(map);
 }
