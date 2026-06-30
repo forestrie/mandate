@@ -12,3 +12,4 @@ agent `bearerEnvKey` bearer routing.
 | Mode C → Mode B exit (same key) | [ADR-0005 exit step 3](../adr/adr-0005-byok-delegation-modes.md#operational-appendix--mode-c-kill-switch-and-exits-for-114) |
 | Secrets catalog                 | [service-secrets.md](../service-secrets.md)                                                                                 |
 | Live test                       | `task test:live:mode-b` ([FOR-210](https://linear.app/forestrie/issue/FOR-210))                                             |
+| Opt-in UUPS root (§1 path C)    | [FORKING.md §1](../../FORKING.md#1--deploy-univocity-on-chain-anchor)                                                        |
