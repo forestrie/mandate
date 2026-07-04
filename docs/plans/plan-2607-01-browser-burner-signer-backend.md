@@ -1,0 +1,195 @@
+---
+id: 2607-01
+status: active
+created: 2026-07-04
+refs: [ADR-0005, ARC-0022, FOR-322]
+---
+
+# Plan 2607-01 — browser burner signer backend
+
+**Status:** ACTIVE · **Created:** 2026-07-04
+
+**Related:** [ADR-0005 BYOK delegation modes](../adr/adr-0005-byok-delegation-modes.md),
+[ARC-0022 BYOK user-log delegation](../../../devdocs/arc/arc-0022-byok-user-log-delegation-and-operator-hosted-sealing.md)
+(invariants I1–I8, exits §7–§8),
+[FORKING.md §5b Mode B](../../FORKING.md#5b--mode-b-user-log-purist-byok),
+signing seam `packages/apps/ui/src/lib/signing/signing-backend.ts`.
+Linear issue: [FOR-322](https://linear.app/forestrie/issue/FOR-322).
+
+## Context
+
+The product claim we most need to *demonstrate*, not just assert, is
+**"own your keys if you want, and exit with zero friction"**: a user holding
+`K(L)` can revoke a hosted operator (Mode C) and continue signing their own
+delegation certificates under Mode B — pointed at any canopy × arbor operator —
+with **no re-registration** (the `publicRoot` verification anchor is unchanged;
+ARC-0022 I5). ADR-0005 §8 / the exit gradient (steps 3–5) is the whole point of
+mandate as a reference implementation.
+
+The demo is currently blocked by an irony in our *default* wallet: **Privy is
+itself custodial.** The Mode C→B story says "the user was always in control of
+the root key," but with the default Privy embedded wallet the key lives in
+Privy's TEE and the user cannot freely take it to another operator — being
+unable to hold the key is *precisely the failure mode Forestrie exists to
+avoid*. So the current UI path (`new PrivyEoaBackend()` at
+`packages/apps/ui/src/lib/signing/delegations/+page.svelte:236`) makes the exit
+demo depend on the one component that contradicts the claim.
+
+The signing surface is already abstracted behind a clean seam —
+`SigningBackend` (`signing-backend.ts`), with `PrivyEoaBackend` and the
+`SafeBackend` stub as implementations, selected at the single call site above.
+A hermetic double already exists (`VITE_E2E_PRIVY_MOCK` →
+`privy/mock-client.ts`), proving the seam takes alternate providers. This plan
+adds a **third backend**: a browser-local **burner key** the user (or, at
+deploy time, the harness) fully controls.
+
+**Framing / non-goals.** mandate is a *minimal* demo of what a real forest
+operator console could offer, and is expected to be **forked**. The weak
+security posture of a raw browser-held burner key is acceptable *for this
+purpose* and must be labelled as such. Privy stays the **default for the live
+`mandate-forestrie` instance**; a forker who wants a different custody model
+swaps the backend. Crucially: **once we know the burner-key backend works
+end-to-end, we no longer need to exercise the Privy integration to prove the
+BYOK/exit properties** — if Privy ever could not support the signing we need,
+we would simply use a different wallet. This plan does not change canopy,
+`@forestrie/delegation-cose`, the Mode C onboarding/revoke CLIs, or the
+reference-user-signer (Mode B server signer) — it is UI + deploy-config only.
+
+## Goal
+
+Ship a `LocalBurnerBackend` implementing `SigningBackend`, plus the
+deployment-time and runtime wiring to select it over Privy, so that the Mode
+C→B exit and "own-your-keys" properties can be demonstrated and **system-tested
+end-to-end with the operator/user in genuine, exportable control of `K(L)`** —
+no Privy dependency in the demo path.
+
+## Decisions
+
+Committed choices (alternatives weighed and rejected — kept here so the record
+survives, not to reopen):
+
+- **D1 — Selection is deploy-time env, prod stays Privy.** A new
+  `PUBLIC_MANDATE_SIGNER_BACKEND` (`privy` | `burner`, **default/blank ⇒
+  `privy`**) picks the backend per deployment, read via `$env/static/public`
+  like the existing `PUBLIC_DEFAULT_CHAIN_ID`. A **build-time guard**
+  (`import.meta.env`) drops the `local-burner-*` modules from any bundle where
+  the backend isn't `burner`, so the burner key path can never ship to the live
+  instance. The selection goes through a `resolveSigningBackend()` factory
+  written so a future *dev-only* runtime toggle can layer on without reshaping
+  callers. *(Rejected: runtime toggle as baseline — foot-gun in prod; two build
+  variants as the only mechanism — heavier than needed.)*
+- **D2 — Deploy-time key seeding: fixture inject + interactive create.**
+  System-testing seeds `localStorage` via Playwright `addInitScript` (the key is
+  a fixture, exactly like the `E2E_SIGNER_TEST_*` wallets in ADR-0005 and the
+  `VITE_E2E_PRIVY_MOCK` precedent). Interactive demos use a create / paste /
+  export path in the UI. *(Rejected: serving a pre-minted private key from a
+  deploy endpoint — that is the exact anti-pattern we're demonstrating against.)*
+- **D3 — Hard switch: burner mode hides Privy wallet UI.** When `burner` is
+  active the console shows no Privy login/connect; the demo turns on *one*
+  obviously user-controlled key. Console auth (app-token/BFF, `lib/auth/*`) is
+  separate from wallet signing and is unaffected — the factory supplies the
+  signing address that `getPrivySessionState()` supplies today.
+- **D4 — Raw hex in `localStorage`.** No passphrase/keystore encryption — the
+  page can read the key regardless, so encryption would be theatre that
+  contradicts "zero friction." The **"for demo purposes"** disclaimer does the
+  honest work.
+
+## Approach
+
+### A. `LocalBurnerBackend` (core seam implementation)
+
+New `packages/apps/ui/src/lib/signing/local-burner-backend.ts` implementing
+`SigningBackend` (`kind: 'eoa'`):
+
+- Holds a secp256k1 private key read from `localStorage` (raw hex, **D4**).
+  Signs `keccak256(Sig_structure)` with `@noble/curves/secp256k1` and returns
+  the 0x-prefixed 65-byte recoverable hex the seam expects — mirroring the
+  server-side pattern in `reference-user-signer/src/key-store.ts` /
+  `sig-utils.ts` and the test helper `testRootFromPrivateKey(...)` in
+  `build-browser-delegation-certificate.test.ts`. No Privy `v` normalization
+  needed (we control the recovery id); reuse `ks256-sig-utils.ts` where possible.
+- Derives `rootSignerAddress` = `keccak_256(pub[1:])[-20:]` and exposes it, so
+  the call site passes it where Privy's connected address goes today. Keeps
+  `buildBrowserDelegationCertificate(input, rootSignerAddress, backend)`
+  unchanged.
+- `isAvailable()` → a burner key is present in storage.
+- A tiny key module (`local-burner-key.ts`): `loadKey()`, `createKey()`,
+  `exportKey()`, `clearKey()`, `getAddress()`, storage-key constant.
+
+### B. Backend selection + deployment-time config (D1)
+
+Add `PUBLIC_MANDATE_SIGNER_BACKEND` to `packages/apps/ui/.env.example`
+(default/blank ⇒ `privy`). Replace the direct `new PrivyEoaBackend()` at
+`+page.svelte:236` with a `resolveSigningBackend()` factory (new
+`signing/resolve-backend.ts`) returning the configured backend and its address
+source. Guard the `local-burner-*` imports behind the build-time flag so they
+tree-shake out of non-`burner` bundles.
+
+### C. Burner UX in the delegation console (D3)
+
+When the burner backend is active and no key is present, the console shows a
+**"Create burner wallet"** action, prominently badged **"⚠ For demo purposes —
+this key lives unencrypted in your browser."** Plus:
+
+- **Export** button → downloads / copies the raw private-key hex (and address).
+- **Clear** button → removes the key (models the "throw it away" story).
+- The signing flow reads the address from the burner backend; Privy
+  connect/login UI is hidden in this mode. `signAndSubmit` currently gates on
+  `session.address` — the factory must supply that from the burner.
+
+### D. Deploy-time / system-testing pre-population (D2)
+
+System-testing seeds `localStorage` with a deploy-time-minted key via Playwright
+`addInitScript`, so a run starts already holding a known `K(L)` and can drive
+the full **onboard → sign → revoke Mode C → continue Mode B same key → export**
+gradient non-interactively. Mint the fixture key with the same tooling as
+`reference-user-signer` keys so Mode B and burner share one key-provenance story.
+Interactive demos use the create/paste/export path from §C.
+
+### E. Docs
+
+- ADR-0005: add the burner backend to the "Documented exits" / demo narrative as
+  the *frictionless self-custody* backend, explicitly contrasting it with Privy
+  custody and noting it is the seam we test the exit against.
+- FORKING.md: a short "Demo/system-test with a burner key" note next to §5b.
+- README/UI copy carries the "for demo purposes" disclaimer verbatim.
+
+## Verification
+
+**End-to-end demo (the actual acceptance criterion):** with
+`PUBLIC_MANDATE_SIGNER_BACKEND=burner`, run the full exit gradient against a
+lane-b canopy × arbor stack and observe, with **no Privy involved**:
+
+1. Create (or deploy-seed) a burner key; onboard a user log whose `K(L)` is that
+   key (canopy genesis `bootstrapKey` = burner address — ADR-0005 §7, canopy is
+   custody-agnostic).
+2. Sign a `delegation.required` window via `LocalBurnerBackend` → certificate
+   verifies against the registered `publicRoot` (`buildBrowserDelegationCertificate`
+   path, KS256).
+3. Demonstrate **exit with zero friction**: point the same key at a *different*
+   canopy × arbor operator (or Mode B signer) and sign again — **no
+   re-registration**, `publicRoot` unchanged (ARC-0022 I5). This is the money
+   shot for the product claim.
+4. **Export** the key; confirm it round-trips (re-import elsewhere signs an
+   equivalent certificate).
+
+**Automated (system-testing, D2):** a Playwright spec seeds the burner key via
+`addInitScript` and drives sign+submit hermetically — burner analog of the
+existing `sign-submit.spec.ts` / `pending-list.spec.ts`, no live Privy.
+
+**Unit:** `local-burner-backend.test.ts` reusing the
+`testRootFromPrivateKey`/`TEST_PRIVATE_KEY_HEX` fixtures already in
+`build-browser-delegation-certificate.test.ts` to assert the burner signature
+verifies through `verifyDelegationCertificateKs256`.
+
+**Guardrails:** assert prod default is `privy` (missing/blank env ⇒ Privy);
+assert the "for demo purposes" disclaimer renders whenever the burner backend is
+active; assert burner modules are absent from a `backend=privy` build (D1 guard).
+
+## Open questions
+
+- Do we also want a burner path for the **operator payment-authoritative** log
+  in system-testing (today an ownerless app-controlled Privy server wallet,
+  ADR-0005 §7), or keep this UI-only (user-log signing)? Default: UI-only.
+- Confirm no other call sites construct `PrivyEoaBackend` directly (grep shows
+  only `+page.svelte:236` + the stub) before routing through the factory.
