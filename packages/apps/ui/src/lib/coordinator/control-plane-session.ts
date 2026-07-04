@@ -1,6 +1,8 @@
 import { browser } from '$app/environment';
 import type { ControlPlaneScope } from '@mandate/coordinator-types';
 import { getConnectedEthereumProvider, getConnectedWalletAddress } from '$lib/privy/client.js';
+import { isBurnerBackend } from '$lib/signing/resolve-backend.js';
+import { signBurnerPersonalMessage } from '$lib/signing/local-burner-personal-sign.js';
 import {
 	ensureCachedControlPlaneSession,
 	type CachedControlPlaneSession
@@ -9,6 +11,12 @@ import {
 const cache = new Map<string, CachedControlPlaneSession>();
 
 async function signKs256Message(message: string): Promise<string> {
+	// Burner mode (plan-2607-01/FOR-322): sign the challenge with the browser-local
+	// key so the console needs no Privy wallet. Server recovers the burner address
+	// via EIP-191 and authorises it against the log.
+	if (isBurnerBackend()) {
+		return signBurnerPersonalMessage(message);
+	}
 	const provider = await getConnectedEthereumProvider();
 	if (!provider) {
 		throw new Error('Connect a wallet before signing the control-plane challenge.');

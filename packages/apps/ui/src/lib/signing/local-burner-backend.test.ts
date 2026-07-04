@@ -88,6 +88,17 @@ describe('LocalBurnerBackend', () => {
 		expect(() => importBurnerKey('0x1234')).toThrow();
 	});
 
+	it('personal_sign recovers the burner address (control-plane challenge)', async () => {
+		const { importBurnerKey, getBurnerAddress } = await import('./local-burner-key.js');
+		const { signBurnerPersonalMessage } = await import('./local-burner-personal-sign.js');
+		const { hashMessage, recoverAddress } = await import('viem');
+		importBurnerKey(`0x${TEST_PRIVATE_KEY_HEX}`);
+		const message = 'wcc-1:e2e-nonce:delegations:read';
+		const signature = signBurnerPersonalMessage(message);
+		const recovered = await recoverAddress({ hash: hashMessage(message), signature });
+		expect(recovered.toLowerCase()).toBe(getBurnerAddress());
+	});
+
 	it('signs a certificate that verifies against the burner address', async () => {
 		const { importBurnerKey, getBurnerAddress } = await import('./local-burner-key.js');
 		const { LocalBurnerBackend } = await import('./local-burner-backend.js');
