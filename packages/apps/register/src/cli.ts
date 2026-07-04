@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { randomUUID } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import { provisionInstance } from './provision.js';
 import {
 	getOnboardRequestStatus,
@@ -9,6 +10,8 @@ import {
 import { onboardModeCWallet, PrivyRestClient } from '@mandate/privy-admin';
 import { runRevokeModeCCommand } from './revoke-mode-c-command.js';
 import { runDescribePostRevokeActionsCommand } from './describe-post-revoke-command.js';
+import { runExitToModeBCommand } from './exit-to-mode-b-command.js';
+import type { OperatorRootKeysMap } from './describe-post-revoke-actions.js';
 import type { DelegationMode } from './delegation-mode.js';
 import { parseUnivocityVariant } from './univocity-genesis-variant.js';
 
@@ -129,6 +132,29 @@ Options (env fallbacks in parentheses):
   --key-directory-json          KEY_DIRECTORY JSON (KEY_DIRECTORY env)
   --operator-root-keys-json     OPERATOR_ROOT_KEYS JSON (OPERATOR_ROOT_KEYS env)
   --emit-updated-key-directory  Print only the pruned KEY_DIRECTORY for piping
+`);
+	process.exit(1);
+}
+
+function usageExitToModeB(): void {
+	console.error(`Usage: mandate-register privy exit-to-mode-b [options]
+
+ADR-0005 exit step 3 (Mode C→B): repoint the deployed agent's OPERATOR_ROOT_KEYS
+entry for a log from the mandate-operated signer to a user-operated signer, and
+set the agent's USER_SIGNER_BEARER. Preserves rootSignerAddress (public root is
+unchanged). Run \`privy revoke-mode-c\` first (exit step 2). Mutates Cloudflare
+Worker secrets via wrangler; prints a pre-exit summary before any change.
+
+Options (env fallbacks in parentheses):
+  --log-id                   32-hex log id to repoint (required)
+  --signer-url               User signer …/v1/sign URL (E2E_USER_SIGNER_URL)
+  --user-signer-bearer       Bearer for the agent→user-signer call (USER_SIGNER_BEARER)
+  --agent-name               wrangler --name target (default: mandate-agent)
+  --operator-root-keys-json  Current OPERATOR_ROOT_KEYS JSON (OPERATOR_ROOT_KEYS)
+  --key-ref                  keyRef for the repointed entry (default: user-remote)
+  --yes                      Skip the interactive prompt (required in non-interactive/CI)
+
+Prefer USER_SIGNER_BEARER env over --user-signer-bearer (argv is visible in ps).
 `);
 	process.exit(1);
 }
@@ -436,6 +462,77 @@ async function runDescribePostRevokeActions(): Promise<void> {
 	}
 }
 
+/** Apply a Cloudflare Worker secret via `wrangler secret put`, value piped on stdin. */
+function wranglerSecretPut(agentName: string, name: string, value: string): Promise<void> {
+	return new Promise((resolvePromise, reject) => {
+		const child = spawn('wrangler', ['secret', 'put', name, '--name', agentName], {
+			stdio: ['pipe', 'inherit', 'inherit']
+		});
+		child.on('error', reject);
+		child.on('close', (code) => {
+			if (code === 0) resolvePromise();
+			else reject(new Error(`wrangler secret put ${name} exited with code ${code ?? 1}`));
+		});
+		child.stdin.write(value);
+		child.stdin.end();
+	});
+}
+
+async function runExitToModeB(): Promise<void> {
+	const logId = readFlag('--log-id');
+	const userSignerUrl = envOr(readFlag('--signer-url'), 'E2E_USER_SIGNER_URL');
+	const bearerFromArgv = readFlag('--user-signer-bearer');
+	const userSignerBearer = bearerFromArgv ?? process.env.USER_SIGNER_BEARER?.trim();
+	const agentName = readFlag('--agent-name') ?? 'mandate-agent';
+	const operatorRootKeysJson =
+		readFlag('--operator-root-keys-json') ?? process.env.OPERATOR_ROOT_KEYS;
+	const keyRef = readFlag('--key-ref');
+	const yes = hasFlag('--yes');
+
+	if (!logId || !userSignerUrl || !userSignerBearer || !operatorRootKeysJson) {
+		usageExitToModeB();
+	}
+	if (bearerFromArgv !== undefined) {
+		console.error(
+			'warning: --user-signer-bearer on the command line is visible in process listings; ' +
+				'prefer USER_SIGNER_BEARER from the environment'
+		);
+	}
+
+	let operatorRootKeys: OperatorRootKeysMap;
+	try {
+		operatorRootKeys = JSON.parse(operatorRootKeysJson!) as OperatorRootKeysMap;
+	} catch {
+		console.error('failed to parse OPERATOR_ROOT_KEYS / --operator-root-keys-json as JSON');
+		process.exit(1);
+	}
+
+	const nonInteractive = process.env.CI === 'true' || !process.stdout.isTTY;
+
+	const exitCode = await runExitToModeBCommand(
+		{
+			logId: logId!,
+			agentName,
+			userSignerUrl: userSignerUrl!,
+			userSignerBearer: userSignerBearer!,
+			operatorRootKeys,
+			keyRef,
+			yes,
+			nonInteractive
+		},
+		{
+			stdout: (line) => console.log(line),
+			stderr: (line) => console.error(line),
+			confirm: promptYesNo,
+			applyAgentSecret: (name, value) => wranglerSecretPut(agentName, name, value)
+		}
+	);
+
+	if (exitCode !== 0) {
+		process.exit(exitCode);
+	}
+}
+
 async function main(): Promise<void> {
 	const sub = process.argv[2];
 	const cmd = process.argv[3];
@@ -475,6 +572,11 @@ async function main(): Promise<void> {
 		return;
 	}
 
+	if (sub === 'privy' && cmd === 'exit-to-mode-b') {
+		await runExitToModeB();
+		return;
+	}
+
 	console.log('mandate-register: Univocity instance provisioning (FOR-100)');
 	console.log('  subcommands:');
 	console.log('    onboard request          Self-service onboard token request (FOR-173)');
@@ -488,6 +590,7 @@ async function main(): Promise<void> {
 	console.log(
 		'    privy describe-post-revoke-actions  Post-revoke KEY_DIRECTORY checklist (FOR-131)'
 	);
+	console.log('    privy exit-to-mode-b   Repoint agent signer to user-operated signer (FOR-311)');
 	process.exit(sub ? 1 : 0);
 }
 
