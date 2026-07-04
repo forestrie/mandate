@@ -186,6 +186,28 @@ verifies through `verifyDelegationCertificateKs256`.
 assert the "for demo purposes" disclaimer renders whenever the burner backend is
 active; assert burner modules are absent from a `backend=privy` build (D1 guard).
 
+## Implementation status (FOR-322)
+
+| Slice | Status | Notes |
+| ----- | ------ | ----- |
+| A — `LocalBurnerBackend` + key store | Done | `signing/local-burner-{key,backend}.ts`; unit-verified via `verifyDelegationCertificateKs256` |
+| B — `resolveSigningBackend` + env | Done | `signing/resolve-backend.ts`; `$env/dynamic/public` (blank ⇒ privy, no build break); burner code-split via dynamic import |
+| C — Burner console UX | Done | Burner card (create/export/clear + disclaimer); Privy wallet UI hidden in burner mode |
+| D — System-test seeding + hermetic spec | Done | `seedBurnerKey()` (addInitScript); `burner-sign-submit.spec.ts` + `playwright.burner.config.ts` (`task test:e2e:ui:burner`) |
+| E — Docs | Done | ADR-0005 §"Demo/system-test burner backend"; FORKING §5c |
+| Build-time strip of burner chunk (D1 strict) | Deferred | Dynamic import code-splits but does not fully drop the chunk; verification follow-up |
+
+**Discovered during D:** the delegation console's **coordinator control-plane
+session** (used for `listPendingDelegations`, enabled reads/writes) also signed
+its challenge via Privy. Burner mode was non-functional until
+`control-plane-session.ts` was made backend-aware (EIP-191 `personal_sign` with
+the burner key). This overlaps the in-flight **FOR-129 wallet-challenge** work —
+the change is an additive burner branch; watch for conflicts on merge.
+
+**Caveat (external):** in-flight sealing/checkpoint work may keep full live
+system tests / deployment from going green independent of this change. The
+hermetic burner e2e above does not depend on the sealing pipeline.
+
 ## Open questions
 
 - Do we also want a burner path for the **operator payment-authoritative** log

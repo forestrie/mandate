@@ -540,6 +540,35 @@ re-registering grants:
 
 Thin agent index: [docs/agents/mode-b-fork.md](docs/agents/mode-b-fork.md).
 
+### 5c — Demo / system-test: burner signing (no Privy)
+
+The default `@mandate/ui` wallet is **Privy**, which is itself custodial — so it
+is a poor vehicle for *demonstrating* the very "own your keys, exit with zero
+friction" property Mode C→B relies on. For demos and system tests, serve the UI
+with a **browser-local burner key** the user fully controls instead
+([plan-2607-01](docs/plans/plan-2607-01-browser-burner-signer-backend.md),
+FOR-322).
+
+- **Select it at deploy time:** `PUBLIC_MANDATE_SIGNER_BACKEND=burner` (blank/unset
+  ⇒ `privy`; **never set `burner` for the live instance**). The delegation console
+  then shows a **Burner wallet** card (create / export / clear, flagged "for demo
+  purposes") and signs both the delegation certificate and the coordinator
+  control-plane challenge with the local key — no Privy at all.
+- **Onboard against it:** the burner address is the log's `K(L)` — pass it as the
+  genesis `bootstrapKey` / `--root-address` exactly like a Mode B user signer.
+  Canopy is custody-agnostic (ADR-0005 §7), so nothing downstream changes.
+- **Pre-populate for system tests:** seed `localStorage['mandate.burner.privateKey']`
+  before load (Playwright `addInitScript` via `seedBurnerKey()` in
+  `@forestrie/mandate-ui-e2e-kit`) so the operator starts already holding the key
+  and the exit gradient runs non-interactively. Hermetic spec + config:
+  `packages/tests/ui-e2e` → `task test:e2e:ui:burner`.
+
+This is the crispest way to show the Mode C→B claim end to end: the same key
+signs, revokes hosted access, and moves to another operator with **no
+re-registration** (`publicRoot` unchanged, ARC-0022 I5). Once the burner path is
+proven, the Privy integration no longer needs to be exercised to demonstrate the
+BYOK/exit properties — swap in any wallet that can sign KS256.
+
 ---
 
 ## 6 — Prove the setup: register a statement (SCRAPI)
