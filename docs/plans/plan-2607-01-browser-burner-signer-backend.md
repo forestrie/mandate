@@ -229,3 +229,23 @@ hermetic burner e2e above does not depend on the sealing pipeline.
   ADR-0005 §7), or keep this UI-only (user-log signing)? Default: UI-only.
 - Confirm no other call sites construct `PrivyEoaBackend` directly (grep shows
   only `+page.svelte:236` + the stub) before routing through the factory.
+
+## Review findings (2026-07-05, review-changes + adversarial crypto pass)
+
+Crypto verified correct: KS256 (raw keccak) and EIP-191 personal_sign schemes
+are distinct (not swapped), both low-S, domain-separated by the EIP-191 prefix,
+and round-trip tested against `verifyDelegationCertificateKs256` /
+`recoverMessageAddress`. Findings, worst first:
+
+| ID | Sev | Location | Finding | Action |
+| -- | --- | -------- | ------- | ------ |
+| R1 | ~~High (CI)~~ **fixed** | `+page.svelte` | `{:else}` block not reindented → `prettier --check` (root `lint`) fails | Fixed in-branch (`style(ui): prettier reindent…`) |
+| R2 | Medium | `resolve-backend.ts`, build | Burner chunk ships in the Privy bundle; activation rests solely on `PUBLIC_MANDATE_SIGNER_BACKEND`. Default is fail-safe (blank/unknown ⇒ privy) but there is no build-time strip or prod-hostname refusal | = deferred D1. Land the build-time guard (and/or a runtime refusal on a production origin) **before** the live instance ships |
+| R3 | Low | `local-burner-backend.ts:34`, `local-burner-personal-sign.ts:21` | `sig.recovery` can be 2/3 (r ≥ n, ~2⁻¹²⁷); code emits v=2/3 or 29/30 which strict verifiers reject — liveness edge, not forgery. Matches existing `reference-user-signer` `signRecoverableLowS` pattern | Add a repo-wide `recovery ∈ {0,1}` assert/retry in the shared sig utils (not just these files) |
+| R4 | Low | `local-burner-backend.ts:34`, `local-burner-personal-sign.ts:21` | `sig.recovery ?? 0` masks an (impossible today) undefined into a wrong v silently | Throw if `recovery == null` |
+| R5 | Low | `+page.svelte` `exportBurner` | Clipboard-failure fallback renders the private key into the DOM `message` (screenshot/log exposure) | Download-only or masked reveal instead of inline text |
+| R6 | Low | `build-browser-delegation-certificate.ts` / `ks256-sig-utils.ts` | `normalizePrivyKs256Signature` is now backend-agnostic; name misleads | Rename to `normalizeKs256Signature` |
+| R7 | Low | test coverage | No test asserts privy-mode hides the burner card / uses the Privy backend, nor the factory `blank ⇒ privy` default | Add a small guard test |
+
+R2 is the only pre-live blocker (already tracked as D1). R3–R7 are hardening/
+cleanup, deferrable. R1 is resolved.
