@@ -241,11 +241,11 @@ and round-trip tested against `verifyDelegationCertificateKs256` /
 | -- | --- | -------- | ------- | ------ |
 | R1 | ~~High (CI)~~ **fixed** | `+page.svelte` | `{:else}` block not reindented → `prettier --check` (root `lint`) fails | Fixed in-branch (`style(ui): prettier reindent…`) |
 | R2 | Medium | `resolve-backend.ts`, build | Burner chunk ships in the Privy bundle; activation rests solely on `PUBLIC_MANDATE_SIGNER_BACKEND`. Default is fail-safe (blank/unknown ⇒ privy) but there is no build-time strip or prod-hostname refusal | = deferred D1. Land the build-time guard (and/or a runtime refusal on a production origin) **before** the live instance ships |
-| R3 | Low | `local-burner-backend.ts:34`, `local-burner-personal-sign.ts:21` | `sig.recovery` can be 2/3 (r ≥ n, ~2⁻¹²⁷); code emits v=2/3 or 29/30 which strict verifiers reject — liveness edge, not forgery. Matches existing `reference-user-signer` `signRecoverableLowS` pattern | Add a repo-wide `recovery ∈ {0,1}` assert/retry in the shared sig utils (not just these files) |
-| R4 | Low | `local-burner-backend.ts:34`, `local-burner-personal-sign.ts:21` | `sig.recovery ?? 0` masks an (impossible today) undefined into a wrong v silently | Throw if `recovery == null` |
-| R5 | Low | `+page.svelte` `exportBurner` | Clipboard-failure fallback renders the private key into the DOM `message` (screenshot/log exposure) | Download-only or masked reveal instead of inline text |
-| R6 | Low | `build-browser-delegation-certificate.ts` / `ks256-sig-utils.ts` | `normalizePrivyKs256Signature` is now backend-agnostic; name misleads | Rename to `normalizeKs256Signature` |
-| R7 | Low | test coverage | No test asserts privy-mode hides the burner card / uses the Privy backend, nor the factory `blank ⇒ privy` default | Add a small guard test |
+| R3 | ~~Low~~ **fixed** | `local-burner-backend.ts`, `local-burner-personal-sign.ts` | `sig.recovery` can be 2/3 (r ≥ n, ~2⁻¹²⁷) → v strict verifiers reject | Both signers now assert `recovery ∈ {0,1}` and throw otherwise |
+| R4 | ~~Low~~ **fixed** | same | `sig.recovery ?? 0` masked an undefined into a wrong v | Same guard removes the `?? 0` fallback |
+| R5 | Low (deferred) | `+page.svelte` `exportBurner` | Clipboard-failure fallback renders the private key into the DOM `message` | Download-only / masked reveal — deferred (demo-only fallback) |
+| R6 | ~~Low~~ **fixed** | `ks256-sig-utils.ts` + caller | `normalizePrivyKs256Signature` was backend-agnostic; name misled | Renamed `normalizeKs256Signature` (3 refs) |
+| R7 | ~~Low~~ **fixed** | `resolve-backend.test.ts` | No test on the factory default / burner selection | Added: `blank/unknown ⇒ privy`, `burner` only on exact trim+lowercase match |
 
-R2 is the only pre-live blocker (already tracked as D1). R3–R7 are hardening/
-cleanup, deferrable. R1 is resolved.
+R2 is the only pre-live blocker (tracked as D1). R1, R3, R4, R6, R7 are resolved;
+R5 (demo-only clipboard fallback) is deferred.

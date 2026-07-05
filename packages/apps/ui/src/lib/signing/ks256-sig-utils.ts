@@ -19,8 +19,12 @@ export function parseEthAddress(address: string): Uint8Array {
 	return out;
 }
 
-/** Privy returns 0x-prefixed 65-byte hex; v is often 27/28. */
-export function normalizePrivyKs256Signature(hex: string): Uint8Array {
+/**
+ * Normalise a 0x-prefixed 65-byte KS256 signature (r‖s‖v) from any backend:
+ * strips a 27/28 `v` to 0/1 and enforces low-S. Privy returns v as 27/28; the
+ * browser burner backend already returns 0/1 low-S (passes through unchanged).
+ */
+export function normalizeKs256Signature(hex: string): Uint8Array {
 	const stripped = hex.trim().replace(/^0x/i, '');
 	if (stripped.length !== KS256_SIG_BYTES * 2) {
 		throw new Error(`Privy signature must be ${KS256_SIG_BYTES} bytes`);

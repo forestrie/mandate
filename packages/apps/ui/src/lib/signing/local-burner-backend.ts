@@ -12,7 +12,7 @@ import { hasBurnerKey, loadBurnerKeyHex } from './local-burner-key.js';
  * controls, instead of the custodial Privy embedded wallet. Emits the same
  * 0x-prefixed 65-byte recoverable signature the cert builder expects; recovery
  * id is already in [0,1] and the signature is low-S, so it passes through
- * `normalizePrivyKs256Signature` unchanged. See `local-burner-key.ts` for the
+ * `normalizeKs256Signature` unchanged. See `local-burner-key.ts` for the
  * (deliberately weak) custody model.
  */
 export class LocalBurnerBackend implements SigningBackend {
@@ -29,9 +29,12 @@ export class LocalBurnerBackend implements SigningBackend {
 		}
 		const hash = keccak_256(sigStructureBytes);
 		const sig = secp256k1.sign(hash, hexToBytes(keyHex), { lowS: true });
+		if (sig.recovery !== 0 && sig.recovery !== 1) {
+			throw new Error(`unexpected secp256k1 recovery id: ${sig.recovery}`);
+		}
 		const out = new Uint8Array(KS256_SIG_BYTES);
 		out.set(sig.toCompactRawBytes(), 0);
-		out[64] = sig.recovery ?? 0;
+		out[64] = sig.recovery;
 		return bytesToHex(out);
 	}
 }
