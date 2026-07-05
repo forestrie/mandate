@@ -146,6 +146,27 @@ true`.
   FOR-110).
 - **UI** adds the per-log pending-delegations queue + revoke control (decision 5).
 
+### Demo / system-test burner backend (FOR-322)
+
+Privy is the production default wallet, but it is **custodial** — which makes it a
+poor vehicle for _demonstrating_ the own-your-keys / zero-friction-exit property
+this ADR is built around. For demos and system tests the UI can select a
+**browser-local burner-key** signing backend the user fully controls
+(`PUBLIC_MANDATE_SIGNER_BACKEND=burner`; blank ⇒ `privy`, never `burner` in prod).
+In this mode the same local key signs **both** the delegation certificate and the
+coordinator control-plane challenge, so the console runs with **no Privy**, and
+the burner address is the log's `K(L)` (Canopy is custody-agnostic, decision 7).
+
+This is the seam against which the exit gradient is exercised: it makes exit
+steps 3–4 (Mode B same key / export) concrete and non-interactive — the key can
+be pre-seeded into `localStorage` at deploy time and re-pointed at another
+operator with no re-registration (I5). Its custody posture is **deliberately weak
+and labelled "for demo purposes"**; mandate is forkable and real operators supply
+their own wallet. Once the burner path is proven, the Privy integration need not
+be re-exercised to demonstrate the BYOK/exit properties. See
+[plan-2607-01](plans/plan-2607-01-browser-burner-signer-backend.md) and
+[FORKING §5c](../../FORKING.md#5c--demo--system-test-burner-signing-no-privy).
+
 ## Consequences
 
 - Mandate ships a true-BYOK path (B) with **no key custody**, and a hosted path

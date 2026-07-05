@@ -4,7 +4,7 @@ import {
 } from '@forestrie/delegation-cose';
 import type { PendingEntry } from '@mandate/coordinator-types';
 import { base64ToBytes } from './bytes.js';
-import { normalizePrivyKs256Signature, parseEthAddress } from './ks256-sig-utils.js';
+import { normalizeKs256Signature, parseEthAddress } from './ks256-sig-utils.js';
 import type { SigningBackend } from './signing-backend.js';
 
 export function pendingEntryToDelegationInput(
@@ -36,7 +36,7 @@ export async function buildBrowserDelegationCertificate(
 		rootSignerAddress,
 		async (sigStructureBytes) => {
 			const signatureHex = await backend.signKs256SigStructure(sigStructureBytes);
-			return normalizePrivyKs256Signature(signatureHex);
+			return normalizeKs256Signature(signatureHex);
 		}
 	);
 }

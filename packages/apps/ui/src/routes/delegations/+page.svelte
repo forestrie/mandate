@@ -25,7 +25,13 @@
 		logoutPrivy,
 		setSelectedChainId
 	} from '$lib/privy/stores.svelte.js';
-	import { PrivyEoaBackend } from '$lib/signing/privy-eoa-backend.js';
+	import { isBurnerBackend, resolveSigningBackend } from '$lib/signing/resolve-backend.js';
+	import {
+		clearBurnerKey,
+		createBurnerKey,
+		exportBurnerKeyHex,
+		getBurnerAddress
+	} from '$lib/signing/local-burner-key.js';
 	import { buildSubmitCertificateBodyFromCert } from './submit-payload.js';
 	import {
 		enabledBadgeLabels,
@@ -63,6 +69,48 @@
 	const supportedChains = $derived(getSupportedMandateChains());
 	const killSwitch = $derived(killSwitchGuidance());
 
+	// Deploy-time backend selection (plan-2607-01 / FOR-322). In burner mode the
+	// signing address comes from the browser-local key rather than the Privy session.
+	const burnerMode = isBurnerBackend();
+	let burnerAddress = $state<string | null>(null);
+	const signerAddress = $derived(burnerMode ? burnerAddress : session.address);
+
+	function refreshBurnerAddress() {
+		burnerAddress = getBurnerAddress();
+	}
+
+	function createBurner() {
+		error = null;
+		try {
+			createBurnerKey();
+			refreshBurnerAddress();
+			message = 'Created a demo burner wallet. Export the key to keep it.';
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to create burner wallet';
+		}
+	}
+
+	async function exportBurner() {
+		const key = exportBurnerKeyHex();
+		if (!key) {
+			error = 'No burner key to export';
+			return;
+		}
+		try {
+			await navigator.clipboard.writeText(key);
+			message = 'Burner private key copied to clipboard.';
+		} catch {
+			// Clipboard blocked (e.g. headless) — surface the key inline as a fallback.
+			message = `Burner private key: ${key}`;
+		}
+	}
+
+	function clearBurner() {
+		clearBurnerKey();
+		refreshBurnerAddress();
+		message = 'Burner key cleared from this browser.';
+	}
+
 	function openKillSwitchRunbook() {
 		window.open(KILL_SWITCH_RUNBOOK_URL, '_blank', 'noopener,noreferrer');
 	}
@@ -78,7 +126,11 @@
 	);
 
 	onMount(() => {
-		void initPrivySession();
+		if (burnerMode) {
+			refreshBurnerAddress();
+		} else {
+			void initPrivySession();
+		}
 		const fromQuery = page.url.searchParams.get('authLogId');
 		if (fromQuery) {
 			authLogId = fromQuery;
@@ -221,8 +273,10 @@
 	}
 
 	async function signAndSubmit(entry: PendingEntry) {
-		if (!session.authenticated || !session.address) {
-			error = 'Connect a wallet before signing';
+		if (!signerAddress) {
+			error = burnerMode
+				? 'Create a burner wallet before signing'
+				: 'Connect a wallet before signing';
 			return;
 		}
 		signingId = entry.id;
@@ -233,8 +287,8 @@
 		try {
 			const now = Math.floor(Date.now() / 1000);
 			const input = pendingEntryToDelegationInput(entry, now);
-			const backend = new PrivyEoaBackend();
-			const certificate = await buildBrowserDelegationCertificate(input, session.address, backend);
+			const backend = await resolveSigningBackend();
+			const certificate = await buildBrowserDelegationCertificate(input, signerAddress, backend);
 			await submitDelegationCertificate(buildSubmitCertificateBodyFromCert(entry, certificate));
 			rowStatus = { ...rowStatus, [entry.id]: 'signed' };
 			persistRowStatus();
@@ -266,71 +320,100 @@
 		</div>
 	</Card>
 
-	<Card class="space-y-4 p-6">
-		<div class="flex items-center justify-between gap-4">
-			<h2 class="text-lg font-medium">Wallet</h2>
-			{#if session.address}
-				<Badge>{session.address.slice(0, 6)}…{session.address.slice(-4)}</Badge>
-			{/if}
-		</div>
-		{#if session.error}
-			<Alert variant="destructive" title="Privy">{session.error}</Alert>
-		{/if}
-		<label class="flex flex-col gap-1 text-sm">
-			<span class="font-medium text-zinc-800">Network</span>
-			<select
-				class="rounded-md border border-zinc-300 bg-white px-3 py-2"
-				value={String(session.selectedChainId)}
-				onchange={onChainChange}
-			>
-				{#each supportedChains as chain (chain.chainId)}
-					<option value={String(chain.chainId)}>{chain.name} ({chain.chainId})</option>
-				{/each}
-			</select>
-		</label>
-		{#if session.chainId !== null}
-			<p class="text-sm text-zinc-600">
-				Wallet network: chainId {session.chainId}
-				{#if session.chainId === session.selectedChainId}
-					(aligned)
-				{/if}
-			</p>
-		{/if}
-		{#if session.authenticated}
-			<Button variant="outline" onclick={() => disconnectWallet()}>Disconnect</Button>
-		{:else}
-			<div class="flex flex-col gap-3">
-				<div class="flex flex-col gap-3 sm:flex-row">
-					<Input
-						bind:value={email}
-						type="email"
-						placeholder="Email for Privy login"
-						class="flex-1"
-					/>
-					<Button variant="outline" disabled={otpBusy || !email.trim()} onclick={sendLoginCode}>
-						{otpSent ? 'Resend code' : 'Send code'}
-					</Button>
-				</div>
-				{#if otpSent}
-					<div class="flex flex-col gap-3 sm:flex-row">
-						<Input
-							bind:value={otpCode}
-							data-testid="privy-otp"
-							type="password"
-							inputmode="numeric"
-							maxlength={8}
-							placeholder="Verification code"
-							class="flex-1"
-							autocomplete="one-time-code"
-						/>
-						<Button disabled={otpBusy || !otpCode.trim()} onclick={connectWallet}>
-							Connect wallet
-						</Button>
-					</div>
+	{#if burnerMode}
+		<Card class="space-y-4 p-6">
+			<div class="flex items-center justify-between gap-4">
+				<h2 class="text-lg font-medium">Burner wallet</h2>
+				{#if burnerAddress}
+					<Badge>{burnerAddress.slice(0, 6)}…{burnerAddress.slice(-4)}</Badge>
 				{/if}
 			</div>
-		{/if}
-	</Card>
+			<Alert variant="destructive" title="⚠ For demo purposes">
+				This key lives unencrypted in your browser. It exists to demonstrate self-custody and
+				zero-friction exit — it is not secure storage. Export it to keep control; clear it to
+				discard.
+			</Alert>
+			{#if burnerAddress}
+				<p class="font-mono text-sm break-all text-zinc-600">{burnerAddress}</p>
+				<div class="flex flex-col gap-3 sm:flex-row">
+					<Button variant="outline" onclick={exportBurner}>Export private key</Button>
+					<Button variant="outline" onclick={clearBurner}>Clear key</Button>
+				</div>
+			{:else}
+				<p class="text-sm text-zinc-600">
+					No burner key in this browser. Create one to sign delegation certificates with a key you
+					fully control.
+				</p>
+				<Button onclick={createBurner}>Create burner wallet</Button>
+			{/if}
+		</Card>
+	{:else}
+		<Card class="space-y-4 p-6">
+			<div class="flex items-center justify-between gap-4">
+				<h2 class="text-lg font-medium">Wallet</h2>
+				{#if session.address}
+					<Badge>{session.address.slice(0, 6)}…{session.address.slice(-4)}</Badge>
+				{/if}
+			</div>
+			{#if session.error}
+				<Alert variant="destructive" title="Privy">{session.error}</Alert>
+			{/if}
+			<label class="flex flex-col gap-1 text-sm">
+				<span class="font-medium text-zinc-800">Network</span>
+				<select
+					class="rounded-md border border-zinc-300 bg-white px-3 py-2"
+					value={String(session.selectedChainId)}
+					onchange={onChainChange}
+				>
+					{#each supportedChains as chain (chain.chainId)}
+						<option value={String(chain.chainId)}>{chain.name} ({chain.chainId})</option>
+					{/each}
+				</select>
+			</label>
+			{#if session.chainId !== null}
+				<p class="text-sm text-zinc-600">
+					Wallet network: chainId {session.chainId}
+					{#if session.chainId === session.selectedChainId}
+						(aligned)
+					{/if}
+				</p>
+			{/if}
+			{#if session.authenticated}
+				<Button variant="outline" onclick={() => disconnectWallet()}>Disconnect</Button>
+			{:else}
+				<div class="flex flex-col gap-3">
+					<div class="flex flex-col gap-3 sm:flex-row">
+						<Input
+							bind:value={email}
+							type="email"
+							placeholder="Email for Privy login"
+							class="flex-1"
+						/>
+						<Button variant="outline" disabled={otpBusy || !email.trim()} onclick={sendLoginCode}>
+							{otpSent ? 'Resend code' : 'Send code'}
+						</Button>
+					</div>
+					{#if otpSent}
+						<div class="flex flex-col gap-3 sm:flex-row">
+							<Input
+								bind:value={otpCode}
+								data-testid="privy-otp"
+								type="password"
+								inputmode="numeric"
+								maxlength={8}
+								placeholder="Verification code"
+								class="flex-1"
+								autocomplete="one-time-code"
+							/>
+							<Button disabled={otpBusy || !otpCode.trim()} onclick={connectWallet}>
+								Connect wallet
+							</Button>
+						</div>
+					{/if}
+				</div>
+			{/if}
+		</Card>
+	{/if}
 
 	<Card class="space-y-4 p-6">
 		<h2 class="text-lg font-medium">Kill switch</h2>
