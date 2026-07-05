@@ -18,7 +18,7 @@ Linear issue: [FOR-322](https://linear.app/forestrie/issue/FOR-322).
 
 ## Context
 
-The product claim we most need to *demonstrate*, not just assert, is
+The product claim we most need to _demonstrate_, not just assert, is
 **"own your keys if you want, and exit with zero friction"**: a user holding
 `K(L)` can revoke a hosted operator (Mode C) and continue signing their own
 delegation certificates under Mode B — pointed at any canopy × arbor operator —
@@ -26,12 +26,12 @@ with **no re-registration** (the `publicRoot` verification anchor is unchanged;
 ARC-0022 I5). ADR-0005 §8 / the exit gradient (steps 3–5) is the whole point of
 mandate as a reference implementation.
 
-The demo is currently blocked by an irony in our *default* wallet: **Privy is
+The demo is currently blocked by an irony in our _default_ wallet: **Privy is
 itself custodial.** The Mode C→B story says "the user was always in control of
 the root key," but with the default Privy embedded wallet the key lives in
 Privy's TEE and the user cannot freely take it to another operator — being
-unable to hold the key is *precisely the failure mode Forestrie exists to
-avoid*. So the current UI path (`new PrivyEoaBackend()` at
+unable to hold the key is _precisely the failure mode Forestrie exists to
+avoid_. So the current UI path (`new PrivyEoaBackend()` at
 `packages/apps/ui/src/lib/signing/delegations/+page.svelte:236`) makes the exit
 demo depend on the one component that contradicts the claim.
 
@@ -43,10 +43,10 @@ A hermetic double already exists (`VITE_E2E_PRIVY_MOCK` →
 adds a **third backend**: a browser-local **burner key** the user (or, at
 deploy time, the harness) fully controls.
 
-**Framing / non-goals.** mandate is a *minimal* demo of what a real forest
+**Framing / non-goals.** mandate is a _minimal_ demo of what a real forest
 operator console could offer, and is expected to be **forked**. The weak
-security posture of a raw browser-held burner key is acceptable *for this
-purpose* and must be labelled as such. Privy stays the **default for the live
+security posture of a raw browser-held burner key is acceptable _for this
+purpose_ and must be labelled as such. Privy stays the **default for the live
 `mandate-forestrie` instance**; a forker who wants a different custody model
 swaps the backend. Crucially: **once we know the burner-key backend works
 end-to-end, we no longer need to exercise the Privy integration to prove the
@@ -75,17 +75,17 @@ survives, not to reopen):
   (`import.meta.env`) drops the `local-burner-*` modules from any bundle where
   the backend isn't `burner`, so the burner key path can never ship to the live
   instance. The selection goes through a `resolveSigningBackend()` factory
-  written so a future *dev-only* runtime toggle can layer on without reshaping
-  callers. *(Rejected: runtime toggle as baseline — foot-gun in prod; two build
-  variants as the only mechanism — heavier than needed.)*
+  written so a future _dev-only_ runtime toggle can layer on without reshaping
+  callers. _(Rejected: runtime toggle as baseline — foot-gun in prod; two build
+  variants as the only mechanism — heavier than needed.)_
 - **D2 — Deploy-time key seeding: fixture inject + interactive create.**
   System-testing seeds `localStorage` via Playwright `addInitScript` (the key is
   a fixture, exactly like the `E2E_SIGNER_TEST_*` wallets in ADR-0005 and the
   `VITE_E2E_PRIVY_MOCK` precedent). Interactive demos use a create / paste /
-  export path in the UI. *(Rejected: serving a pre-minted private key from a
-  deploy endpoint — that is the exact anti-pattern we're demonstrating against.)*
+  export path in the UI. _(Rejected: serving a pre-minted private key from a
+  deploy endpoint — that is the exact anti-pattern we're demonstrating against.)_
 - **D3 — Hard switch: burner mode hides Privy wallet UI.** When `burner` is
-  active the console shows no Privy login/connect; the demo turns on *one*
+  active the console shows no Privy login/connect; the demo turns on _one_
   obviously user-controlled key. Console auth (app-token/BFF, `lib/auth/*`) is
   separate from wallet signing and is unaffected — the factory supplies the
   signing address that `getPrivySessionState()` supplies today.
@@ -149,7 +149,7 @@ Interactive demos use the create/paste/export path from §C.
 ### E. Docs
 
 - ADR-0005: add the burner backend to the "Documented exits" / demo narrative as
-  the *frictionless self-custody* backend, explicitly contrasting it with Privy
+  the _frictionless self-custody_ backend, explicitly contrasting it with Privy
   custody and noting it is the seam we test the exit against.
 - FORKING.md: a short "Demo/system-test with a burner key" note next to §5b.
 - README/UI copy carries the "for demo purposes" disclaimer verbatim.
@@ -166,7 +166,7 @@ lane-b canopy × arbor stack and observe, with **no Privy involved**:
 2. Sign a `delegation.required` window via `LocalBurnerBackend` → certificate
    verifies against the registered `publicRoot` (`buildBrowserDelegationCertificate`
    path, KS256).
-3. Demonstrate **exit with zero friction**: point the same key at a *different*
+3. Demonstrate **exit with zero friction**: point the same key at a _different_
    canopy × arbor operator (or Mode B signer) and sign again — **no
    re-registration**, `publicRoot` unchanged (ARC-0022 I5). This is the money
    shot for the product claim.
@@ -188,14 +188,14 @@ active; assert burner modules are absent from a `backend=privy` build (D1 guard)
 
 ## Implementation status (FOR-322)
 
-| Slice | Status | Notes |
-| ----- | ------ | ----- |
-| A — `LocalBurnerBackend` + key store | Done | `signing/local-burner-{key,backend}.ts`; unit-verified via `verifyDelegationCertificateKs256` |
-| B — `resolveSigningBackend` + env | Done | `signing/resolve-backend.ts`; `$env/dynamic/public` (blank ⇒ privy, no build break); burner code-split via dynamic import |
-| C — Burner console UX | Done | Burner card (create/export/clear + disclaimer); Privy wallet UI hidden in burner mode |
-| D — System-test seeding + hermetic spec | Done | `seedBurnerKey()` (addInitScript); `burner-sign-submit.spec.ts` + `playwright.burner.config.ts` (`task test:e2e:ui:burner`) |
-| E — Docs | Done | ADR-0005 §"Demo/system-test burner backend"; FORKING §5c |
-| Build-time strip of burner chunk (D1 strict) | Deferred | Dynamic import code-splits but does not fully drop the chunk; verification follow-up |
+| Slice                                        | Status   | Notes                                                                                                                       |
+| -------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------- |
+| A — `LocalBurnerBackend` + key store         | Done     | `signing/local-burner-{key,backend}.ts`; unit-verified via `verifyDelegationCertificateKs256`                               |
+| B — `resolveSigningBackend` + env            | Done     | `signing/resolve-backend.ts`; `$env/dynamic/public` (blank ⇒ privy, no build break); burner code-split via dynamic import   |
+| C — Burner console UX                        | Done     | Burner card (create/export/clear + disclaimer); Privy wallet UI hidden in burner mode                                       |
+| D — System-test seeding + hermetic spec      | Done     | `seedBurnerKey()` (addInitScript); `burner-sign-submit.spec.ts` + `playwright.burner.config.ts` (`task test:e2e:ui:burner`) |
+| E — Docs                                     | Done     | ADR-0005 §"Demo/system-test burner backend"; FORKING §5c                                                                    |
+| Build-time strip of burner chunk (D1 strict) | Deferred | Dynamic import code-splits but does not fully drop the chunk; verification follow-up                                        |
 
 **Discovered during D:** the delegation console's **coordinator control-plane
 session** (used for `listPendingDelegations`, enabled reads/writes) also signed
@@ -237,15 +237,15 @@ are distinct (not swapped), both low-S, domain-separated by the EIP-191 prefix,
 and round-trip tested against `verifyDelegationCertificateKs256` /
 `recoverMessageAddress`. Findings, worst first:
 
-| ID | Sev | Location | Finding | Action |
-| -- | --- | -------- | ------- | ------ |
-| R1 | ~~High (CI)~~ **fixed** | `+page.svelte` | `{:else}` block not reindented → `prettier --check` (root `lint`) fails | Fixed in-branch (`style(ui): prettier reindent…`) |
-| R2 | Medium | `resolve-backend.ts`, build | Burner chunk ships in the Privy bundle; activation rests solely on `PUBLIC_MANDATE_SIGNER_BACKEND`. Default is fail-safe (blank/unknown ⇒ privy) but there is no build-time strip or prod-hostname refusal | = deferred D1. Land the build-time guard (and/or a runtime refusal on a production origin) **before** the live instance ships |
-| R3 | ~~Low~~ **fixed** | `local-burner-backend.ts`, `local-burner-personal-sign.ts` | `sig.recovery` can be 2/3 (r ≥ n, ~2⁻¹²⁷) → v strict verifiers reject | Both signers now assert `recovery ∈ {0,1}` and throw otherwise |
-| R4 | ~~Low~~ **fixed** | same | `sig.recovery ?? 0` masked an undefined into a wrong v | Same guard removes the `?? 0` fallback |
-| R5 | Low (deferred) | `+page.svelte` `exportBurner` | Clipboard-failure fallback renders the private key into the DOM `message` | Download-only / masked reveal — deferred (demo-only fallback) |
-| R6 | ~~Low~~ **fixed** | `ks256-sig-utils.ts` + caller | `normalizePrivyKs256Signature` was backend-agnostic; name misled | Renamed `normalizeKs256Signature` (3 refs) |
-| R7 | ~~Low~~ **fixed** | `resolve-backend.test.ts` | No test on the factory default / burner selection | Added: `blank/unknown ⇒ privy`, `burner` only on exact trim+lowercase match |
+| ID  | Sev                     | Location                                                   | Finding                                                                                                                                                                                                    | Action                                                                                                                        |
+| --- | ----------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| R1  | ~~High (CI)~~ **fixed** | `+page.svelte`                                             | `{:else}` block not reindented → `prettier --check` (root `lint`) fails                                                                                                                                    | Fixed in-branch (`style(ui): prettier reindent…`)                                                                             |
+| R2  | Medium                  | `resolve-backend.ts`, build                                | Burner chunk ships in the Privy bundle; activation rests solely on `PUBLIC_MANDATE_SIGNER_BACKEND`. Default is fail-safe (blank/unknown ⇒ privy) but there is no build-time strip or prod-hostname refusal | = deferred D1. Land the build-time guard (and/or a runtime refusal on a production origin) **before** the live instance ships |
+| R3  | ~~Low~~ **fixed**       | `local-burner-backend.ts`, `local-burner-personal-sign.ts` | `sig.recovery` can be 2/3 (r ≥ n, ~2⁻¹²⁷) → v strict verifiers reject                                                                                                                                      | Both signers now assert `recovery ∈ {0,1}` and throw otherwise                                                                |
+| R4  | ~~Low~~ **fixed**       | same                                                       | `sig.recovery ?? 0` masked an undefined into a wrong v                                                                                                                                                     | Same guard removes the `?? 0` fallback                                                                                        |
+| R5  | Low (deferred)          | `+page.svelte` `exportBurner`                              | Clipboard-failure fallback renders the private key into the DOM `message`                                                                                                                                  | Download-only / masked reveal — deferred (demo-only fallback)                                                                 |
+| R6  | ~~Low~~ **fixed**       | `ks256-sig-utils.ts` + caller                              | `normalizePrivyKs256Signature` was backend-agnostic; name misled                                                                                                                                           | Renamed `normalizeKs256Signature` (3 refs)                                                                                    |
+| R7  | ~~Low~~ **fixed**       | `resolve-backend.test.ts`                                  | No test on the factory default / burner selection                                                                                                                                                          | Added: `blank/unknown ⇒ privy`, `burner` only on exact trim+lowercase match                                                   |
 
 R2 is the only pre-live blocker (tracked as D1). R1, R3, R4, R6, R7 are resolved;
 R5 (demo-only clipboard fallback) is deferred.

@@ -149,7 +149,7 @@ true`.
 ### Demo / system-test burner backend (FOR-322)
 
 Privy is the production default wallet, but it is **custodial** — which makes it a
-poor vehicle for *demonstrating* the own-your-keys / zero-friction-exit property
+poor vehicle for _demonstrating_ the own-your-keys / zero-friction-exit property
 this ADR is built around. For demos and system tests the UI can select a
 **browser-local burner-key** signing backend the user fully controls
 (`PUBLIC_MANDATE_SIGNER_BACKEND=burner`; blank ⇒ `privy`, never `burner` in prod).

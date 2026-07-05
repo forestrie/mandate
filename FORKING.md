@@ -543,7 +543,7 @@ Thin agent index: [docs/agents/mode-b-fork.md](docs/agents/mode-b-fork.md).
 ### 5c — Demo / system-test: burner signing (no Privy)
 
 The default `@mandate/ui` wallet is **Privy**, which is itself custodial — so it
-is a poor vehicle for *demonstrating* the very "own your keys, exit with zero
+is a poor vehicle for _demonstrating_ the very "own your keys, exit with zero
 friction" property Mode C→B relies on. For demos and system tests, serve the UI
 with a **browser-local burner key** the user fully controls instead
 ([plan-2607-01](docs/plans/plan-2607-01-browser-burner-signer-backend.md),
