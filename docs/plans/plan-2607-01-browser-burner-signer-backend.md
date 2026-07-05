@@ -201,8 +201,22 @@ active; assert burner modules are absent from a `backend=privy` build (D1 guard)
 session** (used for `listPendingDelegations`, enabled reads/writes) also signed
 its challenge via Privy. Burner mode was non-functional until
 `control-plane-session.ts` was made backend-aware (EIP-191 `personal_sign` with
-the burner key). This overlaps the in-flight **FOR-129 wallet-challenge** work —
-the change is an additive burner branch; watch for conflicts on merge.
+the burner key).
+
+**FOR-129 reconciliation (checked 2026-07-05):** FOR-129 (wallet-challenge
+control-plane auth) is **already merged** — squash PR #6 (`d80ebd8`) on `main`,
+Linear "Done". This branch is cut from current `main`, so it **builds on** merged
+FOR-129 rather than racing it; `control-plane-session.ts`/`-core.ts` are
+byte-identical to the merged version, and the burner branch is an additive
+extension of FOR-129's injected `signMessage` seam. The burner EIP-191 output
+matches FOR-129's `recoverMessageAddress` verification (unit-tested). The stale
+`feat/for-129-wallet-challenge-bff` worktree (forked 2026-06-23) is **leftover**
+and should be pruned — its only not-on-`main` content is commit `cbb1ace` (ES256
+session `publicKeyX/Y`), a spike toward the **ES256-envelope follow-up**
+(`plan-wallet-challenge-followups.md`). Forward reconciliation is only with the
+**ES256 envelope** and **genesis proof-of-possession** follow-ups: extend the
+burner signer in lockstep when those land (the burner is the natural demo signer
+for genesis PoP).
 
 **Caveat (external):** in-flight sealing/checkpoint work may keep full live
 system tests / deployment from going green independent of this change. The
