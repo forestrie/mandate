@@ -348,71 +348,71 @@
 			{/if}
 		</Card>
 	{:else}
-	<Card class="space-y-4 p-6">
-		<div class="flex items-center justify-between gap-4">
-			<h2 class="text-lg font-medium">Wallet</h2>
-			{#if session.address}
-				<Badge>{session.address.slice(0, 6)}…{session.address.slice(-4)}</Badge>
-			{/if}
-		</div>
-		{#if session.error}
-			<Alert variant="destructive" title="Privy">{session.error}</Alert>
-		{/if}
-		<label class="flex flex-col gap-1 text-sm">
-			<span class="font-medium text-zinc-800">Network</span>
-			<select
-				class="rounded-md border border-zinc-300 bg-white px-3 py-2"
-				value={String(session.selectedChainId)}
-				onchange={onChainChange}
-			>
-				{#each supportedChains as chain (chain.chainId)}
-					<option value={String(chain.chainId)}>{chain.name} ({chain.chainId})</option>
-				{/each}
-			</select>
-		</label>
-		{#if session.chainId !== null}
-			<p class="text-sm text-zinc-600">
-				Wallet network: chainId {session.chainId}
-				{#if session.chainId === session.selectedChainId}
-					(aligned)
-				{/if}
-			</p>
-		{/if}
-		{#if session.authenticated}
-			<Button variant="outline" onclick={() => disconnectWallet()}>Disconnect</Button>
-		{:else}
-			<div class="flex flex-col gap-3">
-				<div class="flex flex-col gap-3 sm:flex-row">
-					<Input
-						bind:value={email}
-						type="email"
-						placeholder="Email for Privy login"
-						class="flex-1"
-					/>
-					<Button variant="outline" disabled={otpBusy || !email.trim()} onclick={sendLoginCode}>
-						{otpSent ? 'Resend code' : 'Send code'}
-					</Button>
-				</div>
-				{#if otpSent}
-					<div class="flex flex-col gap-3 sm:flex-row">
-						<Input
-							bind:value={otpCode}
-							data-testid="privy-otp"
-							type="password"
-							inputmode="numeric"
-							maxlength={8}
-							placeholder="Verification code"
-							class="flex-1"
-							autocomplete="one-time-code"
-						/>
-						<Button disabled={otpBusy || !otpCode.trim()} onclick={connectWallet}>
-							Connect wallet
-						</Button>
-					</div>
+		<Card class="space-y-4 p-6">
+			<div class="flex items-center justify-between gap-4">
+				<h2 class="text-lg font-medium">Wallet</h2>
+				{#if session.address}
+					<Badge>{session.address.slice(0, 6)}…{session.address.slice(-4)}</Badge>
 				{/if}
 			</div>
-		{/if}
-	</Card>
+			{#if session.error}
+				<Alert variant="destructive" title="Privy">{session.error}</Alert>
+			{/if}
+			<label class="flex flex-col gap-1 text-sm">
+				<span class="font-medium text-zinc-800">Network</span>
+				<select
+					class="rounded-md border border-zinc-300 bg-white px-3 py-2"
+					value={String(session.selectedChainId)}
+					onchange={onChainChange}
+				>
+					{#each supportedChains as chain (chain.chainId)}
+						<option value={String(chain.chainId)}>{chain.name} ({chain.chainId})</option>
+					{/each}
+				</select>
+			</label>
+			{#if session.chainId !== null}
+				<p class="text-sm text-zinc-600">
+					Wallet network: chainId {session.chainId}
+					{#if session.chainId === session.selectedChainId}
+						(aligned)
+					{/if}
+				</p>
+			{/if}
+			{#if session.authenticated}
+				<Button variant="outline" onclick={() => disconnectWallet()}>Disconnect</Button>
+			{:else}
+				<div class="flex flex-col gap-3">
+					<div class="flex flex-col gap-3 sm:flex-row">
+						<Input
+							bind:value={email}
+							type="email"
+							placeholder="Email for Privy login"
+							class="flex-1"
+						/>
+						<Button variant="outline" disabled={otpBusy || !email.trim()} onclick={sendLoginCode}>
+							{otpSent ? 'Resend code' : 'Send code'}
+						</Button>
+					</div>
+					{#if otpSent}
+						<div class="flex flex-col gap-3 sm:flex-row">
+							<Input
+								bind:value={otpCode}
+								data-testid="privy-otp"
+								type="password"
+								inputmode="numeric"
+								maxlength={8}
+								placeholder="Verification code"
+								class="flex-1"
+								autocomplete="one-time-code"
+							/>
+							<Button disabled={otpBusy || !otpCode.trim()} onclick={connectWallet}>
+								Connect wallet
+							</Button>
+						</div>
+					{/if}
+				</div>
+			{/if}
+		</Card>
 	{/if}
 
 	<Card class="space-y-4 p-6">
