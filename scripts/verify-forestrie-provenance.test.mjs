@@ -117,6 +117,40 @@ test('FAILS when the attestation identity is a different repo/workflow', async (
 	);
 });
 
+test('FAILS when the signing certificate has no SAN identity (P6: fail closed)', async () => {
+	const attestations = JSON.parse(
+		await readFile(fixture('delegation-cose-0.1.3-attestations.json'), 'utf8')
+	);
+	// Swap the Fulcio cert for a parseable certificate that carries no SAN.
+	// Without the fail-closed check this would skip leg 3b entirely and pass
+	// on the attacker-writable predicate alone.
+	const slsa = attestations.attestations.find(
+		(a) => a.predicateType === 'https://slsa.dev/provenance/v1'
+	);
+	slsa.bundle.verificationMaterial.certificate.rawBytes = (
+		await readFile(fixture('san-less-cert.der.b64'), 'utf8')
+	).trim();
+
+	const fetchFn = mockFetch({
+		'/@forestrie%2Fdelegation-cose/0.1.3': { body: { dist: { integrity: REAL_INTEGRITY } } },
+		'/-/npm/v1/attestations/': { body: attestations }
+	});
+	const failures = await verifyPackage(
+		{
+			name: '@forestrie/delegation-cose',
+			version: '0.1.3',
+			integrity: REAL_INTEGRITY,
+			tarball: null,
+			rawKey: '@forestrie/delegation-cose@0.1.3'
+		},
+		{ fetchFn }
+	);
+	assert.ok(
+		failures.some((f) => f.includes('signing certificate identity is missing')),
+		`SAN-less cert must fail the identity check: ${failures.join(' | ') || '(no failures)'}`
+	);
+});
+
 test('FAILS when the package resolves from a non-npmjs tarball', async () => {
 	const failures = await verifyPackage(
 		{

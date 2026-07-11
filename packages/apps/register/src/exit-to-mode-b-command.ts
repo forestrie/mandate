@@ -18,6 +18,24 @@ export class ExitToModeBError extends Error {
 	}
 }
 
+/**
+ * Redact private key material from an OPERATOR_ROOT_KEYS map before it is
+ * echoed (S2, plan-2607-14). The typed entry shape is remote-only, but the
+ * runtime map is parsed JSON that can carry pass-through `kind:"local"`
+ * entries holding `privateKeyHex` (the burner conformance fixture does).
+ * Structure and keys are preserved so the output stays diagnostic; only the
+ * secret value is replaced.
+ */
+export function redactOperatorRootKeys(map: OperatorRootKeysMap): OperatorRootKeysMap {
+	const redacted: OperatorRootKeysMap = {};
+	for (const [logId, entry] of Object.entries(map)) {
+		const clone: Record<string, unknown> = { ...(entry as unknown as Record<string, unknown>) };
+		if ('privateKeyHex' in clone) clone.privateKeyHex = '<redacted>';
+		redacted[logId] = clone as unknown as OperatorRootKeyEntry;
+	}
+	return redacted;
+}
+
 function findLogIdKey(map: OperatorRootKeysMap, logId: string): string | undefined {
 	if (map[logId]) return logId;
 	const lower = logId.toLowerCase();
@@ -146,7 +164,9 @@ export async function runExitToModeBCommand(
 	await io.applyAgentSecret('OPERATOR_ROOT_KEYS', JSON.stringify(updated));
 	await io.applyAgentSecret(USER_SIGNER_BEARER_ENV_KEY, options.userSignerBearer);
 
-	// Emit the updated OPERATOR_ROOT_KEYS (no secrets) for operator paste / harness capture.
-	io.stdout(JSON.stringify({ operatorRootKeys: updated }, null, 2));
+	// Emit the updated OPERATOR_ROOT_KEYS for operator paste / harness capture.
+	// Pass-through entries can carry privateKeyHex, so redact before echoing:
+	// only io.applyAgentSecret above ever sees the unredacted map.
+	io.stdout(JSON.stringify({ operatorRootKeys: redactOperatorRootKeys(updated) }, null, 2));
 	return 0;
 }
