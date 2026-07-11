@@ -13,9 +13,11 @@ FOR-336 / plan-2607-12 Phase 1:
 
 GitHub Packages still hosts a **stale 0.1.2** — nothing on the install path
 may reference it. The **publish** side of mandate's own kits
-(`@forestrie/mandate-register`, `@forestrie/mandate-ui-e2e-kit`) still targets
-GitHub Packages via `publishConfig.registry`; the publish workflows write the
-`//npm.pkg.github.com/:_authToken` line only at the publish step.
+(`@forestrie/mandate-register`, `@forestrie/mandate-ui-e2e-kit`) also moved to
+public npmjs via OIDC trusted publishing (FOR-360 / FOR-361): GitHub Packages
+auth is gone from the publish workflows entirely, and the GH Packages kit
+copies (`mandate-register` ≤0.2.0, `mandate-ui-e2e-kit` 0.1.0) are stale —
+nothing may reference them.
 
 Historical rationale for the retired pattern:
 [ADR-0004](../adr/adr-0004-delegation-cose-distribution.md).
