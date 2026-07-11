@@ -289,7 +289,10 @@ export async function verifyPackage(entry, { fetchFn = fetch } = {}) {
 		} catch (err) {
 			failures.push(`could not parse the signing certificate: ${err.message}`);
 		}
-		if (sanUri !== null && !sanUri.startsWith(expectedSanPrefix)) {
+		// SAN absence is a FAILURE (P6, plan-2607-14): a cert without a SAN URI
+		// would otherwise skip the strongest identity leg and pass on the
+		// attacker-writable predicate alone.
+		if (sanUri === null || !sanUri.startsWith(expectedSanPrefix)) {
 			failures.push(
 				`signing certificate identity is ${sanUri ?? 'missing'}, ` +
 					`expected ${expectedSanPrefix}<ref> — the attestation was signed by a ` +

@@ -135,6 +135,48 @@ describe('runExitToModeBCommand', () => {
 		expect(lines.err.join('\n')).not.toContain(USER_SIGNER_BEARER);
 	});
 
+	it('S2: redacts privateKeyHex from the emitted OPERATOR_ROOT_KEYS JSON (pass-through local entries)', async () => {
+		const localLogId = 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+		const privateKeyHex = '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d';
+		const map = modeCAgentKeys();
+		// The burner conformance fixture carries kind:"local" entries with key
+		// material in the base map; they pass through the repoint untouched.
+		map[localLogId] = {
+			alg: 'KS256',
+			rootSignerAddress: '0xdead0000000000000000000000000000000000ff',
+			kind: 'local',
+			privateKeyHex
+		} as unknown as OperatorRootKeysMap[string];
+		const lines = { out: [] as string[], err: [] as string[] };
+		const applied: AppliedSecret[] = [];
+		const code = await runExitToModeBCommand(
+			baseOptions({ operatorRootKeys: map }),
+			makeIo(lines, applied)
+		);
+		expect(code).toBe(0);
+
+		// The secret still reaches the agent secret store unredacted...
+		const rootKeysPut = applied.find((s) => s.name === 'OPERATOR_ROOT_KEYS');
+		expect(rootKeysPut?.value).toContain(privateKeyHex);
+
+		// ...but no hex key material may appear on stdout/stderr.
+		const out = lines.out.join('\n');
+		expect(out).not.toContain(privateKeyHex);
+		expect(lines.err.join('\n')).not.toContain(privateKeyHex);
+
+		// Structure and keys are preserved so the output stays diagnostic.
+		const jsonLine = lines.out.find((l) => l.startsWith('{'));
+		expect(jsonLine).toBeDefined();
+		const emitted = JSON.parse(jsonLine!) as {
+			operatorRootKeys: Record<string, Record<string, unknown>>;
+		};
+		expect(emitted.operatorRootKeys[localLogId].privateKeyHex).toBe('<redacted>');
+		expect(emitted.operatorRootKeys[localLogId].rootSignerAddress).toBe(
+			'0xdead0000000000000000000000000000000000ff'
+		);
+		expect(emitted.operatorRootKeys[LOG_ID].signerUrl).toBe(USER_SIGNER_URL);
+	});
+
 	it('AT-311-4: unknown logId exits 1 with no wrangler mutation', async () => {
 		const lines = { out: [] as string[], err: [] as string[] };
 		const applied: AppliedSecret[] = [];
