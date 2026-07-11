@@ -1,0 +1,24 @@
+# Fabricated pnpm-lock.yaml fixture (FOR-366 tests): a @forestrie package
+# version that has NO provenance attestation on registry.npmjs.org. The
+# integrity hash is invented; the mocked registry in the tests serves it
+# back so the failure isolated is "no attestation exists".
+# NOTE: prettier-ignored — this file must keep pnpm's own lockfile layout
+# (inline resolution) because the parser under test targets that shape.
+lockfileVersion: '9.0'
+
+importers:
+
+  packages/apps/agent:
+    dependencies:
+      '@forestrie/delegation-cose':
+        specifier: ^0.0.9
+        version: 0.0.9
+
+packages:
+
+  '@forestrie/delegation-cose@0.0.9':
+    resolution: {integrity: sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==}
+
+snapshots:
+
+  '@forestrie/delegation-cose@0.0.9': {}
