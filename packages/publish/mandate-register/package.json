@@ -1,6 +1,6 @@
 {
 	"name": "@forestrie/mandate-register",
-	"version": "0.2.2",
+	"version": "0.2.3",
 	"license": "MIT",
 	"type": "module",
 	"description": "Bundled mandate-register CLI for cross-repo system tests (ARC-0024)",
