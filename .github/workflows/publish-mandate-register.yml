@@ -90,15 +90,10 @@ jobs:
         run: pnpm --filter @forestrie/mandate-register build
 
       - name: Publish to npmjs (trusted publishing)
-        # NOTE(FOR-361): --provenance=false is DELIBERATE. npm provenance
-        # attestations require a PUBLIC source repository ("Unsupported GitHub
-        # Actions source repository visibility: private", registry E422) and
-        # mandate is private. Publishes still authenticate via the OIDC
-        # trusted publisher (registry _npmUser.trustedPublisher proves it);
-        # consumers verify that identity instead of an attestation. If mandate
-        # ever goes public (see the hygiene-project audit issue), flip this to
-        # --provenance and provenance starts working unchanged.
+        # NOTE(FOR-367): mandate went PUBLIC on 2026-07-11 (history scanned
+        # clean), so npm provenance attestation works; --provenance is
+        # explicit so a silent regression is impossible.
         working-directory: packages/publish/mandate-register
         run: |
           pnpm pack
-          npm publish --provenance=false ./forestrie-mandate-register-*.tgz
+          npm publish --provenance ./forestrie-mandate-register-*.tgz
