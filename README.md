@@ -260,15 +260,11 @@ Fork-friendly Cloudflare Workers deploy for **mandate-agent** and
    with `CICD=true` before deploy).
 3. Bind secrets per [docs/service-secrets.md](docs/service-secrets.md).
 
-`@forestrie/delegation-cose` is installed from GitHub Packages (exact version pin;
-see [ADR-0004](docs/adr/adr-0004-delegation-cose-distribution.md)). **CI** mints a
-short-lived org GitHub App token (`GITAPP_ID`, `GITAPP_PRIVATE_KEY` — same app as
-arbor-flux / canopy); see
-[docs/agents/github-packages-delegation-cose.md](docs/agents/github-packages-delegation-cose.md).
-The app needs **Packages: Read** on the forestrie installation. **Forks** need
-root `.npmrc` and `NODE_AUTH_TOKEN` with `read:packages` (`gh auth token` or a
-PAT; run `gh auth refresh -s read:packages -h github.com` if install returns 403)
-before `pnpm install`.
+`@forestrie/delegation-cose` is installed from public npmjs (`^0.1.3`, SLSA
+provenance) — `pnpm install` is tokenless for CI, local, and forks alike. The
+GitHub Packages install path and its auth scaffolding are retired (FOR-336;
+historical context in
+[ADR-0004](docs/adr/adr-0004-delegation-cose-distribution.md)).
 
 ## Coordinator types
 

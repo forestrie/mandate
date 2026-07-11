@@ -24,13 +24,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22.14.0
-          registry-url: https://npm.pkg.github.com
-          scope: '@forestrie'
           cache: pnpm
 
       - name: Install
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm install --frozen-lockfile
 
       - name: Test bundle
@@ -39,10 +35,14 @@ jobs:
       - name: Build bundle
         run: pnpm --filter @forestrie/mandate-register build
 
+      # Publish auth only: publishConfig.registry targets GitHub Packages;
+      # installs resolve @forestrie from public npmjs (FOR-336).
       - name: Publish to GitHub Packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm --filter @forestrie/mandate-register publish --no-git-checks
+        run: |
+          echo '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' >> "$HOME/.npmrc"
+          pnpm --filter @forestrie/mandate-register publish --no-git-checks
 
       - name: Attach components.jsonc to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')

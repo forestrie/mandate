@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: read
-  packages: read
 
 concurrency:
   group: pages-preview-${{ github.event.pull_request.number }}
@@ -26,11 +25,7 @@ jobs:
         with:
           node-version: 22.14.0
           cache: pnpm
-          registry-url: https://npm.pkg.github.com
-          scope: '@forestrie'
       - run: pnpm install --frozen-lockfile
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Build
         env:
           CF_PAGES: '1'
@@ -51,7 +46,6 @@ jobs:
       contents: read
       deployments: write
       pull-requests: write
-      packages: read
     steps:
       - uses: actions/checkout@v4
 
@@ -63,12 +57,8 @@ jobs:
         with:
           node-version: 22.14.0
           cache: pnpm
-          registry-url: https://npm.pkg.github.com
-          scope: '@forestrie'
 
       - name: Install
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm install --frozen-lockfile
 
       - name: Build
