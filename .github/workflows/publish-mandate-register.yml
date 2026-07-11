@@ -93,4 +93,4 @@ jobs:
         working-directory: packages/publish/mandate-register
         run: |
           pnpm pack
-          npm publish ./forestrie-mandate-register-*.tgz
+          npm publish --provenance ./forestrie-mandate-register-*.tgz
