@@ -1,6 +1,6 @@
 {
 	"name": "@forestrie/mandate-register",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"license": "MIT",
 	"type": "module",
 	"description": "Bundled mandate-register CLI for cross-repo system tests (ARC-0024)",
@@ -24,7 +24,8 @@
 		"build": "node build.mjs",
 		"check": "node build.mjs && test -f dist/cli.js",
 		"test": "vitest run",
-		"prepublishOnly": "pnpm run build"
+		"prepublishOnly": "pnpm run build",
+		"prepack": "pnpm run build"
 	},
 	"engines": {
 		"node": ">=22.0.0"
