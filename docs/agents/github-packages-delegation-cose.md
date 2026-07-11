@@ -1,28 +1,21 @@
-# GitHub Packages: `@forestrie/delegation-cose` (FOR-119 / FOR-109)
+# GitHub Packages: `@forestrie/delegation-cose` — RETIRED (FOR-336)
 
-Mandate pins exact semver `@forestrie/delegation-cose@0.1.1` from GitHub
-Packages (see [ADR-0004](../adr/adr-0004-delegation-cose-distribution.md)).
+**Status: retired.** Mandate installs `@forestrie/delegation-cose` from
+**public npmjs** (`^0.1.3`, SLSA provenance, tokenless install). The GitHub
+Packages install path documented here (FOR-119 / FOR-109) was removed by
+FOR-336 / plan-2607-12 Phase 1:
 
-## CI auth
+- root `.npmrc` no longer maps the `@forestrie` scope to `npm.pkg.github.com`
+- CI workflows no longer set `registry-url` / `scope` on `actions/setup-node`
+  or `NODE_AUTH_TOKEN` at `pnpm install`
+- the `refresh-delegation-cose-lockfile.yml` exact-pin refresh workflow is
+  deleted
 
-Workflows use **`GITHUB_TOKEN`** with `permissions: packages: read` and
-`NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}` at `pnpm install`.
+GitHub Packages still hosts a **stale 0.1.2** — nothing on the install path
+may reference it. The **publish** side of mandate's own kits
+(`@forestrie/mandate-register`, `@forestrie/mandate-ui-e2e-kit`) still targets
+GitHub Packages via `publishConfig.registry`; the publish workflows write the
+`//npm.pkg.github.com/:_authToken` line only at the publish step.
 
-**Package setting (org admin):** `@forestrie/delegation-cose` → **Package
-settings** → **Manage Actions access** → add **`forestrie/mandate`** (read).
-
-GitHub App installation tokens are **not** supported by the npm registry; app
-`packages: read` on `forestrie-cd` does not work for `npm.pkg.github.com`.
-
-## Local / fork install
-
-Root `.npmrc` + `NODE_AUTH_TOKEN` with `read:packages` (`gh auth token` after
-`gh auth refresh -s read:packages`, or a PAT). GitHub Packages requires a
-token even for public packages.
-
-## Status
-
-| Check                                           | Result                                              |
-| ----------------------------------------------- | --------------------------------------------------- |
-| `publish-delegation-cose.yml` (2026-06-27)      | `@forestrie/delegation-cose@0.1.1` public (FOR-218) |
-| Mandate CI with `GITHUB_TOKEN` + Actions access | Registry semver install (FOR-109)                   |
+Historical rationale for the retired pattern:
+[ADR-0004](../adr/adr-0004-delegation-cose-distribution.md).

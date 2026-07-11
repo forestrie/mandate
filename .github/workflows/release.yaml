@@ -44,12 +44,8 @@ jobs:
         with:
           node-version: 22.14.0
           cache: pnpm
-          registry-url: https://npm.pkg.github.com
-          scope: '@forestrie'
 
       - name: Install
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm install --frozen-lockfile
 
       - name: Lint

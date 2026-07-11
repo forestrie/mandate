@@ -53,15 +53,15 @@ runs the Canopy ops plane.
 
 ## Prerequisites
 
-| Item                            | Notes                                                                                                       |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Git fork of `forestrie/mandate` | `pnpm install` (see [ADR-0004](docs/adr/adr-0004-delegation-cose-distribution.md) for GitHub Packages auth) |
-| Cloudflare account              | Pages (`@mandate/ui`) + Workers (agent, signer)                                                             |
-| Privy app                       | Dashboard app id + secret; embedded Ethereum wallets enabled                                                |
-| Canopy SCRAPI base URL          | e.g. `https://api-a.forest-2.forestrie.dev` or your self-hosted worker                                      |
-| Delegation-coordinator URL      | e.g. `https://delegation-coordinator.a.forest-2.forestrie.dev`                                              |
-| Chain + Univocity address       | 20-byte contract address bound at genesis                                                                   |
-| Onboard bearer token            | From Canopy operator (below) — gates **payment-authoritative** genesis                                      |
+| Item                            | Notes                                                                                        |
+| ------------------------------- | -------------------------------------------------------------------------------------------- |
+| Git fork of `forestrie/mandate` | `pnpm install` (tokenless; `@forestrie/delegation-cose` resolves from public npmjs, FOR-336) |
+| Cloudflare account              | Pages (`@mandate/ui`) + Workers (agent, signer)                                              |
+| Privy app                       | Dashboard app id + secret; embedded Ethereum wallets enabled                                 |
+| Canopy SCRAPI base URL          | e.g. `https://api-a.forest-2.forestrie.dev` or your self-hosted worker                       |
+| Delegation-coordinator URL      | e.g. `https://delegation-coordinator.a.forest-2.forestrie.dev`                               |
+| Chain + Univocity address       | 20-byte contract address bound at genesis                                                    |
+| Onboard bearer token            | From Canopy operator (below) — gates **payment-authoritative** genesis                       |
 
 Optional for local dev: [Doppler](https://www.doppler.com/) project `mandate-forestrie`
 config `dev`, or copy `.dev.vars.example` files under `packages/apps/*`.

@@ -1,25 +1,12 @@
-# GitHub Packages — local install auth
+# GitHub Packages — local install auth — RETIRED (FOR-336)
 
-CI uses workflow **`GITHUB_TOKEN`** with `permissions: packages: read`. Local
-`pnpm install` needs the same capability on your machine.
+**Status: retired.** `pnpm install` is tokenless: `@forestrie/delegation-cose`
+resolves from **public npmjs**. Do **not** set `NODE_AUTH_TOKEN` or re-add a
+`@forestrie:registry=https://npm.pkg.github.com` mapping — GitHub Packages
+holds a stale 0.1.2 and must not be on the install path.
 
-## Symptom
+If you see `ERR_PNPM_FETCH_403 … @forestrie/…`, check for a leftover scope
+mapping in a user-level `~/.npmrc` and remove it.
 
-```text
-ERR_PNPM_FETCH_403 … @forestrie/delegation-cose … Forbidden
-```
-
-## Cause
-
-`gh auth token` defaults to **`repo`** scopes only. GitHub Packages **requires
-`read:packages` even for public packages** (FOR-218).
-
-## Fix
-
-```bash
-gh auth refresh -h github.com -s read:packages
-export NODE_AUTH_TOKEN="$(gh auth token)"
-pnpm install
-```
-
-See also [github-packages-delegation-cose.md](./github-packages-delegation-cose.md).
+See also
+[github-packages-delegation-cose.md](./github-packages-delegation-cose.md).
