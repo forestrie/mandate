@@ -27,6 +27,16 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # FOR-366 (plan-2607-13 W5/M1): every registry-installed @forestrie
+      # dependency must resolve from registry.npmjs.org and carry a SLSA
+      # provenance attestation whose identity is the expected forestrie
+      # publish workflow. Replacement control for the deleted FOR-119
+      # exact-pin refresh mechanism.
+      - name: Verify @forestrie dependency provenance
+        run: |
+          pnpm test:scripts
+          pnpm verify:provenance
+
       - name: Lint
         run: pnpm lint
 

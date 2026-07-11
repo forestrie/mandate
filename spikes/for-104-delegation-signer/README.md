@@ -1,21 +1,24 @@
-# FOR-104 spike — delegation signer backends
+# RETIRED — FOR-104 spike — delegation signer backends
 
-> **Superseded** by production `@mandate/signer` (`packages/apps/signer/`). This
-> spike remains for historical Privy vs GCP KMS comparison only; do not extend it
-> for Mode C S3 authorization signatures — use the signer Worker instead.
+> **RETIRED** (FOR-366, plan-2607-13 M3). **Superseded** by production
+> `@mandate/signer` (`packages/apps/signer/`). This spike is kept for the
+> historical Privy vs GCP KMS comparison only; do not extend it, and do not
+> use it for Mode C S3 authorization signatures — use the signer Worker
+> instead. It is no longer installable as-is: its GitHub Packages `.npmrc`
+> was removed (mandate installs `@forestrie/*` from public npmjs, FOR-336)
+> and its lockfile still pins the retired `npm.pkg.github.com` tarball.
 
 > spike env vars use legacy `PRIVY_*` names; production naming is
 > [ADR-0006](../../docs/adr/adr-0006-privy-secrets.md).
 
-Runnable PoCs comparing **Privy server wallets** vs **GCP Cloud KMS** as the
-production KS256 remote signer for `@mandate/agent`.
+Runnable PoCs (historical) comparing **Privy server wallets** vs **GCP Cloud
+KMS** as the production KS256 remote signer for `@mandate/agent`.
 
-## Quick start (mock / offline)
+## Quick start (historical — no longer runnable without reviving installs)
 
 ```sh
 cd spikes/for-104-delegation-signer
-export NODE_AUTH_TOKEN="$(gh auth token)"   # needs read:packages
-pnpm install --ignore-workspace
+pnpm install --ignore-workspace   # will not resolve; see RETIRED note above
 pnpm test
 pnpm spike
 ```

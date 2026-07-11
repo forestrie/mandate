@@ -7,3 +7,6 @@ bun.lockb
 
 # Miscellaneous
 packages/apps/ui/static/
+
+# Test fixtures mirroring pnpm-lock.yaml / registry response shapes byte-for-byte
+scripts/fixtures/

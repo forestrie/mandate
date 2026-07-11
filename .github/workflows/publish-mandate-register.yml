@@ -6,14 +6,16 @@ on:
     tags:
       - 'mandate-register-v*'
 
-permissions:
-  contents: write
-  packages: write
+# No workflow-level permissions: grant the minimum at job level (FOR-366 M5).
+permissions: {}
 
 jobs:
   publish:
     name: Publish @forestrie/mandate-register
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # checkout + gh release create/upload
+      packages: write # publish to GitHub Packages
     steps:
       - uses: actions/checkout@v4
 
@@ -37,12 +39,20 @@ jobs:
 
       # Publish auth only: publishConfig.registry targets GitHub Packages;
       # installs resolve @forestrie from public npmjs (FOR-336).
+      # Auth goes into a step-local npmrc via NPM_CONFIG_USERCONFIG so the
+      # token reference does not persist in $HOME/.npmrc for later steps
+      # (FOR-366 M5).
       - name: Publish to GitHub Packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' >> "$HOME/.npmrc"
-          pnpm --filter @forestrie/mandate-register publish --no-git-checks
+          set -euo pipefail
+          NPMRC="$(mktemp)"
+          trap 'rm -f "$NPMRC"' EXIT
+          # shellcheck disable=SC2016 # npm expands ${NODE_AUTH_TOKEN} at use time
+          echo '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > "$NPMRC"
+          NPM_CONFIG_USERCONFIG="$NPMRC" \
+            pnpm --filter @forestrie/mandate-register publish --no-git-checks
 
       - name: Attach components.jsonc to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
