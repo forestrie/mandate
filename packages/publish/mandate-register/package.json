@@ -1,8 +1,14 @@
 {
 	"name": "@forestrie/mandate-register",
 	"version": "0.2.0",
+	"license": "MIT",
 	"type": "module",
 	"description": "Bundled mandate-register CLI for cross-repo system tests (ARC-0024)",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/forestrie/mandate.git",
+		"directory": "packages/publish/mandate-register"
+	},
 	"bin": {
 		"mandate-register": "./bin/mandate-register.mjs"
 	},
@@ -11,7 +17,7 @@
 		"bin"
 	],
 	"publishConfig": {
-		"registry": "https://npm.pkg.github.com",
+		"registry": "https://registry.npmjs.org",
 		"access": "public"
 	},
 	"scripts": {

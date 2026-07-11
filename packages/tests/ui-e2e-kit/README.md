@@ -7,19 +7,17 @@ and [ADR-0041](https://github.com/forestrie/devdocs/blob/main/adr/adr-0041-e2e-k
 
 ## Install
 
+Published to **public npmjs** with SLSA provenance (FOR-361) — tokenless
+install, no `.npmrc` scope mapping. The `@forestrie` scope maps to one
+registry per consumer, and consumers such as `forestrie/system-testing`
+install this kit alongside npmjs-only `@forestrie/canopy-e2e-kit`, so the kit
+publishes to npmjs too.
+
 ```bash
-# GitHub Packages (preferred)
 pnpm add @forestrie/mandate-ui-e2e-kit @playwright/test
 
 # Peer: coordinator types from mandate at a pinned commit
 pnpm add "github:forestrie/mandate#<sha>&path:packages/libs/coordinator-types"
-```
-
-Configure `.npmrc`:
-
-```ini
-@forestrie:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
 ```
 
 ## Public API

@@ -51,6 +51,18 @@ export const EXPECTED_IDENTITIES = {
 	'@forestrie/delegation-cose': {
 		repository: 'forestrie/canopy',
 		workflowPath: '.github/workflows/publish-delegation-cose.yml'
+	},
+	// mandate's own kits (FOR-360 / FOR-361): mandate does not install these
+	// from the registry today (ui-e2e-kit is a workspace link), but other
+	// repos porting this script — and any future registry self-consumption —
+	// need the expected publish identity on record.
+	'@forestrie/mandate-register': {
+		repository: 'forestrie/mandate',
+		workflowPath: '.github/workflows/publish-mandate-register.yml'
+	},
+	'@forestrie/mandate-ui-e2e-kit': {
+		repository: 'forestrie/mandate',
+		workflowPath: '.github/workflows/publish-ui-e2e-kit.yml'
 	}
 };
 
