@@ -36,6 +36,29 @@ export function redactOperatorRootKeys(map: OperatorRootKeysMap): OperatorRootKe
 	return redacted;
 }
 
+/**
+ * Stamp a fresh config-version nonce onto every entry of an OPERATOR_ROOT_KEYS
+ * map about to be put (FOR-311 S1). Per-entry rather than top-level because the
+ * agent's KeyRegistry treats every top-level key as a logId descriptor; a
+ * top-level scalar would fail its parse. One nonce per put identifies the put:
+ * the agent's GET /ops/root-key-config echoes it, so a caller can poll until
+ * the deployed Worker demonstrably serves THIS map version. Pure — entries are
+ * cloned, pass-through fields (including local `privateKeyHex`) preserved.
+ */
+export function stampConfigNonce(
+	map: OperatorRootKeysMap,
+	configNonce: string
+): OperatorRootKeysMap {
+	const stamped: OperatorRootKeysMap = {};
+	for (const [logId, entry] of Object.entries(map)) {
+		stamped[logId] = {
+			...(entry as unknown as Record<string, unknown>),
+			configNonce
+		} as unknown as OperatorRootKeyEntry;
+	}
+	return stamped;
+}
+
 function findLogIdKey(map: OperatorRootKeysMap, logId: string): string | undefined {
 	if (map[logId]) return logId;
 	const lower = logId.toLowerCase();
@@ -140,6 +163,11 @@ export async function runExitToModeBCommand(
 		return 1;
 	}
 
+	// Fresh per-put config-version stamp (FOR-311 S1); echoed by the agent's
+	// GET /ops/root-key-config so the caller can gate on propagation.
+	const configNonce = crypto.randomUUID();
+	const stamped = stampConfigNonce(updated, configNonce);
+
 	io.stdout('Mode C→B exit — repoint signer to user-operated signer (ADR-0005 step 3)');
 	io.stdout(`  logId:            ${options.logId}`);
 	io.stdout(`  agent:            ${options.agentName}`);
@@ -147,6 +175,7 @@ export async function runExitToModeBCommand(
 	io.stdout(`  signerUrl before: ${previous.signerUrl}`);
 	io.stdout(`  signerUrl after:  ${next.signerUrl}`);
 	io.stdout(`  keyRef:           ${next.keyRef}`);
+	io.stdout(`  configNonce:      ${configNonce}`);
 
 	if (options.nonInteractive) {
 		if (!options.yes) {
@@ -161,12 +190,16 @@ export async function runExitToModeBCommand(
 		}
 	}
 
-	await io.applyAgentSecret('OPERATOR_ROOT_KEYS', JSON.stringify(updated));
+	await io.applyAgentSecret('OPERATOR_ROOT_KEYS', JSON.stringify(stamped));
 	await io.applyAgentSecret(USER_SIGNER_BEARER_ENV_KEY, options.userSignerBearer);
 
 	// Emit the updated OPERATOR_ROOT_KEYS for operator paste / harness capture.
 	// Pass-through entries can carry privateKeyHex, so redact before echoing:
-	// only io.applyAgentSecret above ever sees the unredacted map.
-	io.stdout(JSON.stringify({ operatorRootKeys: redactOperatorRootKeys(updated) }, null, 2));
+	// only io.applyAgentSecret above ever sees the unredacted map. The top-level
+	// configNonce is the S1 gate value — callers poll the agent's
+	// /ops/root-key-config until it serves this nonce.
+	io.stdout(
+		JSON.stringify({ configNonce, operatorRootKeys: redactOperatorRootKeys(stamped) }, null, 2)
+	);
 	return 0;
 }

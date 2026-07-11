@@ -11,4 +11,11 @@ export interface LogSignerDescriptor {
 	keyRef?: string;
 	/** Agent env var name for Bearer auth when kind=remote (Mode B). */
 	bearerEnvKey?: string;
+	/**
+	 * Opaque config-version stamp written by `mandate-register privy
+	 * exit-to-mode-b` on every OPERATOR_ROOT_KEYS put and echoed by
+	 * GET /ops/root-key-config (FOR-311 S1). Absent on maps written before the
+	 * stamp existed — readers must tolerate that.
+	 */
+	configNonce?: string;
 }
