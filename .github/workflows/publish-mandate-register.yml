@@ -1,5 +1,35 @@
 name: Publish mandate-register
 
+# Publishes @forestrie/mandate-register to public npmjs.org via trusted
+# publishing (OIDC): no registry token — npmjs is configured to trust this
+# repo+workflow (FOR-360, ported from canopy publish-canopy-e2e-kit.yml).
+# Provenance is attested automatically. The FIRST publish of the package must
+# be manual; this workflow handles every subsequent release.
+#
+# Registry rationale (FOR-360/FOR-361): the @forestrie scope maps to exactly
+# one registry per consumer, and forestrie/system-testing installs this kit
+# alongside @forestrie/canopy-e2e-kit, which exists only on npmjs — a GitHub
+# Packages release would be uninstallable for those consumers, so the kit
+# publishes to npmjs. GitHub Packages auth is gone entirely.
+#
+# Release discipline (FOR-365 pattern):
+# - Tags (`mandate-register-v<version>`) are the normal release trigger;
+#   workflow_dispatch is recovery-only. Both run in the `npm-publish` GitHub
+#   environment, whose deployment branch/tag policy allows only `main` and
+#   `*-v*` tags. Paired with the npm trusted-publisher registration requiring
+#   that environment, this closes ref laundering: a dispatch from an
+#   arbitrary ref can no longer publish with valid provenance.
+# - Actions are SHA-pinned, the npm client is pinned exactly, installs are
+#   frozen-lockfile, and tag<->package.json version agreement is asserted
+#   before anything is built (scripts/assert-publish-version.sh).
+#
+# Pattern notes:
+# - `id-token: write` is required for the OIDC exchange.
+# - Trusted publishing needs npm >= 11.5.1; node 22 ships npm 10, so we
+#   upgrade npm explicitly.
+# - Build and pack with pnpm (rewrites workspace: deps), publish the tarball
+#   with npm (does the OIDC publish).
+
 on:
   workflow_dispatch:
   push:
@@ -13,22 +43,44 @@ jobs:
   publish:
     name: Publish @forestrie/mandate-register
     runs-on: ubuntu-latest
+    environment: npm-publish
     permissions:
-      contents: write # checkout + gh release create/upload
-      packages: write # publish to GitHub Packages
-    steps:
-      - uses: actions/checkout@v4
+      contents: read # checkout only
+      id-token: write # OIDC exchange for npm trusted publishing
 
-      - uses: pnpm/action-setup@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:
           version: 9.6.0
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22.14.0
+          registry-url: https://registry.npmjs.org
+          scope: '@forestrie'
           cache: pnpm
 
-      - name: Install
+      - name: Upgrade npm for trusted publishing
+        # Pinned to an exact version (not a floating `npm@11`) so the release
+        # path is reproducible and cannot pick up a brand-new client at
+        # release time (FOR-365 C1). Trusted publishing needs npm >= 11.5.1;
+        # npm@12 requires a newer node than the pinned 22.14.0 toolchain.
+        run: |
+          npm install -g npm@11.18.0
+          npm --version
+
+      - name: Assert publish version discipline
+        # Tag builds: the tag must name exactly the package.json version.
+        # Dispatch (recovery) builds: the version must not already be on the
+        # registry (FOR-365 C3). Fails before build/publish.
+        run: ./scripts/assert-publish-version.sh packages/publish/mandate-register mandate-register
+
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Test bundle
@@ -37,43 +89,8 @@ jobs:
       - name: Build bundle
         run: pnpm --filter @forestrie/mandate-register build
 
-      # Publish auth only: publishConfig.registry targets GitHub Packages;
-      # installs resolve @forestrie from public npmjs (FOR-336).
-      # Auth goes into a step-local npmrc via NPM_CONFIG_USERCONFIG so the
-      # token reference does not persist in $HOME/.npmrc for later steps
-      # (FOR-366 M5).
-      - name: Publish to GitHub Packages
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish to npmjs (trusted publishing)
+        working-directory: packages/publish/mandate-register
         run: |
-          set -euo pipefail
-          NPMRC="$(mktemp)"
-          trap 'rm -f "$NPMRC"' EXIT
-          # shellcheck disable=SC2016 # npm expands ${NODE_AUTH_TOKEN} at use time
-          echo '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > "$NPMRC"
-          NPM_CONFIG_USERCONFIG="$NPMRC" \
-            pnpm --filter @forestrie/mandate-register publish --no-git-checks
-
-      - name: Attach components.jsonc to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GIT_TAG: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          VERSION=$(node -p "require('./packages/publish/mandate-register/package.json').version")
-          jq -n \
-            --arg ecosystem "pnpm" \
-            --arg pkg "@forestrie/mandate-register" \
-            --arg ver "$VERSION" \
-            '{ ecosystem: $ecosystem, components: { ($pkg): $ver } }' \
-            > components.jsonc
-          if gh release view "$GIT_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            gh release upload "$GIT_TAG" components.jsonc --repo "${{ github.repository }}" --clobber
-          else
-            gh release create "$GIT_TAG" \
-              --repo "${{ github.repository }}" \
-              --title "$GIT_TAG" \
-              --notes "Compound kit release for @forestrie/mandate-register@${VERSION}." \
-              components.jsonc
-          fi
+          pnpm pack
+          npm publish ./forestrie-mandate-register-*.tgz
