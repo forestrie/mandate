@@ -1,6 +1,6 @@
 {
 	"name": "@forestrie/mandate-ui-e2e-kit",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"license": "MIT",
 	"type": "module",
 	"description": "Reusable Playwright fixtures and BFF mocks for mandate UI e2e (ARC-0024 Layer 1)",
@@ -29,7 +29,8 @@
 		"build": "tsc -p tsconfig.build.json",
 		"check": "tsc -p tsconfig.build.json --noEmit",
 		"test": "vitest run",
-		"prepublishOnly": "pnpm run build"
+		"prepublishOnly": "pnpm run build",
+		"prepack": "pnpm run build"
 	},
 	"engines": {
 		"node": ">=22.0.0",
