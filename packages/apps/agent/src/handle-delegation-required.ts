@@ -166,7 +166,7 @@ export async function handleDelegationRequired(
 		// this distinguishes a build/sign-fetch failure from an empty bearer.
 		console.error(
 			'signer_failed buildCertificate',
-			error instanceof Error ? error.message : String(error)
+			error instanceof Error ? (error.stack ?? error.message) : String(error)
 		);
 		await deps.seenStore.clear(event.requestKey);
 		logDelegationOutcome(event, 'signer_failed');
