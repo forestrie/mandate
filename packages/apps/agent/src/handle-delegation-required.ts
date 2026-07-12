@@ -132,7 +132,20 @@ export async function handleDelegationRequired(
 			deps.fetchImpl,
 			deps.remoteBearerEnv ?? {}
 		);
-	} catch {
+	} catch (error) {
+		// FOR-311: surface the swallowed signer-resolve error. A bare catch here
+		// hid a runtime empty-bearer throw for six blind conformance runs. Log the
+		// message and the bearer-env key presence/length (NOT the value) so the
+		// tail distinguishes empty-binding from wrong-value in a single run.
+		const bearerEnv = deps.remoteBearerEnv ?? {};
+		console.error(
+			'signer_failed resolveSigner',
+			error instanceof Error ? error.message : String(error),
+			'bearerEnvKeys=',
+			Object.keys(bearerEnv).join(','),
+			'USER_SIGNER_BEARER.len=',
+			(bearerEnv.USER_SIGNER_BEARER ?? '').length
+		);
 		logDelegationOutcome(event, 'signer_failed');
 		await deps.seenStore.clear(event.requestKey);
 		return jsonResponse(502, { ok: false, error: 'delegation signing failed' });
@@ -147,7 +160,14 @@ export async function handleDelegationRequired(
 			delegatedPublicKeyCbor: base64ToBytes(event.delegatedPublicKey),
 			ttlSeconds: 3600
 		});
-	} catch {
+	} catch (error) {
+		// FOR-311: surface the swallowed buildCertificate error (see resolveSigner
+		// catch above). If we reach here the signer resolved (bearer non-empty), so
+		// this distinguishes a build/sign-fetch failure from an empty bearer.
+		console.error(
+			'signer_failed buildCertificate',
+			error instanceof Error ? error.message : String(error)
+		);
 		await deps.seenStore.clear(event.requestKey);
 		logDelegationOutcome(event, 'signer_failed');
 		return jsonResponse(502, { ok: false, error: 'delegation signing failed' });
