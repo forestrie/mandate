@@ -69,6 +69,53 @@ describe('RemoteKs256Signer', () => {
 		expect(body.sigStructure.length).toBeGreaterThan(0);
 	});
 
+	it('default fetchImpl routes to the global fetch (no injected impl)', async () => {
+		// FOR-311 regression: the deployed agent constructs the signer WITHOUT an
+		// injected fetchImpl, so the default is used and called as `this.fetchImpl`.
+		// The default must delegate to the free global `fetch` (not be the bare
+		// global reference), or the Workers runtime throws "Illegal invocation".
+		// This exercises the default path end to end against a stubbed global fetch.
+		const root = await generateTestKs256Root();
+		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+
+		const globalFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+			const body = JSON.parse(String(init?.body)) as SignRequest;
+			const sigStructure = base64ToBytes(body.sigStructure);
+			const hash = keccak_256(sigStructure);
+			const privateKey = Uint8Array.from(Buffer.from(root.privateKeyHex, 'hex'));
+			const signature = signRecoverableLowS(hash, privateKey);
+			return new Response(
+				JSON.stringify({ signature: Buffer.from(signature).toString('base64') }),
+				{ status: 200 }
+			);
+		});
+		vi.stubGlobal('fetch', globalFetch);
+		try {
+			// No fetchImpl argument → default wrapper.
+			const signer = new RemoteKs256Signer(
+				{
+					alg: 'KS256',
+					rootSignerAddress: root.rootSignerAddress,
+					kind: 'remote',
+					signerUrl: 'https://signer.example/v1/sign',
+					keyRef: 'test-key-ref'
+				},
+				'bearer-token-123'
+			);
+			await signer.buildCertificate({
+				logIdHex32: TEST_LOG_ID,
+				mmrStart: 1,
+				mmrEnd: 2,
+				delegatedPublicKeyCbor,
+				ttlSeconds: 3600
+			});
+			expect(globalFetch).toHaveBeenCalledOnce();
+			expect(globalFetch.mock.calls[0][0]).toBe('https://signer.example/v1/sign');
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
+
 	it('uses bearerEnvKey env value instead of mandate token', async () => {
 		const root = await generateTestKs256Root();
 		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
