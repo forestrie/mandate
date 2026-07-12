@@ -43,28 +43,47 @@ export class RemoteKs256Signer implements DelegationSigner {
 	}
 
 	private async signRemote(logIdHex32: string, sigStructureBytes: Uint8Array): Promise<Uint8Array> {
-		const requestBody: SignRequest = {
-			logId: logIdHex32,
-			keyRef: this.descriptor.keyRef!,
-			rootSignerAddress: this.descriptor.rootSignerAddress,
-			sigStructure: bytesToBase64(sigStructureBytes)
-		};
-		const response = await this.fetchImpl(this.descriptor.signerUrl!, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${this.bearerToken}`
-			},
-			body: JSON.stringify(requestBody)
-		});
-		if (!response.ok) {
-			throw new Error(`remote signer failed: ${response.status}`);
+		// FOR-311 diagnostic: per-step labels so the tail names the exact operation
+		// that throws "Illegal invocation" (fetch/btoa/json all previously "fixed"
+		// with no effect — the line-number inference is unreliable, so isolate it).
+		let step = 'sigStructure(bytesToBase64)';
+		try {
+			const requestBody: SignRequest = {
+				logId: logIdHex32,
+				keyRef: this.descriptor.keyRef!,
+				rootSignerAddress: this.descriptor.rootSignerAddress,
+				sigStructure: bytesToBase64(sigStructureBytes)
+			};
+			step = 'JSON.stringify(body)';
+			const bodyStr = JSON.stringify(requestBody);
+			step = 'fetch(signerUrl)';
+			const response = await this.fetchImpl(this.descriptor.signerUrl!, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${this.bearerToken}`
+				},
+				body: bodyStr
+			});
+			step = 'response.ok';
+			if (!response.ok) {
+				throw new Error(`remote signer failed: ${response.status}`);
+			}
+			step = 'response.json()';
+			const body = (await response.json()) as { signature: string };
+			step = 'base64ToBytes(signature)';
+			const signature = base64ToBytes(body.signature);
+			if (signature.length !== 65) {
+				throw new Error('remote signature must be 65 bytes');
+			}
+			return signature;
+		} catch (error) {
+			console.error(
+				'signRemote_step_failed',
+				step,
+				error instanceof Error ? (error.stack ?? error.message) : String(error)
+			);
+			throw error;
 		}
-		const body = (await response.json()) as { signature: string };
-		const signature = base64ToBytes(body.signature);
-		if (signature.length !== 65) {
-			throw new Error('remote signature must be 65 bytes');
-		}
-		return signature;
 	}
 }
