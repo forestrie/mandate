@@ -17,7 +17,14 @@ export class RemoteKs256Signer implements DelegationSigner {
 	constructor(
 		private readonly descriptor: LogSignerDescriptor,
 		mandateSignerToken: string,
-		private readonly fetchImpl: typeof fetch = fetch,
+		// FOR-311: default must be a wrapper, NOT the bare global `fetch`. Stored on
+		// the instance and later called as `this.fetchImpl(...)`, a bare `fetch`
+		// reference loses its `globalThis` binding and the Workers runtime throws
+		// "Illegal invocation: function called with incorrect `this` reference",
+		// which surfaced as every post-exit remote sign failing (signer_failed
+		// buildCertificate). The closure calls the free global `fetch`, so the
+		// instance `this` is irrelevant.
+		private readonly fetchImpl: typeof fetch = (input, init) => fetch(input, init),
 		remoteBearerEnv: Record<string, string | undefined> = {}
 	) {
 		if (descriptor.kind !== 'remote' || !descriptor.signerUrl || !descriptor.keyRef) {
