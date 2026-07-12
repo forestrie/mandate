@@ -13,5 +13,32 @@
 			"id": "local-request-keys",
 			"preview_id": "local-request-keys"
 		}
-	]
+	],
+	"env": {
+		// Dedicated Mode C→B conformance agent instance (FOR-311, plan-2607-18
+		// decision DC). A distinct deployed worker we OWN — the conformance run
+		// targets it via E2E_CONFORMANCE_AGENT_NAME=mandate-conformance-agent, so
+		// no production worker (mandate-agent-prod) is touched or mutated. Its
+		// OPERATOR_ROOT_KEYS base starts empty ({}); the burner fixture seeds a
+		// per-run log descriptor. Coordinator target matches the lane-B forest-2
+		// deployment the conformance spec exercises (mandate-forestrie/prd).
+		"mode-c-to-b": {
+			"name": "mandate-conformance-agent",
+			"workers_dev": true,
+			"vars": {
+				"COORDINATOR_UPSTREAM_URL": "https://coordinator-a.forest-2.forestrie.dev"
+			},
+			// Dedicated conformance KV namespace (own title, no prod KV touched).
+			// scripts/ensure-kv.mjs creates/reuses it and pins the id here before
+			// deploy (--dry-run tolerates the placeholder). Mirrors repo-init's
+			// prod-KV provisioning.
+			"kv_namespaces": [
+				{
+					"binding": "REQUEST_KEYS",
+					"id": "REPLACE_WITH_CONFORMANCE_REQUEST_KEYS_KV_ID",
+					"preview_id": "REPLACE_WITH_CONFORMANCE_REQUEST_KEYS_KV_ID"
+				}
+			]
+		}
+	}
 }

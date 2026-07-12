@@ -3,5 +3,14 @@
 	"name": "mandate-reference-user-signer",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-04-01",
-	"compatibility_flags": ["nodejs_compat"]
+	"compatibility_flags": ["nodejs_compat"],
+	"env": {
+		// Dedicated Mode C→B conformance instance of this same worker
+		// (FOR-311, plan-2607-17). Distinct deployed name so the burner
+		// conformance fixture can rotate its USER_SIGNER_KEYS_JSON wholesale
+		// per run without touching the shared dev/e2e reference-user-signer.
+		"mode-c-to-b": {
+			"name": "mandate-conformance-user-signer"
+		}
+	}
 }

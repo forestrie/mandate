@@ -1,0 +1,173 @@
+name: Deploy Mode C→B conformance workers
+
+# FOR-311 / plan-2607-17 / plan-2607-18 (decision DC) / ADR-0049.
+#
+# Deploys the two DEDICATED Mode C→B conformance workers — instances we OWN, so
+# NO production worker (mandate-agent-prod / mandate-reference-user-signer) is
+# touched or mutated:
+#   - mandate-conformance-user-signer  (@mandate/reference-user-signer, env mode-c-to-b)
+#   - mandate-conformance-agent        (@mandate/agent,               env mode-c-to-b)
+# and provisions the secrets the burner conformance fixture (system-testing
+# tests/api/mode-c-to-b-exit.spec.ts) depends on.
+#
+# Secret source of truth is Doppler (mandate-forestrie / mode-c-to-b), pulled via
+# GitHub → Doppler OIDC — NO long-lived DOPPLER_TOKEN in CI (ADR-0049 D1).
+# Cloudflare deploy auth (CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID) is ALSO
+# pulled from that same Doppler config (staged as cross-project refs to
+# cloudflare-account) — Doppler is the sole store; no GitHub-env Cloudflare secret.
+#
+# Manual dispatch only, and gated on operator setup:
+#   - repo/environment var DOPPLER_SERVICE_IDENTITY_ID = the Doppler Service
+#     Account Identity federating this repo + workflow + environment
+#     (id 78136e1d-ed96-4826-9a26-bf4b3cc1f04d; read-only on mode-c-to-b).
+#   - the mode-c-to-b GitHub Environment exists.
+# Dispatch from main (the identity's workflow_ref claim pins @refs/heads/main).
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-mode-c-to-b
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write # GitHub OIDC token for Doppler federation
+
+jobs:
+  deploy:
+    name: Deploy conformance signer + agent
+    runs-on: ubuntu-latest
+    environment: mode-c-to-b
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Pull mode-c-to-b secrets from Doppler via GitHub OIDC (no DOPPLER_TOKEN).
+      # The action exchanges the job's id-token for a short-lived, claim-pinned
+      # Doppler token, fetches the config, and exports each secret as a masked
+      # step output (steps.doppler.outputs.<KEY>). Requires the Doppler Service
+      # Account Identity (doppler-identity-id) federating this repo + workflow +
+      # environment (operator prerequisite: set vars.DOPPLER_SERVICE_IDENTITY_ID).
+      # SHA-pinned (D4): mutable tags mint Doppler tokens — supply-chain surface.
+      - name: Fetch Doppler secrets (OIDC)
+        id: doppler
+        uses: dopplerhq/secrets-fetch-action@cd2efbf9a404504316435873eff298b82f7e0562 # v1.3.0
+        with:
+          auth-method: oidc
+          doppler-identity-id: ${{ vars.DOPPLER_SERVICE_IDENTITY_ID }}
+          doppler-project: mandate-forestrie
+          doppler-config: mode-c-to-b
+
+      # ---- Cloudflare deploy auth: pulled from the same OIDC Doppler fetch ----
+      # (mode-c-to-b carries CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID as
+      # cross-project refs to cloudflare-account). No GitHub-env Cloudflare secret.
+
+      # ================= conformance user-signer =================
+      - name: Deploy mandate-conformance-user-signer
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ steps.doppler.outputs.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.doppler.outputs.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: packages/apps/reference-user-signer
+        run: pnpm exec wrangler deploy --env mode-c-to-b
+
+      # Bind the conformance signer's secrets from the OIDC-pulled Doppler values.
+      # Values are on stdin (never in argv); steps.doppler.outputs.* are masked.
+      - name: Bind conformance signer secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ steps.doppler.outputs.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.doppler.outputs.CLOUDFLARE_ACCOUNT_ID }}
+          USER_SIGNER_BEARER: ${{ steps.doppler.outputs.USER_SIGNER_BEARER }}
+          USER_SIGNER_KEYS_JSON: ${{ steps.doppler.outputs.USER_SIGNER_KEYS_JSON }}
+        working-directory: packages/apps/reference-user-signer
+        run: |
+          printf '%s' "$USER_SIGNER_BEARER" | pnpm exec wrangler secret put USER_SIGNER_BEARER --env mode-c-to-b
+          printf '%s' "$USER_SIGNER_KEYS_JSON" | pnpm exec wrangler secret put USER_SIGNER_KEYS_JSON --env mode-c-to-b
+
+      # ================= conformance agent (decision DC) =================
+      # A dedicated agent we own (mandate-conformance-agent). All agent secrets —
+      # including OPS_INTROSPECTION_TOKEN, OPERATOR_ROOT_KEYS, and the coordinator/
+      # signer tokens — land on THIS worker, never on prod (mandate-agent-prod).
+
+      # Provision the conformance agent's OWN request-dedup KV namespace (distinct
+      # title from prod's mandate-agent-prod-request-keys) and pin its id into the
+      # mode-c-to-b env before deploy. No prod KV is read or mutated.
+      - name: Ensure conformance agent KV namespace
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ steps.doppler.outputs.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.doppler.outputs.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node scripts/ensure-kv.mjs \
+            --config packages/apps/agent/wrangler.jsonc \
+            --title mandate-conformance-agent-request-keys \
+            --placeholder REPLACE_WITH_CONFORMANCE_REQUEST_KEYS_KV_ID
+
+      - name: Deploy mandate-conformance-agent
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ steps.doppler.outputs.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.doppler.outputs.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: packages/apps/agent
+        run: pnpm exec wrangler deploy --env mode-c-to-b
+
+      # Bind the conformance agent's secrets from the OIDC-pulled Doppler values.
+      # OPERATOR_ROOT_KEYS starts as the conformance-owned empty base ({}); the
+      # burner fixture seeds a per-run log descriptor at test time.
+      - name: Bind conformance agent secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ steps.doppler.outputs.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.doppler.outputs.CLOUDFLARE_ACCOUNT_ID }}
+          COORDINATOR_APP_TOKEN: ${{ steps.doppler.outputs.COORDINATOR_APP_TOKEN }}
+          MANDATE_SIGNER_TOKEN: ${{ steps.doppler.outputs.MANDATE_SIGNER_TOKEN }}
+          OPERATOR_ROOT_KEYS: ${{ steps.doppler.outputs.OPERATOR_ROOT_KEYS }}
+          OPS_INTROSPECTION_TOKEN: ${{ steps.doppler.outputs.OPS_INTROSPECTION_TOKEN }}
+          USER_SIGNER_BEARER: ${{ steps.doppler.outputs.USER_SIGNER_BEARER }}
+        working-directory: packages/apps/agent
+        run: |
+          printf '%s' "$COORDINATOR_APP_TOKEN" | pnpm exec wrangler secret put COORDINATOR_APP_TOKEN --env mode-c-to-b
+          printf '%s' "$MANDATE_SIGNER_TOKEN" | pnpm exec wrangler secret put MANDATE_SIGNER_TOKEN --env mode-c-to-b
+          printf '%s' "$OPERATOR_ROOT_KEYS" | pnpm exec wrangler secret put OPERATOR_ROOT_KEYS --env mode-c-to-b
+          printf '%s' "$OPS_INTROSPECTION_TOKEN" | pnpm exec wrangler secret put OPS_INTROSPECTION_TOKEN --env mode-c-to-b
+          printf '%s' "$USER_SIGNER_BEARER" | pnpm exec wrangler secret put USER_SIGNER_BEARER --env mode-c-to-b
+
+      # Emit BOTH deployed worker URLs for the operator to wire into lane-b:
+      #   - conformance-signer /v1/sign  → E2E_CONFORMANCE_USER_SIGNER_URL
+      #   - conformance-agent base URL   → the agent the spec targets (name is set
+      #     via E2E_CONFORMANCE_AGENT_NAME=mandate-conformance-agent).
+      # workers.dev URLs derive deterministically from <worker-name>.<subdomain>;
+      # we resolve the account subdomain from `wrangler whoami`/deployments and
+      # fall back to an operator-confirm template if it can't be captured (D3).
+      - name: Emit deployed worker URLs
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ steps.doppler.outputs.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.doppler.outputs.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: packages/apps/reference-user-signer
+        run: |
+          subdomain="$(pnpm exec wrangler deployments status --env mode-c-to-b 2>/dev/null \
+            | grep -ioE 'https://[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev' \
+            | head -n1 | sed -E 's#https://[a-z0-9-]+\.([a-z0-9-]+)\.workers\.dev#\1#' || true)"
+          {
+            echo "## Mode C→B conformance workers deployed"
+            echo ""
+            if [ -n "$subdomain" ]; then
+              signer="https://mandate-conformance-user-signer.${subdomain}.workers.dev"
+              agent="https://mandate-conformance-agent.${subdomain}.workers.dev"
+              echo "- Signer: set lane-b \`E2E_CONFORMANCE_USER_SIGNER_URL\` = \`${signer}/v1/sign\`"
+              echo "- Agent:  \`${agent}\` (target via \`E2E_CONFORMANCE_AGENT_NAME=mandate-conformance-agent\`)"
+            else
+              echo "Could not auto-capture the workers.dev subdomain — confirm the"
+              echo "account subdomain in the Cloudflare dashboard, then set:"
+              echo "- lane-b \`E2E_CONFORMANCE_USER_SIGNER_URL\` = \`https://mandate-conformance-user-signer.<subdomain>.workers.dev/v1/sign\`"
+              echo "- agent name \`E2E_CONFORMANCE_AGENT_NAME\` = \`mandate-conformance-agent\` (\`https://mandate-conformance-agent.<subdomain>.workers.dev\`)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
