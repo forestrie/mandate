@@ -1,11 +1,17 @@
+// FOR-311: call btoa/atob via `globalThis`, never as bare `btoa(...)`/`atob(...)`.
+// In the Workers runtime these WHATWG globals must be invoked with
+// `this === globalThis`; a bare reference (which esbuild may inline into a class
+// method, e.g. RemoteKs256Signer.signRemote) is detached and the runtime throws
+// "Illegal invocation: function called with incorrect `this` reference" — which
+// broke every post-exit remote sign. Same class of bug as the unbound `fetch`.
 export function bytesToBase64(bytes: Uint8Array): string {
 	let binary = '';
 	for (const byte of bytes) binary += String.fromCharCode(byte);
-	return btoa(binary);
+	return globalThis.btoa(binary);
 }
 
 export function base64ToBytes(base64: string): Uint8Array {
-	const binary = atob(base64);
+	const binary = globalThis.atob(base64);
 	const out = new Uint8Array(binary.length);
 	for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
 	return out;
