@@ -26,7 +26,7 @@
 			"name": "mandate-conformance-agent",
 			"workers_dev": true,
 			"vars": {
-				"COORDINATOR_UPSTREAM_URL": "https://coordinator-a.forest-2.forestrie.dev"
+				"COORDINATOR_UPSTREAM_URL": "https://coordinator-b.forest-2.forestrie.dev"
 			},
 			// Dedicated conformance KV namespace (own title, no prod KV touched).
 			// scripts/ensure-kv.mjs creates/reuses it and pins the id here before
