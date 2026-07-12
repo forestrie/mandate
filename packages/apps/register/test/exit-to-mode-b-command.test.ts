@@ -3,6 +3,7 @@ import type { OperatorRootKeysMap } from '../src/describe-post-revoke-actions.js
 import {
 	computeExitToModeBOperatorRootKeys,
 	runExitToModeBCommand,
+	stampConfigNonce,
 	USER_SIGNER_BEARER_ENV_KEY,
 	type ExitToModeBCommandIo,
 	type ExitToModeBCommandOptions
@@ -115,6 +116,31 @@ describe('computeExitToModeBOperatorRootKeys', () => {
 	});
 });
 
+describe('stampConfigNonce', () => {
+	it('stamps every entry, preserves pass-through fields, does not mutate input', () => {
+		const localLogId = 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+		const map = modeCAgentKeys();
+		map[localLogId] = {
+			alg: 'KS256',
+			rootSignerAddress: '0xdead',
+			kind: 'local',
+			privateKeyHex: '0x01'
+		} as unknown as OperatorRootKeysMap[string];
+		const stamped = stampConfigNonce(map, 'nonce-1');
+		expect(stamped[LOG_ID].configNonce).toBe('nonce-1');
+		expect(stamped[localLogId].configNonce).toBe('nonce-1');
+		expect((stamped[localLogId] as unknown as Record<string, unknown>).privateKeyHex).toBe('0x01');
+		expect(map[LOG_ID].configNonce).toBeUndefined();
+	});
+
+	it('replaces a stale nonce from an earlier put', () => {
+		const map = modeCAgentKeys();
+		map[LOG_ID] = { ...map[LOG_ID], configNonce: 'stale' };
+		const stamped = stampConfigNonce(map, 'fresh');
+		expect(stamped[LOG_ID].configNonce).toBe('fresh');
+	});
+});
+
 describe('runExitToModeBCommand', () => {
 	it('AT-311-3: happy path applies OPERATOR_ROOT_KEYS and USER_SIGNER_BEARER to the agent', async () => {
 		const lines = { out: [] as string[], err: [] as string[] };
@@ -133,6 +159,59 @@ describe('runExitToModeBCommand', () => {
 		// Bearer secret value must never leak to logs.
 		expect(lines.out.join('\n')).not.toContain(USER_SIGNER_BEARER);
 		expect(lines.err.join('\n')).not.toContain(USER_SIGNER_BEARER);
+	});
+
+	it('S1: stamps one fresh configNonce per put on every entry and prints it in the stdout JSON', async () => {
+		const otherLogId = 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+		const map = modeCAgentKeys();
+		map[otherLogId] = {
+			alg: 'KS256',
+			rootSignerAddress: '0xbeef',
+			kind: 'remote',
+			signerUrl: 'https://other.example/v1/sign',
+			keyRef: 'other',
+			configNonce: 'stale-from-previous-put'
+		};
+		const lines = { out: [] as string[], err: [] as string[] };
+		const applied: AppliedSecret[] = [];
+		const code = await runExitToModeBCommand(
+			baseOptions({ operatorRootKeys: map }),
+			makeIo(lines, applied)
+		);
+		expect(code).toBe(0);
+
+		const jsonLine = lines.out.find((l) => l.startsWith('{'));
+		expect(jsonLine).toBeDefined();
+		const emitted = JSON.parse(jsonLine!) as {
+			configNonce: string;
+			operatorRootKeys: Record<string, { configNonce?: string }>;
+		};
+		// Crypto UUID shape, printed at the top level for the caller to gate on.
+		expect(emitted.configNonce).toMatch(
+			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+		);
+
+		// The nonce actually written to the agent matches the printed one, on
+		// every entry (stale nonces from earlier puts are replaced).
+		const rootKeysPut = applied.find((s) => s.name === 'OPERATOR_ROOT_KEYS');
+		const putMap = JSON.parse(rootKeysPut!.value) as OperatorRootKeysMap;
+		expect(putMap[LOG_ID].configNonce).toBe(emitted.configNonce);
+		expect(putMap[otherLogId].configNonce).toBe(emitted.configNonce);
+		expect(emitted.operatorRootKeys[LOG_ID].configNonce).toBe(emitted.configNonce);
+	});
+
+	it('S1: each invocation stamps a distinct configNonce', async () => {
+		const nonces: string[] = [];
+		for (let i = 0; i < 2; i++) {
+			const lines = { out: [] as string[], err: [] as string[] };
+			const applied: AppliedSecret[] = [];
+			await runExitToModeBCommand(baseOptions(), makeIo(lines, applied));
+			const emitted = JSON.parse(lines.out.find((l) => l.startsWith('{'))!) as {
+				configNonce: string;
+			};
+			nonces.push(emitted.configNonce);
+		}
+		expect(nonces[0]).not.toBe(nonces[1]);
 	});
 
 	it('S2: redacts privateKeyHex from the emitted OPERATOR_ROOT_KEYS JSON (pass-through local entries)', async () => {

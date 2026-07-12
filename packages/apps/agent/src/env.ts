@@ -6,6 +6,12 @@ export interface Env {
 	MANDATE_SIGNER_TOKEN: string;
 	/** Mode B user remote signer bearer (when descriptor sets bearerEnvKey). */
 	USER_SIGNER_BEARER?: string;
+	/**
+	 * Bearer for GET /ops/root-key-config (FOR-311 S1). The endpoint refuses
+	 * (503) when this is unset — introspection fails closed on agents deployed
+	 * without it.
+	 */
+	OPS_INTROSPECTION_TOKEN?: string;
 	REQUEST_KEYS: KVNamespace;
 }
 

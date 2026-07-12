@@ -155,6 +155,9 @@ Options (env fallbacks in parentheses):
   --yes                      Skip the interactive prompt (required in non-interactive/CI)
 
 Prefer USER_SIGNER_BEARER env over --user-signer-bearer (argv is visible in ps).
+On success prints a JSON object with the redacted OPERATOR_ROOT_KEYS and a fresh
+top-level configNonce; poll the agent's GET /ops/root-key-config until it serves
+that nonce with kind:"remote" before treating the repoint as live (FOR-311 S1).
 `);
 	process.exit(1);
 }
