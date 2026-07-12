@@ -188,3 +188,21 @@ tasks:
       - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- pnpm exec wrangler deploy
       - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- sh -c 'printf "%s" "$USER_SIGNER_BEARER" | pnpm exec wrangler secret put USER_SIGNER_BEARER'
       - doppler run --project {{.DOPPLER_PROJECT}} --config {{.DOPPLER_CONFIG}} -- sh -c 'printf "%s" "$USER_SIGNER_KEYS_JSON" | pnpm exec wrangler secret put USER_SIGNER_KEYS_JSON'
+
+  deploy:mode-c-to-b-signer:
+    desc: >-
+      Deploy the DEDICATED Mode C→B conformance instance of
+      @mandate/reference-user-signer (mandate-conformance-user-signer) and push
+      USER_SIGNER_* secrets from Doppler mode-c-to-b config. Local mirror of the
+      deploy-mode-c-to-b.yml CI path (FOR-311, plan-2607-17). CI pulls the same
+      Doppler config via GitHub OIDC (ADR-0049); locally `doppler run` injects it.
+    dir: packages/apps/reference-user-signer
+    preconditions:
+      - sh: test -n "${CLOUDFLARE_API_TOKEN:-}"
+        msg: CLOUDFLARE_API_TOKEN must be set
+      - sh: test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+        msg: CLOUDFLARE_ACCOUNT_ID must be set
+    cmds:
+      - doppler run --project {{.DOPPLER_PROJECT}} --config mode-c-to-b -- pnpm exec wrangler deploy --env mode-c-to-b
+      - doppler run --project {{.DOPPLER_PROJECT}} --config mode-c-to-b -- sh -c 'printf "%s" "$USER_SIGNER_BEARER" | pnpm exec wrangler secret put USER_SIGNER_BEARER --env mode-c-to-b'
+      - doppler run --project {{.DOPPLER_PROJECT}} --config mode-c-to-b -- sh -c 'printf "%s" "$USER_SIGNER_KEYS_JSON" | pnpm exec wrangler secret put USER_SIGNER_KEYS_JSON --env mode-c-to-b'
