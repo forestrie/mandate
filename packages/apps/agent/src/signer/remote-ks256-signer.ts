@@ -74,7 +74,10 @@ export class RemoteKs256Signer implements DelegationSigner {
 			});
 			step = 'response.ok';
 			if (!response.ok) {
-				throw new Error(`remote signer failed: ${response.status}`);
+				// Include the signer's error body — a bare status hid why post-exit
+				// signs were rejected (FOR-311: e.g. keystore "unknown logId/keyRef").
+				const detail = await response.text().catch(() => '');
+				throw new Error(`remote signer failed: ${response.status} ${detail.slice(0, 200)}`);
 			}
 			step = 'response.json()';
 			const body = (await response.json()) as { signature: string };
