@@ -43,9 +43,9 @@ export class RemoteKs256Signer implements DelegationSigner {
 	}
 
 	private async signRemote(logIdHex32: string, sigStructureBytes: Uint8Array): Promise<Uint8Array> {
-		// FOR-311 diagnostic: per-step labels so the tail names the exact operation
-		// that throws "Illegal invocation" (fetch/btoa/json all previously "fixed"
-		// with no effect — the line-number inference is unreliable, so isolate it).
+		// FOR-311: per-step labels retained as observability — a signer_failed here
+		// gives the tail the exact failing operation + stack (this is how the fetch
+		// method-call bug below was finally pinned).
 		let step = 'sigStructure(bytesToBase64)';
 		try {
 			const requestBody: SignRequest = {
@@ -57,7 +57,14 @@ export class RemoteKs256Signer implements DelegationSigner {
 			step = 'JSON.stringify(body)';
 			const bodyStr = JSON.stringify(requestBody);
 			step = 'fetch(signerUrl)';
-			const response = await this.fetchImpl(this.descriptor.signerUrl!, {
+			// Call via a local free variable, NOT `this.fetchImpl(...)`. resolveSigner
+			// passes the bare global `fetch` explicitly (its own default), and invoking
+			// the global fetch as a method — `this.fetchImpl(...)` — sets `this` to this
+			// instance, which the Workers runtime rejects with "Illegal invocation". A
+			// free call leaves the global fetch correctly bound (this is exactly why the
+			// JWKS fetch, which calls its impl as a free variable, never failed).
+			const doFetch = this.fetchImpl;
+			const response = await doFetch(this.descriptor.signerUrl!, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
