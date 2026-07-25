@@ -1,0 +1,20 @@
+{
+	"name": "@mandate/x402",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"description": "Operator-owned x402 payment collection (FOR-428): challenge, parse, verify, settle",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"build": "tsc --noEmit",
+		"check": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"@types/node": "^22",
+		"typescript": "^6.0.2",
+		"vitest": "^4.1.3"
+	}
+}
