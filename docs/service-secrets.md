@@ -48,6 +48,34 @@ Doppler `mandate-forestrie` configs **`dev`** and **`prod`**.
 users never store owner keys in Doppler; only the synthetic test user owner key is
 `E2E_*`.
 
+## Operator fee collection (`X402_*`)
+
+Agent worker only, for `POST /grants`. This operator collects **its own** fees at
+**its own** address (FOR-428, ADR-0058). Canopy is not in this path and learns
+nothing about these values.
+
+**There is no compiled-in default for any of them, deliberately.** A fallback
+would settle a fork's customers' money to whichever address the fallback names —
+i.e. upstream's. `POST /grants` therefore **fails closed**: with any of these
+unset it answers `503` and issues no challenge at all, rather than paywalling to
+a foreign payee. Set them per environment; a dev payment must not be
+indistinguishable from a production one.
+
+| Name                             | Required | Purpose                                                        |
+| -------------------------------- | -------- | -------------------------------------------------------------- |
+| `X402_PAYTO_ADDRESS`             | yes      | This operator's own settlement address                         |
+| `X402_PRICE_ATOMIC`              | yes      | Grant price in the asset's atomic units (USDC has 6 decimals)  |
+| `X402_NETWORK`                   | yes      | CAIP-2 settlement chain, e.g. `eip155:84532`                   |
+| `X402_ASSET_ADDRESS`             | yes      | ERC-20 settlement asset on `X402_NETWORK` (chain-specific)     |
+| `X402_FACILITATOR_URL`           | yes      | Facilitator base URL used to `verify` then `settle`            |
+| `X402_ASSET_EIP712_NAME`         | no       | Asset EIP-712 domain name; defaults to the ERC-20 usual `USDC` |
+| `X402_ASSET_EIP712_VERSION`      | no       | Asset EIP-712 domain version; defaults to `2`                  |
+| `X402_FACILITATOR_AUTHORIZATION` | no       | Bearer for facilitators that require credentials               |
+
+The two `EIP712` values are properties of the ERC-20 contract named by
+`X402_ASSET_ADDRESS`, not economic configuration, which is why they alone carry
+conventional defaults.
+
 ## E2E fixture secrets (`E2E_*`)
 
 Doppler config **`e2e`** only. GitHub **`live-signer`** only.
