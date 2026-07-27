@@ -110,10 +110,14 @@ describe.skipIf(!LIVE)('Mode B live sealing (reference user signer)', () => {
 
 		const onboardToken =
 			ONBOARD_TOKEN ??
-			(await mintOnboardToken({
-				canopyBaseUrl: CANOPY_BASE!,
-				opsAdminToken: OPS_ADMIN!
-			}));
+			(
+				await mintOnboardToken({
+					canopyBaseUrl: CANOPY_BASE!,
+					opsAdminToken: OPS_ADMIN!,
+					chainId: CHAIN_ID!,
+					univocityAddr: UNIVOCITY_ADDR!
+				})
+			).token;
 
 		provisioned = await provisionInstance({
 			onboardToken,

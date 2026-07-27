@@ -18,7 +18,18 @@ export { postGenesis } from './genesis-client.js';
 export { GenesisClientError } from './genesis-client-error.js';
 export { logIdFromR, rFromLogIdHex32, normalizeForestR } from './log-id.js';
 export { provisionInstance } from './provision.js';
-export { mintOnboardToken } from './mint-onboard-token.js';
+export {
+	mintOnboardToken,
+	MintOnboardTokenConflictError,
+	type MintOnboardTokenResult
+} from './mint-onboard-token.js';
+export {
+	isUnivocityInstanceId,
+	parseUnivocityInstanceId,
+	univocityInstanceIdFromChainBinding,
+	UnivocityInstanceIdError,
+	type UnivocityInstanceId
+} from './univocity-instance-id.js';
 export {
 	requestOnboardToken,
 	redeemOnboardToken,
