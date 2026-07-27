@@ -8,7 +8,6 @@ describe('postGenesis', () => {
 		const coordinator = { publicRoot: 'ok' as const, webhook: 'ok' as const };
 		const responseBody = {
 			R: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-			class: 'payment-authoritative',
 			chainBinding: { chainId: '84532', univocityAddr: 'abcd'.repeat(10) },
 			coordinator
 		};
@@ -49,7 +48,6 @@ describe('postGenesis', () => {
 	it('fails closed when coordinator forward is incomplete', async () => {
 		const responseBody = {
 			R: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-			class: 'payment-authoritative',
 			chainBinding: { chainId: '84532', univocityAddr: 'abcd'.repeat(10) },
 			coordinator: { publicRoot: 'ok', webhook: 'error', detail: 'webhook 403' }
 		};

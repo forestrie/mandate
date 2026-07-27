@@ -29,7 +29,7 @@ function assertCoordinatorOk(coordinator: CoordinatorRegistrationStatus | undefi
 	}
 }
 
-/** POST payment-authoritative forest genesis; canopy brokers coordinator registration. */
+/** POST forest genesis; canopy brokers coordinator registration. */
 export async function postGenesis(input: PostGenesisInput): Promise<GenesisRegistrationResponse> {
 	const fetchImpl = input.fetchImpl ?? fetch;
 	const base = normalizeBaseUrl(input.canopyBaseUrl);

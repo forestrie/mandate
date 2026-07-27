@@ -65,7 +65,6 @@ describe('provisionInstance', () => {
 			return new Response(
 				encodeCbor({
 					R: FOREST_R,
-					class: 'payment-authoritative',
 					chainBinding: { chainId: '84532', univocityAddr: 'cd'.repeat(20) },
 					coordinator
 				}) as unknown as BodyInit,
@@ -113,7 +112,6 @@ describe('provisionInstance', () => {
 				new Response(
 					encodeCbor({
 						R: FOREST_R,
-						class: 'payment-authoritative',
 						chainBinding: { chainId: '84532', univocityAddr: 'cd'.repeat(20) },
 						coordinator
 					}) as unknown as BodyInit,
@@ -162,7 +160,6 @@ describe('provisionInstance', () => {
 			return new Response(
 				encodeCbor({
 					R: FOREST_R,
-					class: 'payment-authoritative',
 					chainBinding: { chainId: '84532', univocityAddr: 'cd'.repeat(20) },
 					coordinator
 				}) as unknown as BodyInit,
