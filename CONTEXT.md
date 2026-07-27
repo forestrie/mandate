@@ -114,12 +114,25 @@ The ops escape hatch that removes **all** `additional_signers` from a wallet
 `--clear-all-additional-signers` CLI flag; never the default Mode C revoke.
 Distinct from a **targeted revoke**.
 
-## operator payment-authoritative wallet
+## univocityInstanceId
 
-The mandate operator's own payment-authoritative log root signer: an **ownerless
-app-controlled** Privy server wallet (`owner_id: null`), signed via Basic auth
-with no `requiresAuthorizationSignature`. Distinct from Mode C user wallets;
-the operator controls this key directly. See ADR-0005 §7 and ARC-0022 §11.1.
+The canonical fee-account identifier (devdocs ADR-0059): the CAIP-10
+rendering of an instance's chain binding, lowercased —
+`eip155:{decimal chainId}:0x{40 lowercase hex}`. One identifier, one name;
+the structured wire form remains `chainBinding { chainId, univocityAddr }`.
+Semantics mirror canopy's `@canopy/univocity-instance-id` (the authority).
+_Retired names_ (naming gate, `scripts/check-naming.mjs`): `instanceKey`,
+`accountKey`, `liableAccount*`, the `payment-authoritative`/"regular"
+registration classes, and `endorsedBy`.
+
+## operator root wallet
+
+The mandate operator's own log root signer (formerly "operator
+payment-authoritative wallet" — the class vocabulary is retired, ADR-0059):
+an **ownerless app-controlled** Privy server wallet (`owner_id: null`),
+signed via Basic auth with no `requiresAuthorizationSignature`. Distinct
+from Mode C user wallets; the operator controls this key directly. See
+ADR-0005 §7 and ARC-0022 §11.1.
 
 ## signer test wallet
 

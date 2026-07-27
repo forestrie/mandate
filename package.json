@@ -11,7 +11,7 @@
 		"preview": "pnpm --filter @mandate/ui preview",
 		"prepare": "pnpm --filter @mandate/ui prepare",
 		"check": "pnpm -r --filter './packages/**' check",
-		"lint": "prettier --check . && eslint . && node scripts/check-legacy-secret-names.mjs",
+		"lint": "prettier --check . && eslint . && node scripts/check-legacy-secret-names.mjs && node scripts/check-naming.mjs",
 		"format": "prettier --write .",
 		"test": "pnpm -r --filter './packages/**' test",
 		"test:scripts": "node --test 'scripts/*.test.mjs'",

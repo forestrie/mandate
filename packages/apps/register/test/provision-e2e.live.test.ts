@@ -166,7 +166,9 @@ describe.skipIf(!LIVE)('provision + hands-off seal (live)', () => {
 	it(
 		'provisions genesis with coordinator forward ok',
 		() => {
-			expect(provisioned.genesis.class).toBe('payment-authoritative');
+			// ADR-0059: no registration class — the account identity is the
+			// canonical instance id derived from the chain binding.
+			expect(provisioned.univocityInstanceId).toMatch(/^eip155:[0-9]+:0x[0-9a-f]{40}$/);
 			expect(provisioned.coordinator.publicRoot).toBe('ok');
 			expect(provisioned.coordinator.webhook).toBe('ok');
 			expect(provisioned.descriptors.operatorRootKeys[provisioned.logIdHex32]).toBeDefined();

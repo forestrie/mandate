@@ -8,6 +8,7 @@ import { logIdFromR, logIdPaddedWire32, normalizeForestR } from './log-id.js';
 import type { ProvisionConfig } from './provision-config.js';
 import type { ProvisionResult } from './provision-result.js';
 import { GenesisClientError } from './genesis-client-error.js';
+import { univocityInstanceIdFromChainBinding } from './univocity-instance-id.js';
 
 function buildModeBDescriptors(
 	logIdHex32: string,
@@ -30,7 +31,8 @@ function buildModeBDescriptors(
 }
 
 /**
- * Provision a payment-authoritative forest instance and emit agent/signer descriptors.
+ * Provision a forest instance — its root is its own fee account (ADR-0059)
+ * — and emit agent/signer descriptors.
  * Mode C: Privy onboard → genesis with wallet address as KS256 bootstrapKey.
  * Mode B: genesis with user root address; descriptor points at user signerUrl (FOR-111).
  */
@@ -127,6 +129,7 @@ export async function provisionInstance(config: ProvisionConfig): Promise<Provis
 		forestR,
 		logIdHex32,
 		mode: config.mode,
+		univocityInstanceId: univocityInstanceIdFromChainBinding(genesis.chainBinding),
 		genesis,
 		descriptors,
 		coordinator
