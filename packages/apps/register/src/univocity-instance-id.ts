@@ -48,6 +48,20 @@ export function isUnivocityInstanceId(value: string): value is UnivocityInstance
 }
 
 /**
+ * Split a canonical id back into the structured wire form (mirrors canopy's
+ * `chainBindingFromUnivocityInstanceId`): bare decimal chainId, 40-lowerhex
+ * address body without 0x.
+ */
+export function chainBindingFromUnivocityInstanceId(id: string): {
+	chainId: string;
+	univocityAddr: string;
+} {
+	parseUnivocityInstanceId(id);
+	const [, chainId, prefixedAddr] = id.split(':');
+	return { chainId: chainId!, univocityAddr: prefixedAddr!.slice(2) };
+}
+
+/**
  * Construct from a chain binding (trusted internal input, e.g. the genesis
  * registration response): tolerates an optional 0x prefix and any hex case,
  * renders canonical.
