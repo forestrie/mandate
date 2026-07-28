@@ -8,6 +8,7 @@ import { logIdFromR, logIdPaddedWire32, normalizeForestR } from './log-id.js';
 import type { ProvisionConfig } from './provision-config.js';
 import type { ProvisionResult } from './provision-result.js';
 import { GenesisClientError } from './genesis-client-error.js';
+import { ReservationConflictError } from './reservation-conflict-error.js';
 import { univocityInstanceIdFromChainBinding } from './univocity-instance-id.js';
 
 function buildModeBDescriptors(
@@ -103,6 +104,13 @@ export async function provisionInstance(config: ProvisionConfig): Promise<Provis
 		...uupsGenesisExtras
 	});
 
+	// The account identity this provisioning claims (ADR-0059): derived up
+	// front so a reservation conflict can name it before genesis succeeds.
+	const univocityInstanceId = univocityInstanceIdFromChainBinding({
+		chainId: config.chainId,
+		univocityAddr: config.univocityAddr
+	});
+
 	let genesis;
 	try {
 		genesis = await postGenesis({
@@ -114,8 +122,14 @@ export async function provisionInstance(config: ProvisionConfig): Promise<Provis
 			fetchImpl
 		});
 	} catch (error) {
-		if (error instanceof GenesisClientError) {
-			throw error;
+		// D7 reservation conflict: the instance is held by a foreign admission
+		// or registered to another root. Genesis retries for the SAME root are
+		// idempotent server-side and do not land here.
+		if (error instanceof GenesisClientError && error.status === 409) {
+			throw new ReservationConflictError(
+				univocityInstanceId,
+				error.detail?.trim() || error.message
+			);
 		}
 		throw error;
 	}
@@ -129,7 +143,7 @@ export async function provisionInstance(config: ProvisionConfig): Promise<Provis
 		forestR,
 		logIdHex32,
 		mode: config.mode,
-		univocityInstanceId: univocityInstanceIdFromChainBinding(genesis.chainBinding),
+		univocityInstanceId,
 		genesis,
 		descriptors,
 		coordinator

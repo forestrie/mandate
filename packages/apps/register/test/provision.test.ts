@@ -145,6 +145,36 @@ describe('provisionInstance', () => {
 		expect(result.descriptors.operatorRootKeys[LOG_ID]?.keyRef).toBe('user-remote');
 	});
 
+	it('maps a genesis 409 to ReservationConflictError naming the account (D7)', async () => {
+		const fetchImpl = vi.fn(
+			async () =>
+				new Response('Univocity instance is already registered to forest root some-other-root', {
+					status: 409
+				})
+		);
+		await expect(
+			provisionInstance({
+				onboardToken: 'onboard-token',
+				canopyBaseUrl: 'https://api.example.dev',
+				coordinatorBaseUrl: 'https://coordinator.example.dev',
+				agentWebhookUrl: 'https://agent.example/webhooks/delegation-required',
+				mode: 'B',
+				univocityAddr: 'cd'.repeat(20),
+				chainId: '84532',
+				forestR: FOREST_R,
+				fetchImpl,
+				modeB: {
+					rootSignerAddress: WALLET_ADDRESS,
+					userSignerUrl: 'https://user-signer.example/v1/sign',
+					keyRef: 'user-remote'
+				}
+			})
+		).rejects.toMatchObject({
+			name: 'ReservationConflictError',
+			univocityInstanceId: `eip155:84532:0x${'cd'.repeat(20)}`
+		});
+	});
+
 	it('Mode B uups-counterfactual emits genesis labels and webhookUrl query', async () => {
 		const coordinator = { publicRoot: 'ok' as const, webhook: 'ok' as const };
 		const deployerHex = 'ef'.repeat(20);

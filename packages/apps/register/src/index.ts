@@ -31,6 +31,12 @@ export {
 	type UnivocityInstanceId
 } from './univocity-instance-id.js';
 export {
+	getChainBinding,
+	releaseChainBinding,
+	type ChainBindingRecord
+} from './chain-bindings-client.js';
+export { ReservationConflictError } from './reservation-conflict-error.js';
+export {
 	requestOnboardToken,
 	redeemOnboardToken,
 	getOnboardRequestStatus
