@@ -19,6 +19,7 @@
 			<nav class="flex gap-4 text-sm text-zinc-600">
 				<a href={resolve('/delegations')} class="hover:text-zinc-950">Delegations</a>
 				<a href={resolve('/fees')} class="hover:text-zinc-950">Fees</a>
+				<a href={resolve('/instances')} class="hover:text-zinc-950">Instances</a>
 			</nav>
 		</div>
 	</header>

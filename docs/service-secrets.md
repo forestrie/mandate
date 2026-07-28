@@ -35,6 +35,9 @@ Doppler `mandate-forestrie` configs **`dev`** and **`prod`**.
 | `USER_SIGNER_BEARER`              | Mode B user remote signer bearer (when descriptor sets `bearerEnvKey`)                                                                          |
 | `COORDINATOR_APP_TOKEN`           | Bearer for coordinator material submit                                                                                                          |
 | `COORDINATOR_UPSTREAM_URL`        | Coordinator origin (agent var)                                                                                                                  |
+| `MANDATE_OPS_UI_TOKEN`            | Console-side bearer for the operator personality's `/instances` BFF (FOR-493); all three operator vars required or the surface answers 501      |
+| `CANOPY_UPSTREAM_URL`             | Canopy origin for the operator BFF (server-side; not the browser-facing `PUBLIC_CANOPY_API_URL`)                                                |
+| `MANDATE_CANOPY_OPS_TOKEN`        | Canopy operator identity the BFF presents upstream; never reaches the browser                                                                   |
 | `OPERATOR_ROOT_KEYS`              | JSON map of per-log signer descriptors                                                                                                          |
 | `KEY_DIRECTORY`                   | Signer wallet directory JSON                                                                                                                    |
 | `CLOUDFLARE_API_TOKEN`            | Wrangler deploy / KV                                                                                                                            |
