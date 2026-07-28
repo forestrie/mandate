@@ -39,6 +39,9 @@ jobs:
           PUBLIC_MANDATE_PRIVY_APP_ID: ${{ vars.PUBLIC_MANDATE_PRIVY_APP_ID }}
           PUBLIC_MANDATE_PRIVY_CLIENT_ID: ${{ vars.PUBLIC_MANDATE_PRIVY_CLIENT_ID }}
           PUBLIC_DEFAULT_CHAIN_ID: ${{ vars.PUBLIC_DEFAULT_CHAIN_ID }}
+          # Canopy base for the browser-direct fee surface (FOR-485); the
+          # attestation aud is this URL's origin.
+          PUBLIC_CANOPY_API_URL: ${{ vars.PUBLIC_CANOPY_API_URL }}
         run: pnpm build:ui
 
       - name: Deploy production
@@ -55,5 +58,12 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         working-directory: packages/apps/ui
+        # Runtime env for the Pages Functions BFF: coordinator proxy plus the
+        # operator personality trio (FOR-493) — all three operator vars must
+        # be present or /instances answers 501 by design.
         run: |
           echo "${{ secrets.COORDINATOR_APP_TOKEN }}" | pnpm exec wrangler pages secret put COORDINATOR_APP_TOKEN --project-name=mandate-prod
+          echo "${{ secrets.COORDINATOR_UPSTREAM_URL }}" | pnpm exec wrangler pages secret put COORDINATOR_UPSTREAM_URL --project-name=mandate-prod
+          echo "${{ secrets.MANDATE_OPS_UI_TOKEN }}" | pnpm exec wrangler pages secret put MANDATE_OPS_UI_TOKEN --project-name=mandate-prod
+          echo "${{ secrets.CANOPY_UPSTREAM_URL }}" | pnpm exec wrangler pages secret put CANOPY_UPSTREAM_URL --project-name=mandate-prod
+          echo "${{ secrets.MANDATE_CANOPY_OPS_TOKEN }}" | pnpm exec wrangler pages secret put MANDATE_CANOPY_OPS_TOKEN --project-name=mandate-prod
