@@ -1,4 +1,7 @@
-import { encode as encodeCbor, decode as decodeCbor } from 'cbor-x';
+import {
+	decodeCborDeterministic as decodeCbor,
+	encodeCborDeterministic as encodeCbor
+} from '@forestrie/encoding';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { KeyRegistry } from '../../agent/src/signer/key-registry.js';
 import { resolveSigner } from '../../agent/src/signer/resolve-signer.js';

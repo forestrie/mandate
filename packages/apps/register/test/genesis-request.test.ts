@@ -1,4 +1,4 @@
-import { decode as decodeCbor } from 'cbor-x';
+import { decodeCborDeterministic as decodeCbor } from '@forestrie/encoding';
 import { describe, expect, it } from 'vitest';
 import { COSE_ALG_ES256, COSE_ALG_KS256 } from '../src/cose-alg.js';
 import { buildGenesisCborBody } from '../src/genesis-request.js';
@@ -40,8 +40,12 @@ describe('buildGenesisCborBody', () => {
 		const map = intKeyMap(body);
 		expect(map.get(FOREST_GENESIS_LABEL_GENESIS_VERSION)).toBe(FOREST_GENESIS_SCHEMA_V2);
 		expect(map.get(FOREST_GENESIS_LABEL_GENESIS_ALG)).toBe(COSE_ALG_KS256);
-		expect(map.get(FOREST_GENESIS_LABEL_BOOTSTRAP_KEY)).toEqual(bootstrapKey);
-		expect(map.get(FOREST_GENESIS_LABEL_UNIVOCITY_ADDR)).toEqual(univocityAddr);
+		expect(new Uint8Array(map.get(FOREST_GENESIS_LABEL_BOOTSTRAP_KEY) as Uint8Array)).toEqual(
+			bootstrapKey
+		);
+		expect(new Uint8Array(map.get(FOREST_GENESIS_LABEL_UNIVOCITY_ADDR) as Uint8Array)).toEqual(
+			univocityAddr
+		);
 		expect(map.get(FOREST_GENESIS_LABEL_CHAIN_ID)).toBe('84532');
 	});
 
@@ -87,7 +91,11 @@ describe('buildGenesisCborBody', () => {
 		expect(map.get(FOREST_GENESIS_LABEL_UNIVOCITY_VARIANT)).toBe(
 			FOREST_GENESIS_UNIVOCITY_VARIANT_UUPS_COUNTERFACTUAL
 		);
-		expect(map.get(FOREST_GENESIS_LABEL_UNIVOCITY_DEPLOYER)).toEqual(deployer);
-		expect(map.get(FOREST_GENESIS_LABEL_BOOTSTRAP_LOG_ID)).toEqual(logIdPaddedWire32(logIdHex32));
+		expect(new Uint8Array(map.get(FOREST_GENESIS_LABEL_UNIVOCITY_DEPLOYER) as Uint8Array)).toEqual(
+			deployer
+		);
+		expect(new Uint8Array(map.get(FOREST_GENESIS_LABEL_BOOTSTRAP_LOG_ID) as Uint8Array)).toEqual(
+			logIdPaddedWire32(logIdHex32)
+		);
 	});
 });

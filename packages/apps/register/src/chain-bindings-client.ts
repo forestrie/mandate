@@ -7,6 +7,8 @@
  * reservations: a paid reservation never expires on its own.
  */
 
+import { decodeCborRecord } from './canopy-cbor.js';
+
 export interface ChainBindingRecord {
 	state: 'reserved' | 'registered';
 	/** `request:{id}`, `token:{hash}`, or `genesis`. */
@@ -49,8 +51,9 @@ async function chainBindingFetch(
 		const detail = await response.text().catch(() => '');
 		throw new Error(`chain-binding ${method} failed: ${response.status}: ${detail.slice(0, 300)}`);
 	}
-	const { decode } = await import('cbor-x');
-	return decode(new Uint8Array(await response.arrayBuffer())) as ChainBindingRecord;
+	return decodeCborRecord(
+		new Uint8Array(await response.arrayBuffer())
+	) as unknown as ChainBindingRecord;
 }
 
 /** Inspect a reservation record; null when no claim exists. */

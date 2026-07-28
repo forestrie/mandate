@@ -1,4 +1,4 @@
-import { encode as encodeCbor } from 'cbor-x';
+import { encodeCborDeterministic as encodeCbor } from '@forestrie/encoding';
 import { describe, expect, it } from 'vitest';
 import { getChainBinding, releaseChainBinding } from '../src/chain-bindings-client.js';
 

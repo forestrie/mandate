@@ -32,6 +32,16 @@ When work merges to `main`, remove the worktree:
 - **Tests**: `pnpm -r test` (per package)
 - **UI browser e2e (hermetic)**: `pnpm test:e2e:ui` or `task test:e2e:ui`
 
+## Rules
+
+- **cbor-x is banned** (standing platform rule; eslint `no-restricted-imports`
+  enforces it). It serialises JavaScript, not CBOR: record extensions for
+  objects, tag 259 for Maps, tag 64 for `Uint8Array` — all rejected or
+  mis-read by canopy's strict deterministic decoder, and this class of bug
+  has shipped repeatedly. Use `@forestrie/encoding`
+  (`encodeCborDeterministic` / `decodeCborDeterministic`); canopy-bound
+  bodies go through `register/src/canopy-cbor.ts`.
+
 ## Documentation map
 
 - **Plans**: [docs/plans/](docs/plans/)

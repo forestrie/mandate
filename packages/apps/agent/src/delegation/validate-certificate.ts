@@ -1,4 +1,4 @@
-import { decode } from 'cbor-x';
+import { decodeCborDeterministic } from '@forestrie/encoding';
 import {
 	decodeCoseSign1Parts,
 	decodeDelegatedCoseKeyFromBytes,
@@ -53,7 +53,7 @@ export async function assertCertificateMatchesEvent(opts: {
 		decodeDelegatedCoseKeyFromBytes(base64ToBytes(opts.event.delegatedPublicKey))
 	);
 	const { payloadBytes } = decodeCoseSign1Parts(opts.certificate);
-	const payloadMap = normalizeIntKeyedMap(decode(payloadBytes));
+	const payloadMap = normalizeIntKeyedMap(decodeCborDeterministic(payloadBytes));
 	const certKey = parseDelegatedCoseKeyFromPayload(payloadMap.get(PAYLOAD_DELEGATED_KEY));
 	if (!bytesEqual(expectedKey.x, certKey.x) || !bytesEqual(expectedKey.y, certKey.y)) {
 		throw new CertificateValidationError(
