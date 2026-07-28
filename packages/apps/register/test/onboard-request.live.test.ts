@@ -42,7 +42,7 @@ async function ensureApproved(requestId: string, initialStatus: string): Promise
 		);
 	}
 
-	const { encode } = await import('cbor-x');
+	const { encodeCborDeterministic: encode } = await import('@forestrie/encoding');
 	const approveRes = await fetch(
 		`${canopyBaseUrl!.replace(/\/$/, '')}/api/onboarding/requests/${requestId}/approve`,
 		{

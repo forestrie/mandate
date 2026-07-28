@@ -1,4 +1,4 @@
-import { cborIntKeyBytes } from './cbor-int-key.js';
+import { cborIntKeyBytes, decodeCborRecord } from './canopy-cbor.js';
 import { univocityInstanceIdFromChainBinding } from './univocity-instance-id.js';
 
 /**
@@ -74,8 +74,7 @@ export async function mintOnboardToken(opts: {
 			`mint onboard token: expected 201, got ${response.status}: ${detail.slice(0, 300)}`
 		);
 	}
-	const { decode } = await import('cbor-x');
-	const body = decode(new Uint8Array(await response.arrayBuffer())) as {
+	const body = decodeCborRecord(new Uint8Array(await response.arrayBuffer())) as {
 		token?: string;
 		ref?: string;
 		univocityInstanceId?: string;

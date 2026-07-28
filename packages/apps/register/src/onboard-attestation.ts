@@ -12,14 +12,16 @@
  * separation comes from the signed content type; forestrie-cli's
  * `onboard-attestation.ts` is the direct-sign sibling producer.
  *
- * The verifier rebuilds Sig_structure from the received protected/payload
- * bytes; maps are encoded via the tag-free canopy-body encoder
- * (`cbor-int-key.ts` — canopy's strict decoder rejects cbor-x tags), and
- * the Sig_structure and envelope framing are inlined byte-exact per
- * RFC 9052.
+ * All CBOR/COSE framing comes from `@forestrie/encoding` — the platform
+ * codec shared with canopy's verifier and forestrie-cli's sibling producer,
+ * so the bytes agree by construction.
  */
 
-import { cborIntKeyBytes } from './cbor-int-key.js';
+import {
+	encodeCborDeterministic,
+	encodeCoseSign1Raw,
+	encodeSigStructure
+} from '@forestrie/encoding';
 
 export const ONBOARD_ATTESTATION_CONTENT_TYPE = 'application/forestrie-onboard-attestation+cwt';
 
@@ -55,48 +57,13 @@ export interface RemoteAttestationSigner {
 	fetchImpl?: typeof fetch;
 }
 
-/** CBOR bstr framing (major type 2) for the RFC 9052 structures. */
-function cborBstr(bytes: Uint8Array): Uint8Array {
-	const len = bytes.length;
-	let header: Uint8Array;
-	if (len < 24) header = new Uint8Array([0x40 + len]);
-	else if (len < 256) header = new Uint8Array([0x58, len]);
-	else header = new Uint8Array([0x59, (len >> 8) & 0xff, len & 0xff]);
-	const out = new Uint8Array(header.length + len);
-	out.set(header, 0);
-	out.set(bytes, header.length);
-	return out;
-}
-
-function concat(...arrays: Uint8Array[]): Uint8Array {
-	const total = arrays.reduce((sum, a) => sum + a.length, 0);
-	const out = new Uint8Array(total);
-	let off = 0;
-	for (const a of arrays) {
-		out.set(a, off);
-		off += a.length;
-	}
-	return out;
-}
-
-/** `["Signature1", protected, external_aad, payload]` — RFC 9052 Sig_structure. */
-const SIG_STRUCTURE_PREFIX = new Uint8Array([
-	0x84, // array(4)
-	0x6a, // tstr(10)
-	...new TextEncoder().encode('Signature1')
-]);
-
+/** RFC 9052 Sig_structure for this envelope (empty external AAD). */
 export function encodeAttestationSigStructure(prot: Uint8Array, payload: Uint8Array): Uint8Array {
-	return concat(
-		SIG_STRUCTURE_PREFIX,
-		cborBstr(prot),
-		cborBstr(new Uint8Array(0)),
-		cborBstr(payload)
-	);
+	return encodeSigStructure(prot, new Uint8Array(0), payload);
 }
 
 function protectedBytes(): Uint8Array {
-	return cborIntKeyBytes(
+	return encodeCborDeterministic(
 		new Map<number, unknown>([
 			[1, COSE_ALG_KS256],
 			[3, ONBOARD_ATTESTATION_CONTENT_TYPE]
@@ -106,7 +73,7 @@ function protectedBytes(): Uint8Array {
 
 function claimsBytes(input: OnboardAttestationInput): Uint8Array {
 	const window = input.windowSec ?? DEFAULT_ATTESTATION_WINDOW_SEC;
-	return cborIntKeyBytes(
+	return encodeCborDeterministic(
 		new Map<number, unknown>([
 			[1, `eip155:${input.chainId}:0x${input.univocityAddr}`],
 			[3, input.aud],
@@ -120,17 +87,6 @@ function claimsBytes(input: OnboardAttestationInput): Uint8Array {
 				])
 			]
 		])
-	);
-}
-
-/** COSE_Sign1: `[bstr protected, {} unprotected, bstr payload, bstr signature]`. */
-function assemble(prot: Uint8Array, payload: Uint8Array, signature: Uint8Array): Uint8Array {
-	return concat(
-		new Uint8Array([0x84]),
-		cborBstr(prot),
-		new Uint8Array([0xa0]),
-		cborBstr(payload),
-		cborBstr(signature)
 	);
 }
 
@@ -191,5 +147,5 @@ export async function buildOnboardAttestationKs256Remote(
 	if (signature.length !== 65) {
 		throw new Error(`KS256 signature must be 65 bytes, got ${signature.length}`);
 	}
-	return assemble(prot, payload, signature);
+	return encodeCoseSign1Raw(prot, new Map(), payload, signature);
 }

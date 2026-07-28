@@ -1,5 +1,5 @@
 import { COSE_ALG_ES256, COSE_ALG_KS256 } from './cose-alg.js';
-import { cborIntKeyBytes } from './cbor-int-key.js';
+import { cborIntKeyBytes } from './canopy-cbor.js';
 import type { GenesisCborInput } from './genesis-cbor-input.js';
 import {
 	FOREST_GENESIS_LABEL_BOOTSTRAP_KEY,

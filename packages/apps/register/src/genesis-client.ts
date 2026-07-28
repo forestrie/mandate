@@ -1,4 +1,4 @@
-import { decode as decodeCbor } from 'cbor-x';
+import { decodeCborRecord } from './canopy-cbor.js';
 import { GenesisClientError } from './genesis-client-error.js';
 import type { CoordinatorRegistrationStatus } from './coordinator-registration-status.js';
 import type { GenesisRegistrationResponse } from './genesis-registration-response.js';
@@ -56,7 +56,7 @@ export async function postGenesis(input: PostGenesisInput): Promise<GenesisRegis
 	}
 
 	const raw = new Uint8Array(await response.arrayBuffer());
-	const decoded = decodeCbor(raw) as GenesisRegistrationResponse;
+	const decoded = decodeCborRecord(raw) as unknown as GenesisRegistrationResponse;
 
 	if (input.webhookUrl) {
 		assertCoordinatorOk(decoded.coordinator);

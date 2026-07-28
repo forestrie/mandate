@@ -1,4 +1,4 @@
-import { encode as encodeCbor } from 'cbor-x';
+import { encodeCborDeterministic as encodeCbor } from '@forestrie/encoding';
 import { describe, expect, it } from 'vitest';
 import { postGenesis } from '../src/genesis-client.js';
 import { GenesisClientError } from '../src/genesis-client-error.js';

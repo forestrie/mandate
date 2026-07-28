@@ -15,8 +15,8 @@
 		"test:live:onboard": "vitest run test/onboard-request.live.test.ts"
 	},
 	"dependencies": {
-		"@mandate/privy-admin": "workspace:*",
-		"cbor-x": "^1.6.4"
+		"@forestrie/encoding": "^0.5.0",
+		"@mandate/privy-admin": "workspace:*"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20260228.0",

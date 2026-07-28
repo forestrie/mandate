@@ -1,4 +1,4 @@
-import { decode as decodeCbor } from 'cbor-x';
+import { decodeCborDeterministic as decodeCbor } from '@forestrie/encoding';
 import { describe, expect, it } from 'vitest';
 import { COSE_ALG_ES256, COSE_ALG_KS256 } from '../src/cose-alg.js';
 import { buildGenesisCborBody } from '../src/genesis-request.js';

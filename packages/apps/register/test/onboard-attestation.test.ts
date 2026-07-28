@@ -1,7 +1,4 @@
-import { Decoder } from 'cbor-x';
-
-const strictDecoder = new Decoder({ mapsAsObjects: false });
-const decodeCbor = (b: Uint8Array): unknown => strictDecoder.decode(b);
+import { decodeCborDeterministic as decodeCbor } from '@forestrie/encoding';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
 import { describe, expect, it } from 'vitest';

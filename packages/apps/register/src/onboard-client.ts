@@ -1,6 +1,6 @@
 /** Self-service onboard request client (FOR-173). */
 
-import { cborIntKeyBytes } from './cbor-int-key.js';
+import { cborIntKeyBytes, decodeCborRecord } from './canopy-cbor.js';
 
 const CBOR_LABEL = 1;
 const CBOR_CHAIN_ID = 2;
@@ -49,8 +49,7 @@ export interface OnboardStatusResult {
 }
 
 async function decodeCborResponse(res: Response): Promise<Record<string, unknown>> {
-	const { decode } = await import('cbor-x');
-	return decode(new Uint8Array(await res.arrayBuffer())) as Record<string, unknown>;
+	return decodeCborRecord(new Uint8Array(await res.arrayBuffer()));
 }
 
 function normalizeBase(base: string): string {

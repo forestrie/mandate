@@ -7,7 +7,7 @@ import {
 
 describe('onboard-client', () => {
 	it('requestOnboardToken posts CBOR create body', async () => {
-		const { encode } = await import('cbor-x');
+		const { encodeCborDeterministic: encode } = await import('@forestrie/encoding');
 		const fetchImpl = vi.fn(
 			async () =>
 				new Response(
@@ -36,8 +36,8 @@ describe('onboard-client', () => {
 	});
 
 	it('carries the attestation as untagged bytes at CBOR key 7 (FOR-484)', async () => {
-		const { Decoder, encode } = await import('cbor-x');
-		const decode = (b: Uint8Array): unknown => new Decoder({ mapsAsObjects: false }).decode(b);
+		const { decodeCborDeterministic: decode, encodeCborDeterministic: encode } =
+			await import('@forestrie/encoding');
 		const attestation = new Uint8Array([0x84, 0x41, 0x01, 0xa0, 0x41, 0x02, 0x41, 0x03]);
 		let sent: Uint8Array | undefined;
 		const fetchImpl = (async (_url: RequestInfo | URL, init?: RequestInit) => {
@@ -71,7 +71,7 @@ describe('onboard-client', () => {
 	});
 
 	it('redeemOnboardToken returns token', async () => {
-		const { encode } = await import('cbor-x');
+		const { encodeCborDeterministic: encode } = await import('@forestrie/encoding');
 		const fetchImpl = vi.fn(
 			async () =>
 				new Response(new Uint8Array(encode({ token: 'tok-abc' })), {
@@ -90,7 +90,7 @@ describe('onboard-client', () => {
 	});
 
 	it('getOnboardRequestStatus polls status', async () => {
-		const { encode } = await import('cbor-x');
+		const { encodeCborDeterministic: encode } = await import('@forestrie/encoding');
 		const fetchImpl = vi.fn(
 			async () =>
 				new Response(new Uint8Array(encode({ requestId: 'id-1', status: 'approved' })), {
