@@ -52,6 +52,11 @@ export const EXPECTED_IDENTITIES = {
 		repository: 'forestrie/canopy',
 		workflowPath: '.github/workflows/publish-delegation-cose.yml'
 	},
+	// The platform CBOR/COSE codec (FOR-484: replaces the banned cbor-x).
+	'@forestrie/encoding': {
+		repository: 'forestrie/canopy',
+		workflowPath: '.github/workflows/publish-encoding.yml'
+	},
 	// mandate's own kits (FOR-360 / FOR-361): mandate does not install these
 	// from the registry today (ui-e2e-kit is a workspace link), but other
 	// repos porting this script — and any future registry self-consumption —
