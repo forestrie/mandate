@@ -1,5 +1,11 @@
 export { installCoordinatorMocks, type CoordinatorMockOptions } from './coordinator-bff.js';
 export {
+	E2E_UNIVOCITY_INSTANCE_ID,
+	installCanopyPaymentsMocks,
+	type CanopyPaymentsMockOptions,
+	type CanopyPaymentsMockState
+} from './canopy-payments.js';
+export {
 	E2E_AUTH_LOG_ID,
 	E2E_USER_LOG_ID,
 	SAMPLE_DELEGATED_PUBLIC_KEY_B64,

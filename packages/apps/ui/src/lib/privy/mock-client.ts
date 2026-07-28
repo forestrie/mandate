@@ -66,7 +66,11 @@ export async function createMockPrivyClient(): Promise<MockPrivyClient> {
 				void args;
 				return {
 					async request({ method, params }) {
-						if (method === 'personal_sign' || method === 'secp256k1_sign') {
+						if (
+							method === 'personal_sign' ||
+							method === 'secp256k1_sign' ||
+							method === 'eth_signTypedData_v4'
+						) {
 							return E2E_MOCK_SIGNATURE_HEX;
 						}
 						if (method === 'eth_chainId') {
@@ -97,7 +101,11 @@ export function mockEthereumProviderWhenAuthenticated(): {
 	if (!mockAuthenticated) return null;
 	return {
 		async request({ method, params }) {
-			if (method === 'personal_sign' || method === 'secp256k1_sign') {
+			if (
+				method === 'personal_sign' ||
+				method === 'secp256k1_sign' ||
+				method === 'eth_signTypedData_v4'
+			) {
 				return E2E_MOCK_SIGNATURE_HEX;
 			}
 			if (method === 'eth_chainId') {

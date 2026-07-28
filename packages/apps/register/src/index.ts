@@ -24,6 +24,7 @@ export {
 	type MintOnboardTokenResult
 } from './mint-onboard-token.js';
 export {
+	chainBindingFromUnivocityInstanceId,
 	isUnivocityInstanceId,
 	parseUnivocityInstanceId,
 	univocityInstanceIdFromChainBinding,
@@ -37,14 +38,26 @@ export {
 } from './chain-bindings-client.js';
 export { ReservationConflictError } from './reservation-conflict-error.js';
 export {
+	assembleKs256Attestation,
 	buildOnboardAttestationKs256Remote,
 	encodeAttestationSigStructure,
+	encodeBootstrapKeyAttestationParts,
 	CLAIM_CHAIN_BINDING,
 	DEFAULT_ATTESTATION_WINDOW_SEC,
 	ONBOARD_ATTESTATION_CONTENT_TYPE,
+	type BootstrapKeyAttestationParts,
 	type OnboardAttestationInput,
 	type RemoteAttestationSigner
 } from './onboard-attestation.js';
+export {
+	accountReadAuthorizationHeader,
+	buildAccountReadAttestationKs256,
+	ACCOUNT_READ_ATTESTATION_CONTENT_TYPE,
+	ACCOUNT_READ_AUTH_SCHEME,
+	DEFAULT_ACCOUNT_READ_WINDOW_SEC,
+	type AccountReadAttestationInput,
+	type Ks256SigStructureSign
+} from './account-read-attestation.js';
 export {
 	requestOnboardToken,
 	redeemOnboardToken,

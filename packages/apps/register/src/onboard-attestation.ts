@@ -62,17 +62,17 @@ export function encodeAttestationSigStructure(prot: Uint8Array, payload: Uint8Ar
 	return encodeSigStructure(prot, new Uint8Array(0), payload);
 }
 
-function protectedBytes(): Uint8Array {
+function protectedBytes(contentType: string): Uint8Array {
 	return encodeCborDeterministic(
 		new Map<number, unknown>([
 			[1, COSE_ALG_KS256],
-			[3, ONBOARD_ATTESTATION_CONTENT_TYPE]
+			[3, contentType]
 		])
 	);
 }
 
-function claimsBytes(input: OnboardAttestationInput): Uint8Array {
-	const window = input.windowSec ?? DEFAULT_ATTESTATION_WINDOW_SEC;
+function claimsBytes(input: OnboardAttestationInput, defaultWindowSec: number): Uint8Array {
+	const window = input.windowSec ?? defaultWindowSec;
 	return encodeCborDeterministic(
 		new Map<number, unknown>([
 			[1, `eip155:${input.chainId}:0x${input.univocityAddr}`],
@@ -88,6 +88,42 @@ function claimsBytes(input: OnboardAttestationInput): Uint8Array {
 			]
 		])
 	);
+}
+
+/** The three byte strings every bootstrap-key attestation is built from. */
+export interface BootstrapKeyAttestationParts {
+	prot: Uint8Array;
+	payload: Uint8Array;
+	sigStructure: Uint8Array;
+}
+
+/**
+ * Frame the KS256 COSE_Sign1 parts for a bootstrap-key CWT under the given
+ * signed content type — the domain separator canopy's `verifyBootstrapKeyCwt`
+ * discriminates on (onboard vs account-read must never cross-replay).
+ */
+export function encodeBootstrapKeyAttestationParts(
+	contentType: string,
+	input: OnboardAttestationInput,
+	defaultWindowSec: number = DEFAULT_ATTESTATION_WINDOW_SEC
+): BootstrapKeyAttestationParts {
+	if (!/^[0-9a-f]{40}$/.test(input.univocityAddr)) {
+		throw new Error('univocityAddr must be 40 lowercase hex chars without 0x');
+	}
+	const prot = protectedBytes(contentType);
+	const payload = claimsBytes(input, defaultWindowSec);
+	return { prot, payload, sigStructure: encodeAttestationSigStructure(prot, payload) };
+}
+
+/** Assemble the envelope once the 65-byte r‖s‖v signature is in hand. */
+export function assembleKs256Attestation(
+	parts: BootstrapKeyAttestationParts,
+	signature: Uint8Array
+): Uint8Array {
+	if (signature.length !== 65) {
+		throw new Error(`KS256 signature must be 65 bytes, got ${signature.length}`);
+	}
+	return encodeCoseSign1Raw(parts.prot, new Map(), parts.payload, signature);
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -113,12 +149,7 @@ export async function buildOnboardAttestationKs256Remote(
 	signer: RemoteAttestationSigner,
 	input: OnboardAttestationInput
 ): Promise<Uint8Array> {
-	if (!/^[0-9a-f]{40}$/.test(input.univocityAddr)) {
-		throw new Error('univocityAddr must be 40 lowercase hex chars without 0x');
-	}
-	const prot = protectedBytes();
-	const payload = claimsBytes(input);
-	const sigStructure = encodeAttestationSigStructure(prot, payload);
+	const parts = encodeBootstrapKeyAttestationParts(ONBOARD_ATTESTATION_CONTENT_TYPE, input);
 
 	const doFetch =
 		signer.fetchImpl ?? ((input2: RequestInfo | URL, init?: RequestInit) => fetch(input2, init));
@@ -132,7 +163,7 @@ export async function buildOnboardAttestationKs256Remote(
 			logId: signer.logIdHex32,
 			keyRef: signer.keyRef,
 			rootSignerAddress: signer.rootSignerAddress,
-			sigStructure: bytesToBase64(sigStructure)
+			sigStructure: bytesToBase64(parts.sigStructure)
 		})
 	});
 	if (!response.ok) {
@@ -143,9 +174,5 @@ export async function buildOnboardAttestationKs256Remote(
 	if (!body.signature) {
 		throw new Error('attestation remote sign: response missing signature');
 	}
-	const signature = base64ToBytes(body.signature);
-	if (signature.length !== 65) {
-		throw new Error(`KS256 signature must be 65 bytes, got ${signature.length}`);
-	}
-	return encodeCoseSign1Raw(prot, new Map(), payload, signature);
+	return assembleKs256Attestation(parts, base64ToBytes(body.signature));
 }
