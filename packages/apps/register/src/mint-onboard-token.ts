@@ -1,3 +1,4 @@
+import { cborIntKeyBytes } from './cbor-int-key.js';
 import { univocityInstanceIdFromChainBinding } from './univocity-instance-id.js';
 
 /**
@@ -39,7 +40,6 @@ export async function mintOnboardToken(opts: {
 	label?: string;
 	fetchImpl?: typeof fetch;
 }): Promise<MintOnboardTokenResult> {
-	const { encode } = await import('cbor-x');
 	const fetchImpl = opts.fetchImpl ?? fetch;
 	const base = opts.canopyBaseUrl.trim().replace(/\/$/, '');
 	const addr40 = opts.univocityAddr.trim().replace(/^0x/i, '').toLowerCase();
@@ -56,7 +56,7 @@ export async function mintOnboardToken(opts: {
 			'Content-Type': 'application/cbor',
 			Accept: 'application/cbor'
 		},
-		body: encode(
+		body: cborIntKeyBytes(
 			new Map<number, unknown>([
 				[1, opts.label ?? 'mandate-provision-e2e'],
 				[3, opts.chainId.trim()],

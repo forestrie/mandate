@@ -1,4 +1,7 @@
-import { decode as decodeCbor, encode as encodeCbor } from 'cbor-x';
+import { Decoder, encode as encodeCbor } from 'cbor-x';
+
+const strictDecoder = new Decoder({ mapsAsObjects: false });
+const decodeCbor = (b: Uint8Array): unknown => strictDecoder.decode(b);
 import { describe, expect, it } from 'vitest';
 import { mintOnboardToken } from '../src/mint-onboard-token.js';
 

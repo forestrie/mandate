@@ -37,6 +37,15 @@ export {
 } from './chain-bindings-client.js';
 export { ReservationConflictError } from './reservation-conflict-error.js';
 export {
+	buildOnboardAttestationKs256Remote,
+	encodeAttestationSigStructure,
+	CLAIM_CHAIN_BINDING,
+	DEFAULT_ATTESTATION_WINDOW_SEC,
+	ONBOARD_ATTESTATION_CONTENT_TYPE,
+	type OnboardAttestationInput,
+	type RemoteAttestationSigner
+} from './onboard-attestation.js';
+export {
 	requestOnboardToken,
 	redeemOnboardToken,
 	getOnboardRequestStatus

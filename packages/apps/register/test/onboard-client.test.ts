@@ -35,6 +35,41 @@ describe('onboard-client', () => {
 		expect(fetchImpl).toHaveBeenCalledOnce();
 	});
 
+	it('carries the attestation as untagged bytes at CBOR key 7 (FOR-484)', async () => {
+		const { Decoder, encode } = await import('cbor-x');
+		const decode = (b: Uint8Array): unknown => new Decoder({ mapsAsObjects: false }).decode(b);
+		const attestation = new Uint8Array([0x84, 0x41, 0x01, 0xa0, 0x41, 0x02, 0x41, 0x03]);
+		let sent: Uint8Array | undefined;
+		const fetchImpl = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+			sent = new Uint8Array(init?.body as unknown as Uint8Array);
+			return new Response(
+				new Uint8Array(
+					encode({ requestId: 'id-2', status: 'pending', expiresAt: 9, redeemCode: 'rc' })
+				) as unknown as BodyInit,
+				{ status: 201 }
+			);
+		}) as typeof fetch;
+
+		await requestOnboardToken({
+			canopyBaseUrl: 'https://api.test',
+			label: 'fork',
+			chainId: '84532',
+			univocityAddr: `0x${'ab'.repeat(20)}`,
+			contactEmail: 'a@b.com',
+			attestation,
+			fetchImpl
+		});
+
+		// canopy's strict decoder surfaces cbor-x tags as opaque CborTag and
+		// would drop (tag 64) or 400 (tag 259) the request — pin tag-free.
+		const hex = Buffer.from(sent!).toString('hex');
+		expect(hex).not.toContain('d90103');
+		expect(hex).not.toContain('d840');
+		const body = decode(sent!) as Map<number, unknown>;
+		expect(body.get(3)).toBe('ab'.repeat(20));
+		expect(new Uint8Array(body.get(7) as Uint8Array)).toEqual(attestation);
+	});
+
 	it('redeemOnboardToken returns token', async () => {
 		const { encode } = await import('cbor-x');
 		const fetchImpl = vi.fn(

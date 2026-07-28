@@ -1,10 +1,14 @@
 /** Self-service onboard request client (FOR-173). */
 
+import { cborIntKeyBytes } from './cbor-int-key.js';
+
 const CBOR_LABEL = 1;
 const CBOR_CHAIN_ID = 2;
 const CBOR_UNIVOCITY_ADDR = 3;
 const CBOR_CONTACT_EMAIL = 4;
 const CBOR_MANDATE_ORIGIN = 5;
+/** COSE_Sign1 bootstrap-key attestation bytes (ADR-0059 D8, FOR-484). */
+const CBOR_ATTESTATION = 7;
 const CBOR_REDEEM_CODE = 1;
 
 export interface RequestOnboardOptions {
@@ -14,6 +18,12 @@ export interface RequestOnboardOptions {
 	univocityAddr: string;
 	contactEmail: string;
 	mandateOrigin?: string;
+	/**
+	 * Bootstrap-key registrant attestation (see `onboard-attestation.ts`).
+	 * Required by canopy wherever ONBOARD_REQUIRE_KEY_ATTESTATION is armed
+	 * (dev, since 2026-07-27); verified whenever present.
+	 */
+	attestation?: Uint8Array;
 	fetchImpl?: typeof fetch;
 }
 
@@ -50,7 +60,6 @@ function normalizeBase(base: string): string {
 export async function requestOnboardToken(
 	opts: RequestOnboardOptions
 ): Promise<RequestOnboardResult> {
-	const { encode } = await import('cbor-x');
 	const fetchImpl = opts.fetchImpl ?? fetch;
 	const body = new Map<number, unknown>([
 		[CBOR_LABEL, opts.label],
@@ -61,6 +70,9 @@ export async function requestOnboardToken(
 	if (opts.mandateOrigin) {
 		body.set(CBOR_MANDATE_ORIGIN, opts.mandateOrigin);
 	}
+	if (opts.attestation) {
+		body.set(CBOR_ATTESTATION, opts.attestation);
+	}
 
 	const response = await fetchImpl(`${normalizeBase(opts.canopyBaseUrl)}/api/onboarding/requests`, {
 		method: 'POST',
@@ -68,7 +80,7 @@ export async function requestOnboardToken(
 			'Content-Type': 'application/cbor',
 			Accept: 'application/cbor'
 		},
-		body: new Uint8Array(encode(body))
+		body: cborIntKeyBytes(body) as unknown as BodyInit
 	});
 
 	if (response.status !== 201) {
@@ -109,7 +121,6 @@ export async function getOnboardRequestStatus(
 }
 
 export async function redeemOnboardToken(opts: RedeemOnboardOptions): Promise<string> {
-	const { encode } = await import('cbor-x');
 	const fetchImpl = opts.fetchImpl ?? fetch;
 	const response = await fetchImpl(
 		`${normalizeBase(opts.canopyBaseUrl)}/api/onboarding/requests/${encodeURIComponent(opts.requestId)}/redeem`,
@@ -119,7 +130,7 @@ export async function redeemOnboardToken(opts: RedeemOnboardOptions): Promise<st
 				'Content-Type': 'application/cbor',
 				Accept: 'application/cbor'
 			},
-			body: new Uint8Array(encode(new Map([[CBOR_REDEEM_CODE, opts.redeemCode]])))
+			body: cborIntKeyBytes(new Map([[CBOR_REDEEM_CODE, opts.redeemCode]])) as unknown as BodyInit
 		}
 	);
 
