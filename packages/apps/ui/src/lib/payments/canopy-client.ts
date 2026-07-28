@@ -48,6 +48,7 @@ export interface FeeAccountRead {
 	univocityInstanceId: string;
 	creditsBalance: number;
 	checkpointsAccrued: number;
+	/** Coarse ledger posture: `current | suspect | in-arrears` (read tolerantly). */
 	arrears: string;
 	enforcementFrozen: boolean;
 	watermarkBlock: number | null;
@@ -88,8 +89,14 @@ export async function fetchFeeAccount(
 	return (await response.json()) as FeeAccountRead;
 }
 
-/** The 402 challenge for a credits purchase, price included. */
+/**
+ * The 402 challenge for a credits purchase. This is the quote SNAPSHOT the
+ * submit step must be bound to — the instance and credit count it was priced
+ * for ride along so later form edits cannot desync what the user signs from
+ * what is submitted (plan-2607-02 R1).
+ */
 export interface CreditsChallenge {
+	univocityInstanceId: string;
 	credits: number;
 	amountAtomic: string;
 	/** Base64 `X-PAYMENT-REQUIRED` header value to sign against. */
@@ -124,7 +131,12 @@ export async function requestCreditsChallenge(
 	if (!paymentRequiredB64) {
 		throw new CanopyRequestError(402, 'challenge missing X-PAYMENT-REQUIRED header');
 	}
-	return { credits: body.credits, amountAtomic: body.amountAtomic, paymentRequiredB64 };
+	return {
+		univocityInstanceId,
+		credits: body.credits,
+		amountAtomic: body.amountAtomic,
+		paymentRequiredB64
+	};
 }
 
 /** Re-POST with the signed payment; 202 means settlement is enqueued. */

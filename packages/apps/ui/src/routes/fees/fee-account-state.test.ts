@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { FeeAccountRead } from '$lib/payments/canopy-client.js';
 import {
+	arrearsBadge,
 	creditsLanded,
 	enforcementBadge,
 	formatUsdcAtomic,
-	hasArrears,
 	parseCreditsInput,
 	registrationBlockLabel
 } from './fee-account-state.js';
@@ -13,7 +13,7 @@ const BASE: FeeAccountRead = {
 	univocityInstanceId: `eip155:84532:0x${'ab'.repeat(20)}`,
 	creditsBalance: 42,
 	checkpointsAccrued: 7,
-	arrears: '0',
+	arrears: 'current',
 	enforcementFrozen: false,
 	watermarkBlock: 123456
 };
@@ -28,11 +28,25 @@ describe('enforcementBadge', () => {
 	});
 });
 
-describe('hasArrears', () => {
-	it('treats zero as clear and positive decimal strings as owing', () => {
-		expect(hasArrears(BASE)).toBe(false);
-		expect(hasArrears({ ...BASE, arrears: '0.25' })).toBe(true);
-		expect(hasArrears({ ...BASE, arrears: '3' })).toBe(true);
+describe('arrearsBadge (ledger posture enum, x402-settlement §7)', () => {
+	it('shows no badge for a current account — the healthy state is quiet', () => {
+		expect(arrearsBadge(BASE)).toBeNull();
+	});
+	it('grades suspect and in-arrears, alarming only the latter', () => {
+		expect(arrearsBadge({ ...BASE, arrears: 'suspect' })).toMatchObject({
+			label: 'Arrears suspect',
+			alarming: false
+		});
+		expect(arrearsBadge({ ...BASE, arrears: 'in-arrears' })).toMatchObject({
+			label: 'In arrears',
+			alarming: true
+		});
+	});
+	it('surfaces unknown future states instead of hiding them', () => {
+		expect(arrearsBadge({ ...BASE, arrears: 'quarantined' })).toMatchObject({
+			label: 'Arrears: quarantined',
+			alarming: false
+		});
 	});
 });
 
@@ -77,5 +91,11 @@ describe('creditsLanded', () => {
 		expect(creditsLanded(BASE, { ...BASE, creditsBalance: 43 })).toBe(true);
 		expect(creditsLanded(BASE, BASE)).toBe(false);
 		expect(creditsLanded(BASE, { ...BASE, creditsBalance: 41 })).toBe(false);
+	});
+	it('never compares balances across different instances (plan-2607-02 R2)', () => {
+		const other = `eip155:84532:0x${'cd'.repeat(20)}`;
+		expect(creditsLanded(BASE, { ...BASE, univocityInstanceId: other, creditsBalance: 999 })).toBe(
+			false
+		);
 	});
 });

@@ -1,13 +1,14 @@
 ---
 id: 2607-02
-status: draft
+status: complete
 created: 2026-07-28
 refs: [ADR-0059, FOR-485, FOR-497]
 ---
 
 # Plan 2607-02 — fee surface review remediation
 
-**Status:** DRAFT · **Created:** 2026-07-28
+**Status:** COMPLETE (R1–R6 remediated same-day, on the mandate#75 branch) ·
+**Created:** 2026-07-28
 
 **Related:** devdocs ADR-0059 (D3 credits, D8 bootstrap-key attestation),
 canopy plan-2607-07 (account-read remediations, R2 tri-state),
@@ -57,10 +58,38 @@ the credits route stays payment-is-the-authorization (no auth added).
   attestations and sees uniform 403s. Deferred; a skew hint in the error copy
   would be the fix.
 
+## Outcome (2026-07-28)
+
+All of R1–R6 shipped on the PR branch; R7 remains a note.
+
+- **R1** — `CreditsChallenge` now carries the `{univocityInstanceId, credits}`
+  snapshot; a page effect clears any quote whose inputs changed; submit uses
+  only the snapshot; `signX402PaymentTypedData` takes a required
+  `X402PaymentExpectation` and refuses to sign on amount or chain mismatch
+  (unit-tested both ways).
+- **R2** — the settlement poll is pinned to the purchased instance and
+  `creditsLanded` requires instance-id equality; a mid-poll field switch can
+  no longer retarget the poll or cross-compare balances.
+- **R3** — `canopy-client.test.ts` covers the 402/202 contracts and both
+  error-body shapes; the e2e kit gained `installCanopyPaymentsMocks`
+  (path-matched, CORS-complete, settles-on-next-read) and three `/fees`
+  Playwright specs: attested read render, full quote→sign→202→poll→landed
+  purchase, and the frozen/in-arrears alarm.
+- **R4** — the read-credential cache is dropped whenever the connected wallet
+  address changes.
+- **R5** — the "watching the balance…" banner only appears when a poll
+  actually starts; otherwise the copy says to reload.
+- **R6** — upgraded from "label units": `arrears` is the ReceivablesDO
+  posture ENUM (`current | suspect | in-arrears`), and the original
+  numeric-parse rendering would have badged HEALTHY accounts as in arrears.
+  Replaced with `arrearsBadge` (quiet when current, amber suspect, red
+  in-arrears, unknown states surfaced) — unit- and e2e-tested.
+
 ## Goal
 
-Close R1–R3 on the `mandate-1` stream before or immediately after mandate#75
-merges; R4–R6 ride along opportunistically; R7 is a note, no action.
+~~Close R1–R3 on the `mandate-1` stream before or immediately after mandate#75
+merges; R4–R6 ride along opportunistically; R7 is a note, no action.~~ Done —
+see Outcome.
 
 ## Approach
 

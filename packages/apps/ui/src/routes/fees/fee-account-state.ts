@@ -38,10 +38,25 @@ export function enforcementBadge(read: FeeAccountRead): {
 		: { label: 'Sealing active', variant: 'default', alarming: false };
 }
 
-/** Arrears is a decimal string from the receivables ledger. */
-export function hasArrears(read: FeeAccountRead): boolean {
-	const numeric = Number(read.arrears);
-	return Number.isFinite(numeric) ? numeric > 0 : read.arrears.trim() !== '0';
+/**
+ * Arrears is the receivables ledger's COARSE posture enum, not an amount:
+ * `current | suspect | in-arrears` (x402-settlement ReceivablesDO §7 —
+ * deliberately imprecise; ops reconciliation is the backstop). Tolerant of
+ * unknown future states: anything unrecognised is surfaced, not hidden.
+ */
+export function arrearsBadge(
+	read: FeeAccountRead
+): { label: string; variant: 'default' | 'secondary' | 'outline'; alarming: boolean } | null {
+	switch (read.arrears) {
+		case 'current':
+			return null;
+		case 'suspect':
+			return { label: 'Arrears suspect', variant: 'outline', alarming: false };
+		case 'in-arrears':
+			return { label: 'In arrears', variant: 'outline', alarming: true };
+		default:
+			return { label: `Arrears: ${read.arrears}`, variant: 'outline', alarming: false };
+	}
 }
 
 /**
@@ -87,5 +102,8 @@ export const SETTLEMENT_POLL_INTERVAL_MS = 10_000;
 export const SETTLEMENT_POLL_LIMIT = 30;
 
 export function creditsLanded(before: FeeAccountRead, after: FeeAccountRead): boolean {
-	return after.creditsBalance > before.creditsBalance;
+	return (
+		after.univocityInstanceId === before.univocityInstanceId &&
+		after.creditsBalance > before.creditsBalance
+	);
 }

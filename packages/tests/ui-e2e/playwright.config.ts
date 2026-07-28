@@ -9,6 +9,9 @@ const e2ePublicEnv = {
 	PUBLIC_MANDATE_PRIVY_CLIENT_ID: 'e2e-placeholder',
 	PUBLIC_COORDINATOR_BFF_BASE: '/api/coordinator',
 	PUBLIC_DEFAULT_CHAIN_ID: '84532',
+	// Same-origin so the mocked canopy routes need no CORS preflight; the
+	// canopy-payments mock is path-matched and 404s anything unmocked.
+	PUBLIC_CANOPY_API_URL: baseURL,
 	CF_PAGES: '1',
 	COORDINATOR_AUTH_MODE: 'app_token_bff',
 	COORDINATOR_APP_TOKEN: 'e2e-placeholder',

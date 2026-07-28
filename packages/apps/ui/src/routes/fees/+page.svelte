@@ -12,8 +12,12 @@
 		type CreditsChallenge,
 		type FeeAccountRead
 	} from '$lib/payments/canopy-client.js';
-	import { mintAccountReadAuthorization } from '$lib/payments/account-read-auth.js';
+	import {
+		clearAccountReadAuthorizations,
+		mintAccountReadAuthorization
+	} from '$lib/payments/account-read-auth.js';
 	import { signX402PaymentTypedData } from '$lib/payments/x402-payer.js';
+	import { getConfiguredDefaultChainId } from '$lib/chains/wallet-chain.js';
 	import { getConnectedEthereumProvider, getConnectedWalletAddress } from '$lib/privy/client.js';
 	import {
 		getPrivySessionState,
@@ -25,11 +29,11 @@
 	import { isUnivocityInstanceId } from '@mandate/register/univocity-instance-id';
 	import { onDestroy, onMount } from 'svelte';
 	import {
+		arrearsBadge,
 		creditsLanded,
 		DEFAULT_CREDITS_PER_PURCHASE,
 		enforcementBadge,
 		formatUsdcAtomic,
-		hasArrears,
 		loadStoredInstanceId,
 		MAX_CREDITS_PER_PURCHASE,
 		parseCreditsInput,
@@ -61,14 +65,30 @@
 	const instanceValid = $derived(isUnivocityInstanceId(instanceId.trim()));
 	const credits = $derived(parseCreditsInput(creditsInput));
 	const frozen = $derived(account ? enforcementBadge(account) : null);
+	const arrears = $derived(account ? arrearsBadge(account) : null);
+
+	// A quote is only submittable for the exact inputs it priced: editing the
+	// instance or the credit count invalidates it (plan-2607-02 R1).
+	$effect(() => {
+		if (
+			challenge &&
+			(challenge.credits !== credits || challenge.univocityInstanceId !== instanceId.trim())
+		) {
+			challenge = null;
+		}
+	});
+
+	// A minted read credential belongs to the wallet that signed it — drop the
+	// cache whenever the connected address changes (plan-2607-02 R4).
+	$effect(() => {
+		void session.address;
+		clearAccountReadAuthorizations();
+	});
 
 	onMount(() => {
 		if (!burnerMode) void initPrivySession();
 		const fromQuery = page.url.searchParams.get('instance');
 		instanceId = fromQuery || loadStoredInstanceId();
-		if (instanceId && !burnerMode) {
-			// Balance loads lazily — the wallet may not be connected yet.
-		}
 	});
 
 	onDestroy(() => stopPolling());
@@ -104,30 +124,28 @@
 		}
 	}
 
-	async function loadAccount(silent = false) {
+	/** Read one PINNED instance; never consults the live form field. */
+	async function readAccount(id: string): Promise<FeeAccountRead | null> {
+		const authorization = await mintAccountReadAuthorization(id);
+		return fetchFeeAccount(id, authorization);
+	}
+
+	async function loadAccount() {
 		if (!instanceValid) {
 			error = 'Enter a canonical univocity instance id (eip155:{chainId}:0x{40 lowercase hex})';
-			return null;
+			return;
 		}
 		const id = instanceId.trim();
-		if (!silent) {
-			loading = true;
-			message = null;
-			error = null;
-		}
+		loading = true;
+		message = null;
+		error = null;
 		try {
 			saveStoredInstanceId(id);
-			const authorization = await mintAccountReadAuthorization(id);
-			const read = await fetchFeeAccount(id, authorization);
-			account = read;
-			return read;
+			account = await readAccount(id);
 		} catch (err) {
-			if (!silent) {
-				error = err instanceof Error ? err.message : 'Failed to load fee account';
-			}
-			return null;
+			error = err instanceof Error ? err.message : 'Failed to load fee account';
 		} finally {
-			if (!silent) loading = false;
+			loading = false;
 		}
 	}
 
@@ -147,7 +165,10 @@
 	}
 
 	async function signAndPay() {
-		if (!challenge || credits === null) return;
+		// Everything below is bound to the quote snapshot, never the live form
+		// fields — a stale quote is cleared by the effect above (R1).
+		const quote = challenge;
+		if (!quote) return;
 		purchasing = true;
 		message = null;
 		error = null;
@@ -157,16 +178,31 @@
 			if (!provider || !payerAddress) {
 				throw new Error('Connect the Privy wallet before purchasing credits.');
 			}
-			const before = account ?? (await loadAccount(true));
+			const before =
+				(account?.univocityInstanceId === quote.univocityInstanceId ? account : null) ??
+				(await readAccount(quote.univocityInstanceId).catch(() => null));
 			const xPayment = await signX402PaymentTypedData(
-				challenge.paymentRequiredB64,
+				quote.paymentRequiredB64,
 				provider,
-				payerAddress
+				payerAddress,
+				{
+					amountAtomic: quote.amountAtomic,
+					chainId: getConfiguredDefaultChainId()
+				}
 			);
-			const accepted = await submitCreditsPayment(instanceId.trim(), credits, xPayment);
+			const accepted = await submitCreditsPayment(
+				quote.univocityInstanceId,
+				quote.credits,
+				xPayment
+			);
 			challenge = null;
-			message = `Payment accepted (${formatUsdcAtomic(accepted.amountAtomic)} for ${accepted.credits} credits). Credits land after on-chain settlement — watching the balance…`;
-			if (before) startSettlementPoll(before);
+			const paid = `Payment accepted (${formatUsdcAtomic(accepted.amountAtomic)} for ${accepted.credits} credits).`;
+			if (before) {
+				message = `${paid} Credits land after on-chain settlement — watching the balance…`;
+				startSettlementPoll(before);
+			} else {
+				message = `${paid} Credits land after on-chain settlement; reload the account to check.`;
+			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Credits purchase failed';
 		} finally {
@@ -176,9 +212,15 @@
 
 	function startSettlementPoll(before: FeeAccountRead) {
 		stopPolling();
+		// Pinned to the purchased instance: switching the form field mid-poll
+		// must neither retarget the poll nor cross-compare balances (R2).
+		const id = before.univocityInstanceId;
 		const tick = async () => {
 			pollCount += 1;
-			const read = await loadAccount(true);
+			const read = await readAccount(id).catch(() => null);
+			if (read && instanceId.trim() === id) {
+				account = read;
+			}
 			if (read && creditsLanded(before, read)) {
 				message = `Credits landed: balance is now ${read.creditsBalance}.`;
 				stopPolling();
@@ -263,8 +305,15 @@
 					>
 						{frozen.label}
 					</Badge>
-					{#if hasArrears(account)}
-						<Badge variant="outline" class="border-amber-300 text-amber-700">In arrears</Badge>
+					{#if arrears}
+						<Badge
+							variant={arrears.variant}
+							class={arrears.alarming
+								? 'border-red-300 text-red-700'
+								: 'border-amber-300 text-amber-700'}
+						>
+							{arrears.label}
+						</Badge>
 					{/if}
 				</div>
 			</div>
@@ -273,7 +322,7 @@
 				<dd class="text-right font-medium">{account.creditsBalance}</dd>
 				<dt class="text-zinc-500">Checkpoints accrued</dt>
 				<dd class="text-right font-medium">{account.checkpointsAccrued}</dd>
-				<dt class="text-zinc-500">Arrears</dt>
+				<dt class="text-zinc-500">Arrears posture</dt>
 				<dd class="text-right font-medium">{account.arrears}</dd>
 				<dt class="text-zinc-500">Watermark block</dt>
 				<dd class="text-right font-medium">{account.watermarkBlock ?? '—'}</dd>

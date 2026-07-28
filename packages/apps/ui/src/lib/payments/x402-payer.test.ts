@@ -55,6 +55,7 @@ describe('signX402PaymentTypedData', () => {
 			challengeB64(),
 			capturingProvider(capture),
 			PAYER,
+			{ amountAtomic: '1000000', chainId: 84532 },
 			NOW
 		);
 
@@ -94,14 +95,48 @@ describe('signX402PaymentTypedData', () => {
 		expect(payload.accepted).toMatchObject({ scheme: 'exact', network: 'eip155:84532' });
 	});
 
+	it('refuses to sign when the challenge amount disagrees with the quote (plan-2607-02 R1)', async () => {
+		const capture: { method?: string } = {};
+		await expect(
+			signX402PaymentTypedData(
+				challengeB64(),
+				capturingProvider(capture),
+				PAYER,
+				{ amountAtomic: '999999', chainId: 84532 },
+				NOW
+			)
+		).rejects.toThrow(/does not match the quoted/);
+		expect(capture.method).toBeUndefined();
+	});
+
+	it('refuses to sign a challenge for the wrong chain (plan-2607-02 R1)', async () => {
+		const capture: { method?: string } = {};
+		await expect(
+			signX402PaymentTypedData(
+				challengeB64({ network: 'eip155:1' }),
+				capturingProvider(capture),
+				PAYER,
+				{ amountAtomic: '1000000', chainId: 84532 },
+				NOW
+			)
+		).rejects.toThrow(/expected eip155:84532/);
+		expect(capture.method).toBeUndefined();
+	});
+
 	it('rejects a wallet response that is not hex', async () => {
 		const badProvider: EthereumProvider = {
 			async request() {
 				return 'nope';
 			}
 		};
-		await expect(signX402PaymentTypedData(challengeB64(), badProvider, PAYER, NOW)).rejects.toThrow(
-			/invalid typed-data signature/
-		);
+		await expect(
+			signX402PaymentTypedData(
+				challengeB64(),
+				badProvider,
+				PAYER,
+				{ amountAtomic: '1000000', chainId: 84532 },
+				NOW
+			)
+		).rejects.toThrow(/invalid typed-data signature/);
 	});
 });

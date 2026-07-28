@@ -56,17 +56,43 @@ export function parseExactChallengeOption(paymentRequiredB64: string): X402Optio
 }
 
 /**
+ * What the caller QUOTED to the user — the challenge must match before
+ * anything is signed (plan-2607-02 R1). The displayed price and the signed
+ * value must be one number, and the payment must be on the chain this
+ * console is configured for.
+ */
+export interface X402PaymentExpectation {
+	/** The atomic amount shown to the user (the 402 body's `amountAtomic`). */
+	amountAtomic: string;
+	/** The configured chain id; the challenge's `network` must name it. */
+	chainId: number;
+}
+
+/**
  * Sign the challenge with the connected wallet and return the base64
  * `X-PAYMENT` header value. `payerAddress` must be the wallet the provider
- * signs for — it becomes the transfer's `from`.
+ * signs for — it becomes the transfer's `from`. Refuses to sign when the
+ * challenge disagrees with `expectation`.
  */
 export async function signX402PaymentTypedData(
 	paymentRequiredB64: string,
 	provider: EthereumProvider,
 	payerAddress: string,
+	expectation: X402PaymentExpectation,
 	nowSec: number = Math.floor(Date.now() / 1000)
 ): Promise<string> {
 	const chosen = parseExactChallengeOption(paymentRequiredB64);
+	if (chosen.amount !== expectation.amountAtomic) {
+		throw new Error(
+			`challenge amount ${chosen.amount} does not match the quoted ${expectation.amountAtomic} — refusing to sign`
+		);
+	}
+	const challengeChainId = Number(chosen.network.split(':')[1]);
+	if (challengeChainId !== expectation.chainId) {
+		throw new Error(
+			`challenge names chain ${chosen.network}, expected eip155:${expectation.chainId} — refusing to sign`
+		);
+	}
 	const nonce = randomNonceHex();
 	const validAfter = (nowSec - 600).toString();
 	const validBefore = (nowSec + (chosen.maxTimeoutSeconds ?? 300)).toString();
@@ -78,7 +104,7 @@ export async function signX402PaymentTypedData(
 		domain: {
 			name: chosen.extra!.name!,
 			version: chosen.extra!.version!,
-			chainId: Number(chosen.network.split(':')[1]),
+			chainId: challengeChainId,
 			verifyingContract: chosen.asset
 		},
 		types: {
