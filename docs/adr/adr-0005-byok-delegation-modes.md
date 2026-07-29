@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted (2026-06-22)
+Accepted (2026-06-22). Amended 2026-07-29: added **Safe 1x1 (Mode D)** —
+see [Addendum](#addendum--safe-1x1-mode-d-2026-07-29).
 
 **Related:**
 [devdocs ARC-0022 BYOK user-log delegation](../../../devdocs/arc/arc-0022-byok-user-log-delegation-and-operator-hosted-sealing.md)
@@ -288,3 +289,45 @@ Runbook: [FORKING.md §5b](../../FORKING.md#5b--mode-b-user-log-purist-byok). Pl
   offered only with the same disclosures as Mode C.
 - **Raw user keys in Worker secrets / KV.** Rejected (ADR-0002): violates the
   non-custodial model.
+
+## Addendum — Safe 1x1 (Mode D) (2026-07-29)
+
+**Decision.** A fourth mode is added and is the **intended production model**
+for operator-owned roots: the log root authority `K(L)` is a **1-of-1 Safe
+contract account**. Signatures verify via **ERC-1271** under the unchanged
+`ALG_KS256` convention (univocity plan-0029: the expected 20-byte address may
+be an EOA — ecrecover — or a contract account — `isValidSignature`; no new
+COSE algorithm). The sole Safe owner signs interactively in the console: the
+owner wallet signs the EIP-712 **SafeMessage** wrapping
+`keccak256(Sig_structure)` via `eth_signTypedData_v4`, so no wallet is ever
+asked to sign a raw hash. **No standing signer service, no third-party key
+custody.**
+
+Mode naming convention (normative for docs and demos, see `CONTEXT.md`):
+modes are always semantically qualified — **Purist BYOK (Mode B)**,
+**Privy-custody (Mode C)**, **Safe 1x1 (Mode D)**.
+
+**Custody comparison.** Purist BYOK (Mode B) achieves operator custody with a
+standing user-run signer service; Privy-custody (Mode C) removes the service
+by accepting Privy TEE custody. Safe 1x1 (Mode D) removes both: custody is an
+on-chain contract account, availability is the owner's presence. The
+consequence is accepted and normative for the mode: **root signing is
+interactive-only** — `delegation.required` events queue in the pending UI
+(Decision §5) until the owner signs; sealing for a log stalls when its
+delegated MMR range is exhausted while the operator is away. Mitigation is
+generous range sizing, not a standing fallback signer (a fallback would
+re-import the Mode B infrastructure the mode exists to eliminate).
+
+**v1 constraints** (devdocs plan-2607-45, decisions log there):
+1-of-1 Safes only (threshold >1 needs signature collection — deferred);
+bring-your-own Safe (console validates bytecode, ownership, threshold);
+owner connect via a native injected EIP-6963 seam — Safe 1x1 (Mode D) is
+Privy-free end-to-end; x402 payments are signed by the **owner EOA** (a
+spend, not a root-authority act — Safe-held treasury deferred).
+
+**Verification surfaces.** The univocity contract (OZ `SignatureChecker`),
+the delegation-coordinator (`KS256_RPC_URL` hooks), and canopy's grant path
+already verify ecrecover-or-1271; canopy's onboarding/account-read verifier
+is extended to match (fail-closed for contract roots when RPC is
+unavailable). ERC-6492 counterfactual Safes and ERC-7913 signers remain
+reserved for future algorithms per plan-0029.

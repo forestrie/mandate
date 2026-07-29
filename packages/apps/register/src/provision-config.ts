@@ -21,6 +21,8 @@ export interface ProvisionConfig {
 	modeC?: ModeCProvisionInputs;
 	/** Mode B user remote signer (descriptor only; full routing FOR-111). */
 	modeB?: ModeBProvisionInputs;
+	/** Safe 1x1 (Mode D) interactive root (ADR-0005 addendum, plan-2607-45). */
+	modeD?: ModeDProvisionInputs;
 }
 
 export interface ModeCProvisionInputs {
@@ -39,6 +41,19 @@ export interface ModeBProvisionInputs {
 	rootSignerAddress: string;
 	userSignerUrl: string;
 	keyRef: string;
+}
+
+/**
+ * Safe 1x1 (Mode D): the log root authority is a 1-of-1 Safe contract
+ * account. Genesis takes the bare Safe address as the KS256 bootstrapKey
+ * (ERC-1271 verification, univocity plan-0029 — no new COSE alg). There is
+ * no signer service and no custody client: the sole owner signs
+ * interactively in the console, so the emitted descriptor is
+ * `kind: 'interactive'` with NO signerUrl.
+ */
+export interface ModeDProvisionInputs {
+	/** 1-of-1 Safe contract address (0x…) — the log's root authority K(L). */
+	safeAddress: string;
 }
 
 export interface ProvisionDescriptors {

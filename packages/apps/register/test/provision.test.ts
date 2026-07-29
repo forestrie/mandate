@@ -178,6 +178,68 @@ describe('provisionInstance', () => {
 		});
 	});
 
+	it('Safe 1x1 (Mode D) emits an interactive descriptor the agent refuses to sign with', async () => {
+		const coordinator = { publicRoot: 'ok' as const, webhook: 'ok' as const };
+		const safeAddress = `0x${'cd'.repeat(20)}`;
+		let postedBody: Uint8Array | undefined;
+		const fetchImpl = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+			postedBody = new Uint8Array(init?.body as ArrayBuffer);
+			return new Response(
+				encodeCbor({
+					R: FOREST_R,
+					chainBinding: { chainId: '84532', univocityAddr: 'ab'.repeat(20) },
+					coordinator
+				}) as unknown as BodyInit,
+				{ status: 201 }
+			);
+		});
+
+		const result = await provisionInstance({
+			onboardToken: 'onboard-token',
+			canopyBaseUrl: 'https://api.example.dev',
+			coordinatorBaseUrl: 'https://coordinator.example.dev',
+			agentWebhookUrl: 'https://agent.example/webhooks/delegation-required',
+			mode: 'D',
+			univocityAddr: 'ab'.repeat(20),
+			chainId: '84532',
+			forestR: FOREST_R,
+			fetchImpl,
+			modeD: { safeAddress }
+		});
+
+		// Genesis bootstrapKey is the bare Safe address (plan-0029: the KS256
+		// 20-byte address may be a contract account — no new COSE alg).
+		expect(postedBody).toBeDefined();
+		const map = intKeyMap(postedBody!);
+		expect(map.get(-68015)).toEqual(new Uint8Array(20).fill(0xcd));
+
+		// No signer service anywhere: no KEY_DIRECTORY, no signerUrl, no keyRef.
+		expect(result.descriptors.keyDirectory).toEqual({});
+		const entry = result.descriptors.operatorRootKeys[LOG_ID];
+		expect(entry?.kind).toBe('interactive');
+		expect(entry?.rootSignerAddress).toBe(safeAddress);
+		expect(entry?.signerUrl).toBeUndefined();
+		expect(entry?.keyRef).toBeUndefined();
+
+		// The agent's signing path must refuse the interactive root outright;
+		// metadata introspection still works.
+		const registry = new KeyRegistry(JSON.stringify(result.descriptors.operatorRootKeys));
+		expect(() => registry.get(LOG_ID)).toThrow(/signs in the console/);
+		expect(registry.describe(LOG_ID).kind).toBe('interactive');
+
+		// A misassembled descriptor (interactive + signerUrl) fails fast at load
+		// so a signing path can never form for a console-only root.
+		const malformed = JSON.stringify({
+			[LOG_ID]: {
+				alg: 'KS256',
+				rootSignerAddress: safeAddress,
+				kind: 'interactive',
+				signerUrl: 'https://signer.example/v1/sign'
+			}
+		});
+		expect(() => new KeyRegistry(malformed).describe(LOG_ID)).toThrow(/signerUrl must not be set/);
+	});
+
 	it('Mode B uups-counterfactual emits genesis labels and webhookUrl query', async () => {
 		const coordinator = { publicRoot: 'ok' as const, webhook: 'ok' as const };
 		const deployerHex = 'ef'.repeat(20);

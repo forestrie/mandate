@@ -3,6 +3,7 @@ import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
 import { describe, expect, it } from 'vitest';
 import {
+	buildOnboardAttestationKs256,
 	buildOnboardAttestationKs256Remote,
 	CLAIM_CHAIN_BINDING,
 	COSE_ALG_KS256,
@@ -67,6 +68,57 @@ async function buildAttestation(capture: { body?: Record<string, unknown> }) {
 		{ chainId: CHAIN_ID, univocityAddr: ADDR, aud: AUD, nowSec: NOW }
 	);
 }
+
+describe('onboard attestation via signer callback (plan-2607-45 slice 02)', () => {
+	// The console SigningBackend shape: keccak over the Sig_structure, low-S
+	// 65-byte r‖s‖v with v ∈ {0,1} — same seam as the account-read producer.
+	async function localSign(sigStructure: Uint8Array): Promise<Uint8Array> {
+		const sig = secp256k1.sign(keccak_256(sigStructure), PRIV, { prehash: false });
+		const bytes = new Uint8Array(65);
+		bytes.set(sig.toCompactRawBytes(), 0);
+		bytes[64] = sig.recovery ?? 0;
+		return bytes;
+	}
+
+	it('produces the onboard-domain COSE_Sign1 that passes canopy-shape verification', async () => {
+		const attestation = await buildOnboardAttestationKs256(
+			{ chainId: CHAIN_ID, univocityAddr: ADDR, aud: AUD, nowSec: NOW },
+			localSign
+		);
+
+		const parts = decodeCbor(attestation) as [Uint8Array, unknown, Uint8Array, Uint8Array];
+		expect(parts).toHaveLength(4);
+		const [prot, , payload, signature] = parts;
+
+		const sigStructure = encodeAttestationSigStructure(
+			new Uint8Array(prot),
+			new Uint8Array(payload)
+		);
+		expect(verifyKs256(sigStructure, new Uint8Array(signature), WALLET_ADDR)).toBe(true);
+
+		// Onboard content type, NOT the read domain — cross-protocol discipline.
+		const header = decodeCbor(new Uint8Array(prot)) as Map<number, unknown>;
+		expect(header.get(1)).toBe(COSE_ALG_KS256);
+		expect(header.get(3)).toBe(ONBOARD_ATTESTATION_CONTENT_TYPE);
+
+		const claims = decodeCbor(new Uint8Array(payload)) as Map<number, unknown>;
+		expect(claims.get(3)).toBe(AUD);
+		const binding = claims.get(CLAIM_CHAIN_BINDING) as Map<number, unknown>;
+		expect(binding.get(1)).toBe(CHAIN_ID);
+		expect(binding.get(2)).toBe(ADDR);
+	});
+
+	it('propagates signer failures instead of assembling a broken envelope', async () => {
+		await expect(
+			buildOnboardAttestationKs256(
+				{ chainId: CHAIN_ID, univocityAddr: ADDR, aud: AUD, nowSec: NOW },
+				async () => {
+					throw new Error('user rejected');
+				}
+			)
+		).rejects.toThrow('user rejected');
+	});
+});
 
 describe('BYOK onboard attestation (ADR-0059 D8, KS256 via remote signer)', () => {
 	it('produces a COSE_Sign1 that passes canopy-shape KS256 verification', async () => {

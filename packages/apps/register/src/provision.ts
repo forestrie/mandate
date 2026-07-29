@@ -32,10 +32,35 @@ function buildModeBDescriptors(
 }
 
 /**
+ * Safe 1x1 (Mode D) descriptors: an interactive root has NO signerUrl and no
+ * keyRef — the root signs in the console (ADR-0005 addendum). The agent's
+ * KeyRegistry refuses to resolve a signer for `kind: 'interactive'`, and the
+ * coordinator's pending queue (signing-route) carries the demand until the
+ * owner signs.
+ */
+function buildModeDDescriptors(
+	logIdHex32: string,
+	input: NonNullable<ProvisionConfig['modeD']>
+): ProvisionResult['descriptors'] {
+	return {
+		keyDirectory: {},
+		operatorRootKeys: {
+			[logIdHex32]: {
+				alg: 'KS256',
+				rootSignerAddress: input.safeAddress,
+				kind: 'interactive'
+			}
+		}
+	};
+}
+
+/**
  * Provision a forest instance — its root is its own fee account (ADR-0059)
  * — and emit agent/signer descriptors.
  * Mode C: Privy onboard → genesis with wallet address as KS256 bootstrapKey.
  * Mode B: genesis with user root address; descriptor points at user signerUrl (FOR-111).
+ * Mode D: genesis with the 1-of-1 Safe address (ERC-1271 under KS256,
+ * univocity plan-0029); interactive descriptor, no signer service.
  */
 export async function provisionInstance(config: ProvisionConfig): Promise<ProvisionResult> {
 	const forestR = config.forestR ? normalizeForestR(config.forestR) : randomUUID();
@@ -78,6 +103,13 @@ export async function provisionInstance(config: ProvisionConfig): Promise<Provis
 		}
 		bootstrapKey = parseEthAddressToBytes(modeB.rootSignerAddress);
 		descriptors = buildModeBDescriptors(logIdHex32, modeB);
+	} else if (config.mode === 'D') {
+		const modeD = config.modeD;
+		if (!modeD) {
+			throw new Error('mode D provisioning requires modeD inputs');
+		}
+		bootstrapKey = parseEthAddressToBytes(modeD.safeAddress);
+		descriptors = buildModeDDescriptors(logIdHex32, modeD);
 	} else {
 		throw new Error(`unsupported delegation mode: ${config.mode as string}`);
 	}
