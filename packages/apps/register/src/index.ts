@@ -39,6 +39,7 @@ export {
 export { ReservationConflictError } from './reservation-conflict-error.js';
 export {
 	assembleKs256Attestation,
+	buildOnboardAttestationKs256,
 	buildOnboardAttestationKs256Remote,
 	encodeAttestationSigStructure,
 	encodeBootstrapKeyAttestationParts,
@@ -46,6 +47,7 @@ export {
 	DEFAULT_ATTESTATION_WINDOW_SEC,
 	ONBOARD_ATTESTATION_CONTENT_TYPE,
 	type BootstrapKeyAttestationParts,
+	type Ks256SigStructureSign,
 	type OnboardAttestationInput,
 	type RemoteAttestationSigner
 } from './onboard-attestation.js';
@@ -55,8 +57,7 @@ export {
 	ACCOUNT_READ_ATTESTATION_CONTENT_TYPE,
 	ACCOUNT_READ_AUTH_SCHEME,
 	DEFAULT_ACCOUNT_READ_WINDOW_SEC,
-	type AccountReadAttestationInput,
-	type Ks256SigStructureSign
+	type AccountReadAttestationInput
 } from './account-read-attestation.js';
 export {
 	requestOnboardToken,

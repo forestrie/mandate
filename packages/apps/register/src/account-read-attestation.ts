@@ -19,6 +19,7 @@
 import {
 	assembleKs256Attestation,
 	encodeBootstrapKeyAttestationParts,
+	type Ks256SigStructureSign,
 	type OnboardAttestationInput
 } from './onboard-attestation.js';
 
@@ -34,10 +35,11 @@ export const DEFAULT_ACCOUNT_READ_WINDOW_SEC = 90;
 export type AccountReadAttestationInput = OnboardAttestationInput;
 
 /**
- * Sign keccak256(Sig_structure) with the bootstrap key and return the
- * normalised 65-byte r‖s‖v signature (low-S, v ∈ {0,1}).
+ * Signer-callback seam shared with the onboard producer — defined in
+ * `onboard-attestation.ts`, re-exported here so existing consumers of this
+ * subpath keep working.
  */
-export type Ks256SigStructureSign = (sigStructure: Uint8Array) => Promise<Uint8Array>;
+export type { Ks256SigStructureSign } from './onboard-attestation.js';
 
 /** Build the read-domain KS256 attestation via a caller-supplied signer. */
 export async function buildAccountReadAttestationKs256(

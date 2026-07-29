@@ -1,4 +1,10 @@
-export type SignerKind = 'local' | 'remote';
+/**
+ * `local` and `remote` resolve to an agent-side signer. `interactive` is the
+ * Safe 1x1 (Mode D) shape (ADR-0005 addendum): the root signs in the console
+ * only — the agent NEVER signs for these logs, and the coordinator's pending
+ * queue (signing-route) holds delegation demands until the owner signs.
+ */
+export type SignerKind = 'local' | 'remote' | 'interactive';
 
 /** Per-log operator root signing configuration (no private key material in remote mode). */
 export interface LogSignerDescriptor {

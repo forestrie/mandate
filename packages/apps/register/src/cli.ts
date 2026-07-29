@@ -7,6 +7,7 @@ import {
 	redeemOnboardToken,
 	requestOnboardToken
 } from './onboard-client.js';
+import { buildOnboardAttestationKs256Remote } from './onboard-attestation.js';
 import { onboardModeCWallet, PrivyRestClient } from '@mandate/privy-admin';
 import { runRevokeModeCCommand } from './revoke-mode-c-command.js';
 import { runDescribePostRevokeActionsCommand } from './describe-post-revoke-command.js';
@@ -25,6 +26,19 @@ Options:
   --univocity-addr   40-hex Univocity contract (required)
   --contact-email    Operator contact email (required)
   --mandate-origin   Deployed mandate UI URL (optional)
+
+Bootstrap-key attestation (ADR-0059 D8 — required where canopy arms
+ONBOARD_REQUIRE_KEY_ATTESTATION; signed by the remote mandate signer):
+  --root-address     Bootstrap wallet address the signer recovery-checks (0x…)
+  --log-id           32-hex log id the signer KEY_DIRECTORY authorises
+  --signer-url       mandate-signer /v1/sign URL (MANDATE_SIGNER_URL)
+  --key-ref          KEY_DIRECTORY keyRef (default: user-log-wallet)
+  --attest-aud       aud claim (default: the canopy URL origin)
+  MANDATE_SIGNER_TOKEN env: bearer for the signer call (required to attest)
+
+Any attestation flag (or MANDATE_SIGNER_URL in env) arms attesting, and the
+rest become required. Omit them all to post an unattested request (rejected
+wherever the canopy policy is armed).
 `);
 	process.exit(1);
 }
@@ -58,7 +72,7 @@ Options (env fallbacks in parentheses):
   --canopy-url          E2E_CANOPY_API_URL (required)
   --coordinator-url     E2E_DELEGATION_COORDINATOR_URL (required)
   --webhook-url         E2E_MANDATE_AGENT_WEBHOOK_URL (required)
-  --mode                Delegation mode B or C (default: C)
+  --mode                Delegation mode B, C or D (default: C)
   --univocity-addr      40-hex Univocity contract (E2E_CANOPY_UNIVOCITY_ADDR)
   --chain-id            EIP-155 chain id (E2E_CANOPY_CHAIN_ID)
   --forest-r            Optional dashed UUID for genesis R (generated if omitted)
@@ -77,6 +91,10 @@ Mode B (user remote signer — descriptor only, FOR-111):
   --root-address        User KS256 root address (0x…)
   --user-signer-url     User signer POST /v1/sign URL
   --key-ref             keyRef for OPERATOR_ROOT_KEYS
+
+Safe 1x1 (Mode D — interactive root, ADR-0005 addendum):
+  --safe-address        1-of-1 Safe contract address (0x…); the root signs in
+                        the console — no signer service, no custody client
 `);
 	process.exit(1);
 }
@@ -213,6 +231,51 @@ function requirePrivyClientConfig(): {
 	};
 }
 
+/**
+ * Build the D8 bootstrap-key attestation for `onboard request` via the remote
+ * mandate signer (the bootstrap key never leaves custody). Attestation is
+ * armed by ANY of --root-address, --log-id, --signer-url, or a
+ * MANDATE_SIGNER_URL env — so a partial flag set OR an env-only signer
+ * config fails loudly instead of silently posting unattested
+ * (plan-2607-03 M2).
+ */
+async function buildOnboardRequestAttestation(args: {
+	canopyBaseUrl: string;
+	chainId: string;
+	univocityAddr: string;
+}): Promise<Uint8Array | undefined> {
+	const rootSignerAddress = readFlag('--root-address');
+	const logIdHex32 = readFlag('--log-id');
+	const signerUrl = envOr(readFlag('--signer-url'), 'MANDATE_SIGNER_URL');
+	if (!rootSignerAddress && !logIdHex32 && !signerUrl) {
+		return undefined;
+	}
+	if (!rootSignerAddress || !logIdHex32 || !signerUrl) {
+		console.error(
+			'attested onboard request needs --root-address, --log-id and a signer URL ' +
+				'(--signer-url or MANDATE_SIGNER_URL)'
+		);
+		usageOnboardRequest();
+	}
+	const bearerToken = requireOperationalEnv('MANDATE_SIGNER_TOKEN');
+
+	return buildOnboardAttestationKs256Remote(
+		{
+			signerUrl: signerUrl!,
+			bearerToken,
+			keyRef: readFlag('--key-ref') ?? 'user-log-wallet',
+			rootSignerAddress: rootSignerAddress!,
+			logIdHex32: logIdHex32!
+		},
+		{
+			chainId: args.chainId,
+			univocityAddr: args.univocityAddr.replace(/^0x/i, '').toLowerCase(),
+			aud: readFlag('--attest-aud') ?? new URL(args.canopyBaseUrl).origin,
+			nowSec: Math.floor(Date.now() / 1000)
+		}
+	);
+}
+
 async function runOnboardRequest(): Promise<void> {
 	const canopyBaseUrl = envOr(readFlag('--canopy-url'), 'E2E_CANOPY_API_URL');
 	const label = readFlag('--label');
@@ -225,13 +288,20 @@ async function runOnboardRequest(): Promise<void> {
 		usageOnboardRequest();
 	}
 
+	const attestation = await buildOnboardRequestAttestation({
+		canopyBaseUrl: canopyBaseUrl!,
+		chainId: chainId!,
+		univocityAddr: univocityAddr!
+	});
+
 	const result = await requestOnboardToken({
 		canopyBaseUrl: canopyBaseUrl!,
 		label: label!,
 		chainId: chainId!,
 		univocityAddr: univocityAddr!,
 		contactEmail: contactEmail!,
-		mandateOrigin
+		mandateOrigin,
+		attestation
 	});
 	console.log(JSON.stringify(result, null, 2));
 }
@@ -271,7 +341,12 @@ async function runProvision(): Promise<void> {
 	const coordinatorBaseUrl = envOr(readFlag('--coordinator-url'), 'E2E_DELEGATION_COORDINATOR_URL');
 	const agentWebhookUrl = envOr(readFlag('--webhook-url'), 'E2E_MANDATE_AGENT_WEBHOOK_URL');
 	const modeRaw = (readFlag('--mode') ?? process.env.MANDATE_DELEGATION_MODE ?? 'C').toUpperCase();
-	const mode = (modeRaw === 'B' ? 'B' : 'C') as DelegationMode;
+	if (modeRaw !== 'B' && modeRaw !== 'C' && modeRaw !== 'D') {
+		// A typo must not silently provision Privy-custody (plan-2607-03 M3).
+		console.error(`unknown delegation mode '${modeRaw}' — expected B, C or D`);
+		usageProvision();
+	}
+	const mode = modeRaw as DelegationMode;
 	const univocityAddr = envOr(readFlag('--univocity-addr'), 'E2E_CANOPY_UNIVOCITY_ADDR');
 	const chainId = envOr(readFlag('--chain-id'), 'E2E_CANOPY_CHAIN_ID');
 	const forestR = readFlag('--forest-r') ?? process.env.MANDATE_FOREST_R;
@@ -330,6 +405,19 @@ async function runProvision(): Promise<void> {
 				keyRef: readFlag('--key-ref') ?? 'user-log-wallet',
 				policyId: readFlag('--policy-id')
 			}
+		});
+		console.log(JSON.stringify(output, null, 2));
+		return;
+	}
+
+	if (mode === 'D') {
+		const safeAddress = readFlag('--safe-address');
+		if (!safeAddress) {
+			usageProvision();
+		}
+		const output = await provisionInstance({
+			...base,
+			modeD: { safeAddress: safeAddress! }
 		});
 		console.log(JSON.stringify(output, null, 2));
 		return;

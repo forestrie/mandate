@@ -65,6 +65,21 @@ infra (synthetic Mode C test user wallet, dev Canopy/coordinator endpoints).
 Stored in Doppler config `e2e` and GitHub `live-signer` — never production.
 Prefixed `E2E_` (see ADR-0006).
 
+## delegation mode names
+
+Modes are always written qualified with their semantic name: **Purist BYOK
+(Mode B)**, **Privy-custody (Mode C)**, **Safe 1x1 (Mode D)**. Mode A is the
+standing sub-delegation chain, rejected for v1 (ADR-0005).
+_Avoid_: bare "Mode B"/"Mode C"/"Mode D" without the semantic qualifier.
+
+## Safe 1x1 (Mode D)
+
+The log root authority is a 1-of-1 Safe contract account. Signatures verify
+via ERC-1271 under unchanged `ALG_KS256` (univocity plan-0029); the sole
+owner wallet signs interactively (EIP-712 SafeMessage). No standing signer
+service, no third-party key custody. The intended production model.
+_Avoid_: "Safe BYOK", "Privy BYOK", "B-1271".
+
 ## Mode B descriptor
 
 Per-log operator configuration for **purist BYOK**: an `OPERATOR_ROOT_KEYS` entry

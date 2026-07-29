@@ -6,7 +6,9 @@ export type DelegationOutcome =
 	| 'webhook_rejected'
 	| 'signer_failed'
 	| 'certificate_rejected'
-	| 'coordinator_rejected';
+	| 'coordinator_rejected'
+	/** Safe 1x1 (Mode D): root signs in the console; the agent never will. */
+	| 'interactive_root';
 
 /** Structured per-request log for pending-delegations queue / exit audit (FOR-113). */
 export function logDelegationOutcome(

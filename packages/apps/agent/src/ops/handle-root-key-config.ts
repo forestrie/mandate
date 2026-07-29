@@ -1,5 +1,6 @@
 import type { KeyRegistry } from '../signer/key-registry.js';
 import { UnknownLogSignerError } from '../signer/key-registry.js';
+import type { SignerKind } from '../signer/log-signer-descriptor.js';
 
 /**
  * Authed, metadata-only introspection of the agent's live OPERATOR_ROOT_KEYS
@@ -16,7 +17,7 @@ import { UnknownLogSignerError } from '../signer/key-registry.js';
 /** Allowlisted, secret-free view of a LogSignerDescriptor. */
 export interface RootKeyConfigResponse {
 	ok: true;
-	kind: 'local' | 'remote';
+	kind: SignerKind;
 	keyRef: string | null;
 	signerUrl: string | null;
 	configNonce: string | null;
@@ -68,7 +69,9 @@ export async function handleRootKeyConfig(
 
 	let descriptor;
 	try {
-		descriptor = deps.keyRegistry.get(logId);
+		// Metadata-only reader: `describe` skips the interactive-root signing
+		// refusal so a Safe 1x1 (Mode D) descriptor is still introspectable.
+		descriptor = deps.keyRegistry.describe(logId);
 	} catch (error) {
 		if (error instanceof UnknownLogSignerError) {
 			return jsonResponse(404, {

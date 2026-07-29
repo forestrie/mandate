@@ -57,6 +57,16 @@ export interface RemoteAttestationSigner {
 	fetchImpl?: typeof fetch;
 }
 
+/**
+ * Sign keccak256(Sig_structure) with the bootstrap key and return the
+ * normalised 65-byte r‖s‖v signature (low-S, v ∈ {0,1}).
+ *
+ * The callback seam shared by the browser console (Privy `secp256k1_sign`
+ * through its `SigningBackend`) and any in-process signer; the remote
+ * `@mandate/signer` path is `buildOnboardAttestationKs256Remote` below.
+ */
+export type Ks256SigStructureSign = (sigStructure: Uint8Array) => Promise<Uint8Array>;
+
 /** RFC 9052 Sig_structure for this envelope (empty external AAD). */
 export function encodeAttestationSigStructure(prot: Uint8Array, payload: Uint8Array): Uint8Array {
 	return encodeSigStructure(prot, new Uint8Array(0), payload);
@@ -124,6 +134,21 @@ export function assembleKs256Attestation(
 		throw new Error(`KS256 signature must be 65 bytes, got ${signature.length}`);
 	}
 	return encodeCoseSign1Raw(parts.prot, new Map(), parts.payload, signature);
+}
+
+/**
+ * Build the onboard-domain KS256 attestation via a caller-supplied signer —
+ * the callback sibling of `buildOnboardAttestationKs256Remote`, mirroring
+ * `buildAccountReadAttestationKs256`. Used wherever the bootstrap key is at
+ * hand in-process (console `SigningBackend`, direct-sign tooling) rather than
+ * behind the remote `@mandate/signer` route.
+ */
+export async function buildOnboardAttestationKs256(
+	input: OnboardAttestationInput,
+	sign: Ks256SigStructureSign
+): Promise<Uint8Array> {
+	const parts = encodeBootstrapKeyAttestationParts(ONBOARD_ATTESTATION_CONTENT_TYPE, input);
+	return assembleKs256Attestation(parts, await sign(parts.sigStructure));
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
