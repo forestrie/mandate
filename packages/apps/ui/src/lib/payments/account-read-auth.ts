@@ -15,7 +15,6 @@ import {
 	DEFAULT_ACCOUNT_READ_WINDOW_SEC
 } from '@mandate/register/account-read-attestation';
 import { chainBindingFromUnivocityInstanceId } from '@mandate/register/univocity-instance-id';
-import { normalizeKs256Signature } from '$lib/signing/ks256-sig-utils.js';
 import { resolveSigningBackend } from '$lib/signing/resolve-backend.js';
 import { canopyOrigin } from './canopy-client.js';
 
@@ -50,8 +49,7 @@ export async function mintAccountReadAuthorization(
 	const backend = await resolveSigningBackend();
 	const attestation = await buildAccountReadAttestationKs256(
 		{ chainId, univocityAddr, aud: canopyOrigin(), nowSec },
-		async (sigStructure) =>
-			normalizeKs256Signature(await backend.signKs256SigStructure(sigStructure))
+		(sigStructure) => backend.signKs256SigStructure(sigStructure)
 	);
 	const header = accountReadAuthorizationHeader(attestation);
 	cache.set(univocityInstanceId, { header, exp: nowSec + DEFAULT_ACCOUNT_READ_WINDOW_SEC });

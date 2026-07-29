@@ -9,6 +9,7 @@
 		"COORDINATOR_AUTH_MODE": "wallet_challenge",
 		"COORDINATOR_UPSTREAM_URL": "https://coordinator.forest-2.forestrie.dev",
 		"ENABLE_WALLET_CHALLENGE_AUTH": "true",
-		"PUBLIC_CANOPY_API_URL": "https://api-a.forest-2.forestrie.dev"
+		"PUBLIC_CANOPY_API_URL": "https://api-a.forest-2.forestrie.dev",
+		"PUBLIC_RPC_URL": "https://sepolia.base.org"
 	}
 }

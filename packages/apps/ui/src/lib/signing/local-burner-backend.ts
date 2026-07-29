@@ -1,6 +1,6 @@
 import { keccak_256 } from '@noble/hashes/sha3';
 import { secp256k1 } from '@noble/curves/secp256k1';
-import { bytesToHex, hexToBytes, type Hex } from 'viem';
+import { hexToBytes } from 'viem';
 import type { SigningBackend } from './signing-backend.js';
 import { SigningBackendUnavailableError } from './signing-backend.js';
 import { KS256_SIG_BYTES } from './ks256-sig-utils.js';
@@ -9,11 +9,9 @@ import { hasBurnerKey, loadBurnerKeyHex } from './local-burner-key.js';
 /**
  * Demo/system-test signing backend (plan-2607-01, FOR-322): signs KS256
  * delegation certificates with a browser-local burner key the user fully
- * controls, instead of the custodial Privy embedded wallet. Emits the same
- * 0x-prefixed 65-byte recoverable signature the cert builder expects; recovery
- * id is already in [0,1] and the signature is low-S, so it passes through
- * `normalizeKs256Signature` unchanged. See `local-burner-key.ts` for the
- * (deliberately weak) custody model.
+ * controls, instead of the custodial Privy embedded wallet. Emits the 65-byte
+ * recoverable wire signature directly — recovery id already in [0,1], low-S.
+ * See `local-burner-key.ts` for the (deliberately weak) custody model.
  */
 export class LocalBurnerBackend implements SigningBackend {
 	readonly kind = 'eoa' as const;
@@ -22,7 +20,7 @@ export class LocalBurnerBackend implements SigningBackend {
 		return hasBurnerKey();
 	}
 
-	async signKs256SigStructure(sigStructureBytes: Uint8Array): Promise<Hex> {
+	async signKs256SigStructure(sigStructureBytes: Uint8Array): Promise<Uint8Array> {
 		const keyHex = loadBurnerKeyHex();
 		if (!keyHex) {
 			throw new SigningBackendUnavailableError('Create a burner wallet before signing.');
@@ -35,6 +33,6 @@ export class LocalBurnerBackend implements SigningBackend {
 		const out = new Uint8Array(KS256_SIG_BYTES);
 		out.set(sig.toCompactRawBytes(), 0);
 		out[64] = sig.recovery;
-		return bytesToHex(out);
+		return out;
 	}
 }

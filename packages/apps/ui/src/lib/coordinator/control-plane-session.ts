@@ -1,8 +1,8 @@
 import { browser } from '$app/environment';
 import type { ControlPlaneScope } from '@mandate/coordinator-types';
-import { getConnectedEthereumProvider, getConnectedWalletAddress } from '$lib/privy/client.js';
 import { isBurnerBackend } from '$lib/signing/resolve-backend.js';
 import { signBurnerPersonalMessage } from '$lib/signing/local-burner-personal-sign.js';
+import { getActiveEthereumProvider, getActiveWalletAddress } from '$lib/wallets/active-wallet.js';
 import {
 	ensureCachedControlPlaneSession,
 	type CachedControlPlaneSession
@@ -17,11 +17,14 @@ async function signKs256Message(message: string): Promise<string> {
 	if (isBurnerBackend()) {
 		return signBurnerPersonalMessage(message);
 	}
-	const provider = await getConnectedEthereumProvider();
+	// Otherwise the session's active wallet signs: Privy embedded, or in Mode D
+	// the injected OWNER EOA (whether the coordinator authorises the owner of a
+	// Safe-rooted log is server policy — slice 04 / FOR-504 territory).
+	const provider = await getActiveEthereumProvider();
 	if (!provider) {
 		throw new Error('Connect a wallet before signing the control-plane challenge.');
 	}
-	const address = await getConnectedWalletAddress();
+	const address = await getActiveWalletAddress();
 	if (!address) {
 		throw new Error('Connect a wallet before signing the control-plane challenge.');
 	}

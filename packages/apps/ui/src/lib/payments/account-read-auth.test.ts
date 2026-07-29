@@ -10,7 +10,7 @@ vi.mock('$lib/signing/resolve-backend.js', () => ({
 		isAvailable: () => true,
 		signKs256SigStructure: async (bytes: Uint8Array) => {
 			signCalls.push(bytes);
-			return `0x${'ab'.repeat(64)}00`;
+			return new Uint8Array(65).fill(0xab);
 		}
 	})
 }));

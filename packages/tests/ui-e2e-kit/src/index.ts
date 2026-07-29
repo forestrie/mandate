@@ -14,6 +14,15 @@ export {
 } from './fixtures.js';
 export { E2E_MOCK_WALLET_ADDRESS } from './e2e-wallet.js';
 export {
+	E2E_INJECTED_OWNER_ADDRESS,
+	E2E_INJECTED_SIGNATURE,
+	E2E_SAFE_ADDRESS,
+	installInjectedWalletMock,
+	recordedTypedDataRequests,
+	type InjectedWalletMockOptions,
+	type RecordedTypedDataRequest
+} from './injected-wallet.js';
+export {
 	BURNER_KEY_STORAGE_KEY,
 	E2E_BURNER_ADDRESS,
 	E2E_BURNER_PRIVATE_KEY,

@@ -18,14 +18,22 @@
 	} from '$lib/payments/account-read-auth.js';
 	import { signX402PaymentTypedData } from '$lib/payments/x402-payer.js';
 	import { getConfiguredDefaultChainId } from '$lib/chains/wallet-chain.js';
-	import { getConnectedEthereumProvider, getConnectedWalletAddress } from '$lib/privy/client.js';
 	import {
 		getPrivySessionState,
 		initPrivySession,
 		sendEmailLoginCode,
 		completeEmailLogin
 	} from '$lib/privy/stores.svelte.js';
-	import { isBurnerBackend } from '$lib/signing/resolve-backend.js';
+	import {
+		getSelectableSignerBackends,
+		getSessionSignerBackend,
+		setSessionSignerBackend,
+		type SignerBackendKind
+	} from '$lib/signing/resolve-backend.js';
+	import SignerModePicker from '$lib/components/signer-mode-picker.svelte';
+	import SafeWalletCard from '$lib/components/safe-wallet-card.svelte';
+	import { getActiveEthereumProvider, getActiveWalletAddress } from '$lib/wallets/active-wallet.js';
+	import { getInjectedWalletState } from '$lib/wallets/stores.svelte.js';
 	import { isUnivocityInstanceId } from '@mandate/register/univocity-instance-id';
 	import { onDestroy, onMount } from 'svelte';
 	import {
@@ -61,7 +69,10 @@
 	let otpBusy = $state(false);
 
 	const session = $derived(getPrivySessionState());
-	const burnerMode = isBurnerBackend();
+	let signerMode = $state<SignerBackendKind>(getSessionSignerBackend());
+	const signerModeOptions = getSelectableSignerBackends();
+	const burnerMode = $derived(signerMode === 'burner');
+	const injectedWallet = $derived(getInjectedWalletState());
 	const instanceValid = $derived(isUnivocityInstanceId(instanceId.trim()));
 	const credits = $derived(parseCreditsInput(creditsInput));
 	const frozen = $derived(account ? enforcementBadge(account) : null);
@@ -79,17 +90,25 @@
 	});
 
 	// A minted read credential belongs to the wallet that signed it — drop the
-	// cache whenever the connected address changes (plan-2607-02 R4).
+	// cache whenever the connected address changes, Privy or injected
+	// (plan-2607-02 R4; the wallets store also clears on `accountsChanged`).
 	$effect(() => {
 		void session.address;
+		void injectedWallet.address;
 		clearAccountReadAuthorizations();
 	});
 
 	onMount(() => {
-		if (!burnerMode) void initPrivySession();
+		if (signerMode === 'privy') void initPrivySession();
 		const fromQuery = page.url.searchParams.get('instance');
 		instanceId = fromQuery || loadStoredInstanceId();
 	});
+
+	function selectSignerMode(kind: SignerBackendKind) {
+		setSessionSignerBackend(kind);
+		signerMode = kind;
+		if (kind === 'privy') void initPrivySession();
+	}
 
 	onDestroy(() => stopPolling());
 
@@ -173,10 +192,17 @@
 		message = null;
 		error = null;
 		try {
-			const provider = await getConnectedEthereumProvider();
-			const payerAddress = await getConnectedWalletAddress();
+			// Payer follows the session mode: Privy embedded wallet, or in Mode D
+			// the injected OWNER EOA — x402 is decoupled from the Safe signing
+			// backend (the Safe never pays; decision Q9).
+			const provider = await getActiveEthereumProvider();
+			const payerAddress = await getActiveWalletAddress();
 			if (!provider || !payerAddress) {
-				throw new Error('Connect the Privy wallet before purchasing credits.');
+				throw new Error(
+					signerMode === 'safe'
+						? 'Connect the Safe owner wallet before purchasing credits.'
+						: 'Connect the Privy wallet before purchasing credits.'
+				);
 			}
 			const before =
 				(account?.univocityInstanceId === quote.univocityInstanceId ? account : null) ??
@@ -255,7 +281,18 @@
 		<Alert>{message}</Alert>
 	{/if}
 
-	{#if !burnerMode && !session.authenticated}
+	{#if signerModeOptions.length > 1}
+		<div class="flex items-center gap-3">
+			<span class="text-sm font-medium text-zinc-800">Signing backend</span>
+			<SignerModePicker mode={signerMode} options={signerModeOptions} onSelect={selectSignerMode} />
+		</div>
+	{/if}
+
+	{#if signerMode === 'safe'}
+		<Card class="p-6">
+			<SafeWalletCard />
+		</Card>
+	{:else if !burnerMode && !session.authenticated}
 		<Card class="space-y-4 p-6">
 			<h2 class="font-medium">Sign in</h2>
 			<p class="text-sm text-zinc-600">

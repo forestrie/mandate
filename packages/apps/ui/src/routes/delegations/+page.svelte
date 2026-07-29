@@ -25,7 +25,16 @@
 		logoutPrivy,
 		setSelectedChainId
 	} from '$lib/privy/stores.svelte.js';
-	import { isBurnerBackend, resolveSigningBackend } from '$lib/signing/resolve-backend.js';
+	import {
+		getSelectableSignerBackends,
+		getSessionSignerBackend,
+		resolveSigningBackend,
+		setSessionSignerBackend,
+		type SignerBackendKind
+	} from '$lib/signing/resolve-backend.js';
+	import SignerModePicker from '$lib/components/signer-mode-picker.svelte';
+	import SafeWalletCard from '$lib/components/safe-wallet-card.svelte';
+	import { getInjectedWalletState } from '$lib/wallets/stores.svelte.js';
 	import {
 		clearBurnerKey,
 		createBurnerKey,
@@ -69,11 +78,34 @@
 	const supportedChains = $derived(getSupportedMandateChains());
 	const killSwitch = $derived(killSwitchGuidance());
 
-	// Deploy-time backend selection (plan-2607-01 / FOR-322). In burner mode the
-	// signing address comes from the browser-local key rather than the Privy session.
-	const burnerMode = isBurnerBackend();
+	// Session-scoped backend selection (plan-2607-45 slice 03): the operator
+	// picks the mode at connect time; the env var is only the default. The root
+	// signer address follows the mode — in Safe mode it is the VALIDATED Safe
+	// contract address (the KS256 root), never the owner EOA.
+	let signerMode = $state<SignerBackendKind>(getSessionSignerBackend());
+	const signerModeOptions = getSelectableSignerBackends();
+	const burnerMode = $derived(signerMode === 'burner');
+	const injectedWallet = $derived(getInjectedWalletState());
 	let burnerAddress = $state<string | null>(null);
-	const signerAddress = $derived(burnerMode ? burnerAddress : session.address);
+	const signerAddress = $derived(
+		signerMode === 'burner'
+			? burnerAddress
+			: signerMode === 'safe'
+				? injectedWallet.safeValidation?.status === 'valid'
+					? injectedWallet.safeAddress
+					: null
+				: session.address
+	);
+
+	function selectSignerMode(kind: SignerBackendKind) {
+		setSessionSignerBackend(kind);
+		signerMode = kind;
+		if (kind === 'burner') {
+			refreshBurnerAddress();
+		} else if (kind === 'privy') {
+			void initPrivySession();
+		}
+	}
 
 	function refreshBurnerAddress() {
 		burnerAddress = getBurnerAddress();
@@ -126,9 +158,9 @@
 	);
 
 	onMount(() => {
-		if (burnerMode) {
+		if (signerMode === 'burner') {
 			refreshBurnerAddress();
-		} else {
+		} else if (signerMode === 'privy') {
 			void initPrivySession();
 		}
 		const fromQuery = page.url.searchParams.get('authLogId');
@@ -274,9 +306,12 @@
 
 	async function signAndSubmit(entry: PendingEntry) {
 		if (!signerAddress) {
-			error = burnerMode
-				? 'Create a burner wallet before signing'
-				: 'Connect a wallet before signing';
+			error =
+				signerMode === 'burner'
+					? 'Create a burner wallet before signing'
+					: signerMode === 'safe'
+						? 'Connect the owner wallet and validate the Safe before signing'
+						: 'Connect a wallet before signing';
 			return;
 		}
 		signingId = entry.id;
@@ -320,7 +355,18 @@
 		</div>
 	</Card>
 
-	{#if burnerMode}
+	{#if signerModeOptions.length > 1}
+		<div class="flex items-center gap-3">
+			<span class="text-sm font-medium text-zinc-800">Signing backend</span>
+			<SignerModePicker mode={signerMode} options={signerModeOptions} onSelect={selectSignerMode} />
+		</div>
+	{/if}
+
+	{#if signerMode === 'safe'}
+		<Card class="p-6">
+			<SafeWalletCard />
+		</Card>
+	{:else if burnerMode}
 		<Card class="space-y-4 p-6">
 			<div class="flex items-center justify-between gap-4">
 				<h2 class="text-lg font-medium">Burner wallet</h2>

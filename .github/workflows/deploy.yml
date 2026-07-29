@@ -42,6 +42,9 @@ jobs:
           # Canopy base for the browser-direct fee surface (FOR-485); the
           # attestation aud is this URL's origin.
           PUBLIC_CANOPY_API_URL: ${{ vars.PUBLIC_CANOPY_API_URL }}
+          # Browser-side RPC for Mode D Safe validation (plan-2607-45 slice 03);
+          # keyless endpoint for PUBLIC_DEFAULT_CHAIN_ID.
+          PUBLIC_RPC_URL: ${{ vars.PUBLIC_RPC_URL || 'https://sepolia.base.org' }}
         run: pnpm build:ui
 
       - name: Bind Pages secrets
