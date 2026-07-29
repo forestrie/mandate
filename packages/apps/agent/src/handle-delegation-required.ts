@@ -8,7 +8,7 @@ import {
 import { logDelegationOutcome } from './delegation/delegation-outcome-log.js';
 import type { SeenStore } from './dedup/seen-store.js';
 import type { KeyRegistry } from './signer/key-registry.js';
-import { UnknownLogSignerError } from './signer/key-registry.js';
+import { InteractiveRootSignerError, UnknownLogSignerError } from './signer/key-registry.js';
 import { resolveSigner } from './signer/resolve-signer.js';
 import type { JwksResolver } from './webhook/jwks-resolver.js';
 import { verifyWebhookSignature, WebhookVerificationError } from './webhook/verify-signature.js';
@@ -119,6 +119,16 @@ export async function handleDelegationRequired(
 		if (error instanceof UnknownLogSignerError) {
 			await deps.seenStore.clear(event.requestKey);
 			return jsonResponse(404, { ok: false, error: error.message });
+		}
+		if (error instanceof InteractiveRootSignerError) {
+			// Safe 1x1 (Mode D): the coordinator retries EVERY non-2xx through
+			// the full ladder, and this log will never sign via webhook — the
+			// root signs in the console (pending queue). Acknowledge with 200 +
+			// ok:false so delivery stops now; the demand stays in pending
+			// (plan-2607-03 R1; route-aware suppression is FOR-504).
+			logDelegationOutcome(event, 'interactive_root');
+			await deps.seenStore.clear(event.requestKey);
+			return jsonResponse(200, { ok: false, error: error.message });
 		}
 		throw error;
 	}

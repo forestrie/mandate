@@ -242,6 +242,44 @@ describe('handleDelegationRequired', () => {
 		expect(await seenStore.has('unknown-log-reservation-key')).toBe(false);
 	});
 
+	it('acknowledges a Safe 1x1 interactive root without retrying (200 + ok:false)', async () => {
+		// plan-2607-03 R1: the coordinator retries every non-2xx through the
+		// full ladder, and an interactive root will NEVER sign via webhook —
+		// the delivery is acknowledged, the demand stays in the pending queue.
+		const root = await generateTestKs256Root();
+		const { privateKey, publicJwk } = await generateWebhookSigningKeyPair();
+		const seenStore = new MemorySeenStore();
+		const event = buildDelegationRequiredEvent({
+			root,
+			delegatedPublicKeyCbor: await generateDelegatedPublicKeyCbor(),
+			requestKey: 'interactive-root-request-key'
+		});
+		const eventBody = JSON.stringify(event);
+		const interactiveKeys = JSON.stringify({
+			[TEST_LOG_ID]: {
+				alg: 'KS256',
+				rootSignerAddress: root.rootSignerAddress,
+				kind: 'interactive'
+			}
+		});
+
+		const response = await handleDelegationRequired(
+			await signedWebhookRequest({ eventBody, privateKey }),
+			{
+				jwksResolver: createJwksResolver(publicJwk),
+				keyRegistry: new KeyRegistry(interactiveKeys),
+				seenStore,
+				...TEST_AGENT_DEPS,
+				nowSeconds: NOW
+			}
+		);
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as { ok: boolean; error: string };
+		expect(body.ok).toBe(false);
+		expect(body.error).toContain('signs in the console');
+		expect(await seenStore.has('interactive-root-request-key')).toBe(false);
+	});
+
 	it('rejects unsupported event type', async () => {
 		const root = await generateTestKs256Root();
 		const { privateKey, publicJwk } = await generateWebhookSigningKeyPair();

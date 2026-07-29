@@ -36,8 +36,9 @@ ONBOARD_REQUIRE_KEY_ATTESTATION; signed by the remote mandate signer):
   --attest-aud       aud claim (default: the canopy URL origin)
   MANDATE_SIGNER_TOKEN env: bearer for the signer call (required to attest)
 
-Pass --root-address and --log-id together to attest; omit both to post an
-unattested request (rejected wherever the canopy policy is armed).
+Any attestation flag (or MANDATE_SIGNER_URL in env) arms attesting, and the
+rest become required. Omit them all to post an unattested request (rejected
+wherever the canopy policy is armed).
 `);
 	process.exit(1);
 }
@@ -233,9 +234,10 @@ function requirePrivyClientConfig(): {
 /**
  * Build the D8 bootstrap-key attestation for `onboard request` via the remote
  * mandate signer (the bootstrap key never leaves custody). Attestation is
- * armed by --root-address/--log-id (with --signer-url or MANDATE_SIGNER_URL);
- * naming any one of the three arms it, so a partial flag set fails loudly
- * instead of silently posting unattested.
+ * armed by ANY of --root-address, --log-id, --signer-url, or a
+ * MANDATE_SIGNER_URL env — so a partial flag set OR an env-only signer
+ * config fails loudly instead of silently posting unattested
+ * (plan-2607-03 M2).
  */
 async function buildOnboardRequestAttestation(args: {
 	canopyBaseUrl: string;
@@ -244,12 +246,10 @@ async function buildOnboardRequestAttestation(args: {
 }): Promise<Uint8Array | undefined> {
 	const rootSignerAddress = readFlag('--root-address');
 	const logIdHex32 = readFlag('--log-id');
-	const signerUrlFlag = readFlag('--signer-url');
-	if (!rootSignerAddress && !logIdHex32 && !signerUrlFlag) {
+	const signerUrl = envOr(readFlag('--signer-url'), 'MANDATE_SIGNER_URL');
+	if (!rootSignerAddress && !logIdHex32 && !signerUrl) {
 		return undefined;
 	}
-
-	const signerUrl = envOr(signerUrlFlag, 'MANDATE_SIGNER_URL');
 	if (!rootSignerAddress || !logIdHex32 || !signerUrl) {
 		console.error(
 			'attested onboard request needs --root-address, --log-id and a signer URL ' +
@@ -341,7 +341,12 @@ async function runProvision(): Promise<void> {
 	const coordinatorBaseUrl = envOr(readFlag('--coordinator-url'), 'E2E_DELEGATION_COORDINATOR_URL');
 	const agentWebhookUrl = envOr(readFlag('--webhook-url'), 'E2E_MANDATE_AGENT_WEBHOOK_URL');
 	const modeRaw = (readFlag('--mode') ?? process.env.MANDATE_DELEGATION_MODE ?? 'C').toUpperCase();
-	const mode = (modeRaw === 'B' || modeRaw === 'D' ? modeRaw : 'C') as DelegationMode;
+	if (modeRaw !== 'B' && modeRaw !== 'C' && modeRaw !== 'D') {
+		// A typo must not silently provision Privy-custody (plan-2607-03 M3).
+		console.error(`unknown delegation mode '${modeRaw}' — expected B, C or D`);
+		usageProvision();
+	}
+	const mode = modeRaw as DelegationMode;
 	const univocityAddr = envOr(readFlag('--univocity-addr'), 'E2E_CANOPY_UNIVOCITY_ADDR');
 	const chainId = envOr(readFlag('--chain-id'), 'E2E_CANOPY_CHAIN_ID');
 	const forestR = readFlag('--forest-r') ?? process.env.MANDATE_FOREST_R;
