@@ -18,6 +18,7 @@ export {
 	E2E_INJECTED_SIGNATURE,
 	E2E_SAFE_ADDRESS,
 	installInjectedWalletMock,
+	recordedPersonalSignRequests,
 	recordedTypedDataRequests,
 	type InjectedWalletMockOptions,
 	type RecordedTypedDataRequest

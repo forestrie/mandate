@@ -28,6 +28,10 @@ export interface InjectedWalletMockOptions {
 	safeAddress?: string;
 	owners?: string[];
 	threshold?: number;
+	/** `VERSION()` the mock Safe reports (default 1.4.1; use 1.1.1 for the R2 gate). */
+	safeVersion?: string;
+	/** Make every chain read fail — drives the `unavailable` validation state. */
+	chainReadsFail?: boolean;
 }
 
 export interface RecordedTypedDataRequest {
@@ -37,14 +41,25 @@ export interface RecordedTypedDataRequest {
 	message: Record<string, unknown>;
 }
 
-function chainReadResult(
-	cfg: { safeAddress: string; owners: string[]; threshold: number },
-	method: string,
-	params: unknown[]
-): string {
+interface ChainReadConfig {
+	safeAddress: string;
+	owners: string[];
+	threshold: number;
+	safeVersion: string;
+	chainId: number;
+	chainReadsFail: boolean;
+}
+
+function chainReadResult(cfg: ChainReadConfig, method: string, params: unknown[]): string {
+	if (cfg.chainReadsFail) {
+		throw new Error('e2e chain: reads configured to fail (unavailable-state spec)');
+	}
 	const word = (value: number): string => value.toString(16).padStart(64, '0');
 	const addressWord = (address: string): string =>
 		address.replace(/^0x/, '').toLowerCase().padStart(64, '0');
+	if (method === 'eth_chainId') {
+		return `0x${cfg.chainId.toString(16)}`;
+	}
 	if (method === 'eth_getCode') {
 		const [address] = params as [string];
 		return address.toLowerCase() === cfg.safeAddress.toLowerCase()
@@ -55,6 +70,17 @@ function chainReadResult(
 		const [{ to, data }] = params as [{ to: string; data: string }];
 		if (to.toLowerCase() !== cfg.safeAddress.toLowerCase()) {
 			throw new Error(`e2e chain: eth_call to unexpected address ${to}`);
+		}
+		if (data === '0xffa1ad74') {
+			// ABI string: offset ‖ length ‖ right-padded utf8.
+			let versionHex = '';
+			for (const ch of cfg.safeVersion) {
+				versionHex += ch.charCodeAt(0).toString(16).padStart(2, '0');
+			}
+			return `0x${word(0x20)}${word(cfg.safeVersion.length)}${versionHex.padEnd(
+				Math.ceil(versionHex.length / 64) * 64,
+				'0'
+			)}`;
 		}
 		if (data === '0xa0e67e2b') {
 			return `0x${word(0x20)}${word(cfg.owners.length)}${cfg.owners.map(addressWord).join('')}`;
@@ -73,10 +99,7 @@ function chainReadResult(
  * hermetic whatever endpoint the build resolved. Non-JSON-RPC traffic falls
  * back to the other installed mocks.
  */
-async function installJsonRpcIntercept(
-	page: Page,
-	cfg: { safeAddress: string; owners: string[]; threshold: number }
-): Promise<void> {
+async function installJsonRpcIntercept(page: Page, cfg: ChainReadConfig): Promise<void> {
 	await page.route('**/*', async (route) => {
 		const request = route.request();
 		if (request.method() !== 'POST') return route.fallback();
@@ -118,6 +141,8 @@ export async function installInjectedWalletMock(
 		safeAddress: options.safeAddress ?? E2E_SAFE_ADDRESS,
 		owners: options.owners ?? [options.address ?? E2E_INJECTED_OWNER_ADDRESS],
 		threshold: options.threshold ?? 1,
+		safeVersion: options.safeVersion ?? '1.4.1',
+		chainReadsFail: options.chainReadsFail ?? false,
 		signature: E2E_INJECTED_SIGNATURE
 	};
 	await installJsonRpcIntercept(page, config);
@@ -125,7 +150,10 @@ export async function installInjectedWalletMock(
 		const word = (value: number): string => value.toString(16).padStart(64, '0');
 		const addressWord = (address: string): string =>
 			address.replace(/^0x/, '').toLowerCase().padStart(64, '0');
-		const record: { typedDataRequests: unknown[] } = { typedDataRequests: [] };
+		const record: { typedDataRequests: unknown[]; personalSignRequests: unknown[] } = {
+			typedDataRequests: [],
+			personalSignRequests: []
+		};
 		(window as unknown as Record<string, unknown>).__e2eInjectedWallet = record;
 
 		const listeners = new Map<string, Array<(...args: unknown[]) => void>>();
@@ -155,18 +183,37 @@ export async function installInjectedWalletMock(
 						});
 						return cfg.signature;
 					}
-					case 'personal_sign':
+					case 'personal_sign': {
+						const [message, address] = params as [string, string];
+						record.personalSignRequests.push({ message, address });
 						return cfg.signature;
+					}
 					case 'eth_getCode': {
+						if (cfg.chainReadsFail) {
+							throw new Error('e2e wallet: chain reads configured to fail');
+						}
 						const [address] = params as [string];
 						return address.toLowerCase() === cfg.safeAddress.toLowerCase()
 							? '0x600160005260206000f3'
 							: '0x';
 					}
 					case 'eth_call': {
+						if (cfg.chainReadsFail) {
+							throw new Error('e2e wallet: chain reads configured to fail');
+						}
 						const [{ to, data }] = params as [{ to: string; data: string }];
 						if (to.toLowerCase() !== cfg.safeAddress.toLowerCase()) {
 							throw new Error(`e2e wallet: eth_call to unexpected address ${to}`);
+						}
+						if (data === '0xffa1ad74') {
+							let versionHex = '';
+							for (const ch of cfg.safeVersion) {
+								versionHex += ch.charCodeAt(0).toString(16).padStart(2, '0');
+							}
+							return `0x${word(0x20)}${word(cfg.safeVersion.length)}${versionHex.padEnd(
+								Math.ceil(versionHex.length / 64) * 64,
+								'0'
+							)}`;
 						}
 						if (data === '0xa0e67e2b') {
 							return `0x${word(0x20)}${word(cfg.owners.length)}${cfg.owners
@@ -224,5 +271,19 @@ export async function recordedTypedDataRequests(page: Page): Promise<RecordedTyp
 					typedDataRequests: RecordedTypedDataRequest[];
 				}
 			).typedDataRequests
+	);
+}
+
+/** Read back the personal_sign requests the mock wallet answered. */
+export async function recordedPersonalSignRequests(
+	page: Page
+): Promise<Array<{ message: string; address: string }>> {
+	return page.evaluate(
+		() =>
+			(
+				(window as unknown as Record<string, unknown>).__e2eInjectedWallet as {
+					personalSignRequests: Array<{ message: string; address: string }>;
+				}
+			).personalSignRequests
 	);
 }

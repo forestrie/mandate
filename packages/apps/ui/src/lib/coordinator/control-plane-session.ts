@@ -1,6 +1,7 @@
 import { browser } from '$app/environment';
+import { bytesToHex, hashMessage } from 'viem';
 import type { ControlPlaneScope } from '@mandate/coordinator-types';
-import { isBurnerBackend } from '$lib/signing/resolve-backend.js';
+import { getSessionSignerBackend, isBurnerBackend } from '$lib/signing/resolve-backend.js';
 import { signBurnerPersonalMessage } from '$lib/signing/local-burner-personal-sign.js';
 import { getActiveEthereumProvider, getActiveWalletAddress } from '$lib/wallets/active-wallet.js';
 import {
@@ -17,9 +18,18 @@ async function signKs256Message(message: string): Promise<string> {
 	if (isBurnerBackend()) {
 		return signBurnerPersonalMessage(message);
 	}
-	// Otherwise the session's active wallet signs: Privy embedded, or in Mode D
-	// the injected OWNER EOA (whether the coordinator authorises the owner of a
-	// Safe-rooted log is server policy — slice 04 / FOR-504 territory).
+	// Safe mode (plan-2607-04 R1 / FOR-505): the root is a contract account —
+	// personal_sign can never match it. The owner signs the SAME EIP-191
+	// challenge digest wrapped in the Safe's SafeMessage; the coordinator
+	// dispatches contract roots to ERC-1271 with that digest.
+	if (getSessionSignerBackend() === 'safe') {
+		const [{ getSafeSigningContext }, { signSafeMessageForDigest }] = await Promise.all([
+			import('$lib/wallets/stores.svelte.js'),
+			import('$lib/signing/safe-backend.js')
+		]);
+		const context = getSafeSigningContext();
+		return bytesToHex(await signSafeMessageForDigest(context, hashMessage(message)));
+	}
 	const provider = await getActiveEthereumProvider();
 	if (!provider) {
 		throw new Error('Connect a wallet before signing the control-plane challenge.');

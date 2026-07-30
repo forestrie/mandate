@@ -11,10 +11,12 @@ import {
 } from 'viem';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
+import { hashMessage } from 'viem';
 import {
 	SafeBackend,
 	buildSafeMessageTypedDataJson,
 	safeOwnerSignatureBytes,
+	signSafeMessageForDigest,
 	type SafeSigningContext
 } from './safe-backend.js';
 
@@ -129,6 +131,22 @@ describe('SafeBackend', () => {
 		const hash = keccak256(sigStructure);
 		const recovered = await recoverAddress({
 			hash: safeMessageDigest(hash),
+			signature: `0x${Buffer.from(blob).toString('hex')}`
+		});
+		expect(recovered.toLowerCase()).toBe(ownerAddress);
+	});
+
+	it('signs the wcc-1 challenge digest with the same SafeMessage wrap (FOR-505)', async () => {
+		// The control-plane challenge flavour: EIP-191 digest of the wcc-1
+		// message in, owner blob out — the coordinator hands exactly this digest
+		// to the root Safe's isValidSignature.
+		const digest = hashMessage(
+			'localhost wants you to authorize delegation control-plane access:\nAuth log: 1111'
+		);
+		const blob = await signSafeMessageForDigest(walletSigningSafeMessages(), digest);
+		expect(blob).toHaveLength(65);
+		const recovered = await recoverAddress({
+			hash: safeMessageDigest(digest),
 			signature: `0x${Buffer.from(blob).toString('hex')}`
 		});
 		expect(recovered.toLowerCase()).toBe(ownerAddress);

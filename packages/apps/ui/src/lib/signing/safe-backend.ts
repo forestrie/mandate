@@ -87,6 +87,28 @@ async function resolveContextFromInjectedSession(): Promise<SafeSigningContext> 
 	return getSafeSigningContext();
 }
 
+/**
+ * Sign an arbitrary 32-byte digest as a SafeMessage with the owner wallet
+ * and return the 27/28-flavoured owner blob. Shared by the KS256 COSE path
+ * (keccak256(Sig_structure)) and the wcc-1 control-plane challenge (EIP-191
+ * digest, coordinator FOR-505) — both end at the root Safe's
+ * `isValidSignature(digest, blob)`.
+ */
+export async function signSafeMessageForDigest(
+	context: SafeSigningContext,
+	digest: Hex
+): Promise<Uint8Array> {
+	const typedDataJson = buildSafeMessageTypedDataJson(digest, context.chainId, context.safeAddress);
+	const signature = (await context.provider.request({
+		method: 'eth_signTypedData_v4',
+		params: [context.ownerAddress, typedDataJson]
+	})) as string;
+	if (typeof signature !== 'string' || !signature.startsWith('0x')) {
+		throw new SigningBackendUnavailableError('Wallet returned an invalid SafeMessage signature');
+	}
+	return safeOwnerSignatureBytes(signature);
+}
+
 export class SafeBackend implements SigningBackend {
 	readonly kind = 'safe' as const;
 
@@ -99,16 +121,7 @@ export class SafeBackend implements SigningBackend {
 	}
 
 	async signKs256SigStructure(sigStructureBytes: Uint8Array): Promise<Uint8Array> {
-		const hash = keccak256(sigStructureBytes);
 		const context = await this.resolveContext();
-		const typedDataJson = buildSafeMessageTypedDataJson(hash, context.chainId, context.safeAddress);
-		const signature = (await context.provider.request({
-			method: 'eth_signTypedData_v4',
-			params: [context.ownerAddress, typedDataJson]
-		})) as string;
-		if (typeof signature !== 'string' || !signature.startsWith('0x')) {
-			throw new SigningBackendUnavailableError('Wallet returned an invalid SafeMessage signature');
-		}
-		return safeOwnerSignatureBytes(signature);
+		return signSafeMessageForDigest(context, keccak256(sigStructureBytes));
 	}
 }

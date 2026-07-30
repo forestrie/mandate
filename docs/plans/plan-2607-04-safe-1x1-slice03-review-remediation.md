@@ -1,6 +1,9 @@
 # plan-2607-04 — Safe 1x1 slice 03 review remediation
 
-**Status:** DRAFT
+**Status:** IMPLEMENTED (2026-07-30) — R1 ERC-1271 challenge flavour chosen;
+coordinator side on the canopy `mandate-1` branch (FOR-505 PR), mandate side +
+R2/R3/R4 + all deferred Lows on PR
+[#80](https://github.com/forestrie/mandate/pull/80)
 **Date:** 2026-07-30
 **Related:** plan-2607-45 slice 03 (devdocs), FOR-502, mandate PR
 [#80](https://github.com/forestrie/mandate/pull/80) (`ef28b87`), sibling gap
@@ -86,15 +89,15 @@ failures as `unavailable`.
 **Acceptance:** revert-shaped transport stub → `invalid`; HTTP 503 /
 network-error stub → `unavailable` (existing test retained).
 
-## Deferred (Low)
+## Deferred (Low) — all implemented with the Mediums (2026-07-30)
 
-- e2e coverage for the `unavailable` validation state; unit coverage for
-  listener rebinding (needs a DOM-ish store harness); `eip6963.ts` discovery
-  unit test.
-- `PUBLIC_RPC_URL` Base Sepolia defaults are hardcoded in three places while
-  the chain comes from `PUBLIC_DEFAULT_CHAIN_ID` — single-source when a
-  second chain lands, or assert `eth_chainId` matches at validation time.
-- `signer-mode-picker.svelte` radiogroup lacks arrow-key navigation.
+- e2e coverage for the `unavailable` validation state (`chainReadsFail` kit
+  option); store listener-lifecycle unit tests (`stores-session.test.ts`);
+  `eip6963.ts` discovery unit test.
+- Chain drift: transports expose `eth_chainId` and `validateSessionSafe`
+  refuses (as `unavailable`, deployment-misconfiguration wording) when the
+  validation RPC's chain differs from `PUBLIC_DEFAULT_CHAIN_ID`.
+- `signer-mode-picker.svelte`: roving tabindex + Arrow/Home/End selection.
 
 ## Branch assignment
 

@@ -63,7 +63,11 @@ let state = $state<InjectedWalletState>({
 
 /** The live EIP-1193 provider is not serialisable UI state — module-held. */
 let activeProvider: EventedEthereumProvider | null = null;
-let listenersBound = false;
+let boundProvider: EventedEthereumProvider | null = null;
+let boundHandlers: {
+	accountsChanged: (...args: unknown[]) => void;
+	chainChanged: (...args: unknown[]) => void;
+} | null = null;
 
 export function getInjectedWalletState(): InjectedWalletState {
 	return state;
@@ -85,10 +89,26 @@ export async function initInjectedWallets(): Promise<void> {
 	};
 }
 
+/**
+ * Listener lifecycle (plan-2607-04 R3): exactly one bound provider at a time.
+ * Handlers are detached on disconnect/rebind, and each handler ignores events
+ * from a provider that is no longer active — a disconnected wallet must never
+ * mutate the live session.
+ */
+function unbindProviderListeners(): void {
+	if (boundProvider?.removeListener && boundHandlers) {
+		boundProvider.removeListener('accountsChanged', boundHandlers.accountsChanged);
+		boundProvider.removeListener('chainChanged', boundHandlers.chainChanged);
+	}
+	boundProvider = null;
+	boundHandlers = null;
+}
+
 function bindProviderListeners(provider: EventedEthereumProvider): void {
-	if (listenersBound || !provider.on) return;
-	listenersBound = true;
-	provider.on('accountsChanged', (...args: unknown[]) => {
+	unbindProviderListeners();
+	if (!provider.on) return;
+	const accountsChanged = (...args: unknown[]) => {
+		if (provider !== activeProvider) return;
 		const accounts = (args[0] as string[] | undefined) ?? [];
 		// A minted read credential belongs to the wallet that signed it, and a
 		// Safe validation belongs to the owner that was checked — both die with
@@ -100,13 +120,18 @@ function bindProviderListeners(provider: EventedEthereumProvider): void {
 			safeValidation: null,
 			error: null
 		};
-	});
-	provider.on('chainChanged', (...args: unknown[]) => {
+	};
+	const chainChanged = (...args: unknown[]) => {
+		if (provider !== activeProvider) return;
 		const raw = args[0];
 		const chainId =
 			typeof raw === 'string' ? Number.parseInt(raw, 16) : typeof raw === 'number' ? raw : null;
 		state = { ...state, chainId };
-	});
+	};
+	provider.on('accountsChanged', accountsChanged);
+	provider.on('chainChanged', chainChanged);
+	boundProvider = provider;
+	boundHandlers = { accountsChanged, chainChanged };
 }
 
 /**
@@ -132,7 +157,6 @@ export async function connectInjectedWallet(rdns?: string): Promise<void> {
 		await ensureWalletChain(provider, targetChainId);
 		const chainId = await readWalletChainId(provider);
 		activeProvider = provider;
-		listenersBound = false;
 		bindProviderListeners(provider);
 		clearAccountReadAuthorizations();
 		state = {
@@ -157,7 +181,7 @@ export async function connectInjectedWallet(rdns?: string): Promise<void> {
 
 export function disconnectInjectedWallet(): void {
 	activeProvider = null;
-	listenersBound = false;
+	unbindProviderListeners();
 	clearAccountReadAuthorizations();
 	state = {
 		...state,
@@ -195,11 +219,23 @@ export async function validateSessionSafe(): Promise<void> {
 		return;
 	}
 	try {
-		const result = await validateSafeAccount(
-			defaultSafeReadTransport(provider),
-			state.safeAddress,
-			owner
-		);
+		const transport = defaultSafeReadTransport(provider);
+		// The validation endpoint must serve the console's configured chain
+		// (plan-2607-04 low: PUBLIC_RPC_URL vs PUBLIC_DEFAULT_CHAIN_ID drift is a
+		// deployment misconfiguration, not a verdict on the Safe).
+		const expectedChainId = getConfiguredDefaultChainId();
+		const rpcChainId = await transport.chainId();
+		if (rpcChainId !== expectedChainId) {
+			state = {
+				...state,
+				safeValidation: {
+					status: 'unavailable',
+					detail: `Validation RPC serves chain ${rpcChainId} but the console is configured for ${expectedChainId} — deployment misconfiguration`
+				}
+			};
+			return;
+		}
+		const result = await validateSafeAccount(transport, state.safeAddress, owner);
 		state = {
 			...state,
 			safeValidation: result.ok
