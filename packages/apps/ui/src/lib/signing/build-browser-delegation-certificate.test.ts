@@ -13,7 +13,6 @@ import {
 } from '@forestrie/delegation-cose';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
-import type { Hex } from 'viem';
 import { buildBrowserDelegationCertificate } from './build-browser-delegation-certificate.js';
 import type { SigningBackend } from './signing-backend.js';
 import { bytesToBase64 } from './bytes.js';
@@ -53,14 +52,14 @@ class LocalKs256Backend implements SigningBackend {
 		return true;
 	}
 
-	async signKs256SigStructure(sigStructureBytes: Uint8Array): Promise<Hex> {
+	async signKs256SigStructure(sigStructureBytes: Uint8Array): Promise<Uint8Array> {
 		const hash = keccak_256(sigStructureBytes);
 		const sig = secp256k1.sign(hash, this.sk, { lowS: true });
 		const compact = sig.toCompactRawBytes();
 		const out = new Uint8Array(65);
 		out.set(compact, 0);
 		out[64] = sig.recovery ?? 0;
-		return `0x${Buffer.from(out).toString('hex')}` as Hex;
+		return out;
 	}
 }
 
