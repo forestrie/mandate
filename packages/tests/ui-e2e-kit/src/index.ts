@@ -14,6 +14,17 @@ export {
 } from './fixtures.js';
 export { E2E_MOCK_WALLET_ADDRESS } from './e2e-wallet.js';
 export {
+	E2E_ONBOARD_REDEEM_CODE,
+	E2E_ONBOARD_REQUEST_ID,
+	E2E_ONBOARD_TOKEN,
+	E2E_UNIVOCITY_ADDR,
+	installCanopyOnboardingMocks,
+	type CanopyOnboardingMockHandle,
+	type CanopyOnboardingMockOptions,
+	type RecordedGenesisPost,
+	type RecordedOnboardRequest
+} from './canopy-onboarding.js';
+export {
 	E2E_INJECTED_OWNER_ADDRESS,
 	E2E_INJECTED_SIGNATURE,
 	E2E_SAFE_ADDRESS,

@@ -32,6 +32,11 @@ export interface InjectedWalletMockOptions {
 	safeVersion?: string;
 	/** Make every chain read fail — drives the `unavailable` validation state. */
 	chainReadsFail?: boolean;
+	/**
+	 * Extra addresses `eth_getCode` reports contract code for (besides the
+	 * Safe) — the onboard wizard's univocity deployed-contract check.
+	 */
+	codeAddresses?: string[];
 }
 
 export interface RecordedTypedDataRequest {
@@ -48,6 +53,7 @@ interface ChainReadConfig {
 	safeVersion: string;
 	chainId: number;
 	chainReadsFail: boolean;
+	codeAddresses: string[];
 }
 
 function chainReadResult(cfg: ChainReadConfig, method: string, params: unknown[]): string {
@@ -62,9 +68,8 @@ function chainReadResult(cfg: ChainReadConfig, method: string, params: unknown[]
 	}
 	if (method === 'eth_getCode') {
 		const [address] = params as [string];
-		return address.toLowerCase() === cfg.safeAddress.toLowerCase()
-			? '0x600160005260206000f3'
-			: '0x';
+		const withCode = [cfg.safeAddress, ...cfg.codeAddresses].map((a) => a.toLowerCase());
+		return withCode.includes(address.toLowerCase()) ? '0x600160005260206000f3' : '0x';
 	}
 	if (method === 'eth_call') {
 		const [{ to, data }] = params as [{ to: string; data: string }];
@@ -143,6 +148,7 @@ export async function installInjectedWalletMock(
 		threshold: options.threshold ?? 1,
 		safeVersion: options.safeVersion ?? '1.4.1',
 		chainReadsFail: options.chainReadsFail ?? false,
+		codeAddresses: options.codeAddresses ?? [],
 		signature: E2E_INJECTED_SIGNATURE
 	};
 	await installJsonRpcIntercept(page, config);
@@ -193,9 +199,8 @@ export async function installInjectedWalletMock(
 							throw new Error('e2e wallet: chain reads configured to fail');
 						}
 						const [address] = params as [string];
-						return address.toLowerCase() === cfg.safeAddress.toLowerCase()
-							? '0x600160005260206000f3'
-							: '0x';
+						const withCode = [cfg.safeAddress, ...cfg.codeAddresses].map((a) => a.toLowerCase());
+						return withCode.includes(address.toLowerCase()) ? '0x600160005260206000f3' : '0x';
 					}
 					case 'eth_call': {
 						if (cfg.chainReadsFail) {
