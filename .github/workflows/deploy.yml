@@ -64,6 +64,13 @@ jobs:
           echo "${{ secrets.MANDATE_OPS_UI_TOKEN }}" | pnpm exec wrangler pages secret put MANDATE_OPS_UI_TOKEN --project-name=mandate-prod
           echo "${{ secrets.CANOPY_UPSTREAM_URL }}" | pnpm exec wrangler pages secret put CANOPY_UPSTREAM_URL --project-name=mandate-prod
           echo "${{ secrets.MANDATE_CANOPY_OPS_TOKEN }}" | pnpm exec wrangler pages secret put MANDATE_CANOPY_OPS_TOKEN --project-name=mandate-prod
+          # PUBLIC_* config read via $env/dynamic/public resolves from the
+          # runtime Pages env, not the build env — the ssr=false shells for
+          # /fees and /onboard are served by the worker, which injects
+          # `env: {}` unless these are bound to the project. Public values,
+          # but `secret put` is wrangler's only scriptable Pages env write.
+          echo "${{ vars.PUBLIC_CANOPY_API_URL }}" | pnpm exec wrangler pages secret put PUBLIC_CANOPY_API_URL --project-name=mandate-prod
+          echo "${{ vars.PUBLIC_RPC_URL || 'https://sepolia.base.org' }}" | pnpm exec wrangler pages secret put PUBLIC_RPC_URL --project-name=mandate-prod
 
       - name: Deploy production
         env:
