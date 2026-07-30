@@ -5,6 +5,7 @@ import { parseEthAddressToBytes, parseUnivocityAddrHex } from './eth-address.js'
 import { buildGenesisCborBody } from './genesis-request.js';
 import { postGenesis } from './genesis-client.js';
 import { logIdFromR, logIdPaddedWire32, normalizeForestR } from './log-id.js';
+import { buildModeDDescriptors } from './provision-mode-d.js';
 import type { ProvisionConfig } from './provision-config.js';
 import type { ProvisionResult } from './provision-result.js';
 import { GenesisClientError } from './genesis-client-error.js';
@@ -26,29 +27,6 @@ function buildModeBDescriptors(
 				signerUrl: input.userSignerUrl,
 				keyRef,
 				bearerEnvKey: 'USER_SIGNER_BEARER'
-			}
-		}
-	};
-}
-
-/**
- * Safe 1x1 (Mode D) descriptors: an interactive root has NO signerUrl and no
- * keyRef — the root signs in the console (ADR-0005 addendum). The agent's
- * KeyRegistry refuses to resolve a signer for `kind: 'interactive'`, and the
- * coordinator's pending queue (signing-route) carries the demand until the
- * owner signs.
- */
-function buildModeDDescriptors(
-	logIdHex32: string,
-	input: NonNullable<ProvisionConfig['modeD']>
-): ProvisionResult['descriptors'] {
-	return {
-		keyDirectory: {},
-		operatorRootKeys: {
-			[logIdHex32]: {
-				alg: 'KS256',
-				rootSignerAddress: input.safeAddress,
-				kind: 'interactive'
 			}
 		}
 	};

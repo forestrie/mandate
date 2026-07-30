@@ -62,7 +62,8 @@ Two facts shape this plan:
 ## Non-goals
 
 - No browser registration/onboarding UI (does not exist; would be net-new product
-  work).
+  work). **Superseded** by devdocs plan-2607-45 slice 04 (Safe 1x1 Mode D):
+  the `/onboard` wizard now IS the browser registration flow.
 - No deployed, cross-repo, or on-chain system tests in Phase 1 (→ arc-0024).
 - No changes to the coordinator, canopy, or on-chain contracts.
 - No Vitest browser-mode component tests (different tool; this is flow e2e).

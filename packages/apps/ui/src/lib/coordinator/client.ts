@@ -6,6 +6,8 @@ import type {
 	PendingListResponse,
 	ProblemDetails,
 	PutEnabledRequest,
+	SigningRouteMode,
+	SigningRouteMutationResponse,
 	SubmitDelegationCertificateRequest
 } from '@mandate/coordinator-types';
 import { controlPlaneAuthHeaders } from './control-plane-session.js';
@@ -69,6 +71,27 @@ export async function getLogDelegationEnabled(logId: string): Promise<EnabledRes
 	return bffFetch<EnabledResponse>(`logs/${encodeURIComponent(logId)}/enabled`, undefined, logId, [
 		'logs:enabled:read'
 	]);
+}
+
+/**
+ * Set a log's signing route. The Mode D onboard wizard posts `mode: 'wallet'`
+ * right after genesis so delegation demands land in the pending queue (and
+ * the coordinator suppresses signer webhooks for the log) instead of paging
+ * an agent that cannot sign for an interactive root.
+ */
+export async function setLogSigningRoute(
+	logId: string,
+	mode: SigningRouteMode
+): Promise<SigningRouteMutationResponse> {
+	return bffFetch<SigningRouteMutationResponse>(
+		`logs/${encodeURIComponent(logId)}/signing-route`,
+		{
+			method: 'POST',
+			body: JSON.stringify({ mode })
+		},
+		logId,
+		['logs:signing-route:write']
+	);
 }
 
 export async function setLogDelegationEnabled(

@@ -16,6 +16,8 @@ export interface CoordinatorMockOptions {
 	certificateSubmitError?: ProblemDetails;
 	onCertificateSubmit?: (body: unknown) => void;
 	enabledByLogId?: Record<string, EnabledResponse>;
+	/** Recorded when the wizard posts `logs/{id}/signing-route`. */
+	onSigningRouteSet?: (logId: string, body: { mode: string }) => void;
 }
 
 function defaultEnabled(enabled = true): EnabledResponse {
@@ -163,6 +165,18 @@ export async function installCoordinatorMocks(
 				});
 				return;
 			}
+		}
+
+		const signingRouteMatch = path.match(/^logs\/([^/]+)\/signing-route$/);
+		if (signingRouteMatch && method === 'POST') {
+			const body = request.postDataJSON() as { mode: string };
+			options.onSigningRouteSet?.(signingRouteMatch[1]!, body);
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({ ok: true })
+			});
+			return;
 		}
 
 		await route.fulfill({

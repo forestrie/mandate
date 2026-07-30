@@ -11,6 +11,9 @@
 		".": "./src/index.ts",
 		"./account-read-attestation": "./src/account-read-attestation.ts",
 		"./onboard-attestation": "./src/onboard-attestation.ts",
+		"./onboard-client": "./src/onboard-client.ts",
+		"./provision-mode-d": "./src/provision-mode-d.ts",
+		"./reservation-conflict-error": "./src/reservation-conflict-error.ts",
 		"./univocity-instance-id": "./src/univocity-instance-id.ts"
 	},
 	"scripts": {

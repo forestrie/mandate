@@ -17,6 +17,7 @@
 			<a href={resolve('/')} class="text-sm font-semibold tracking-wide text-emerald-800">Mandate</a
 			>
 			<nav class="flex gap-4 text-sm text-zinc-600">
+				<a href={resolve('/onboard')} class="hover:text-zinc-950">Onboard</a>
 				<a href={resolve('/delegations')} class="hover:text-zinc-950">Delegations</a>
 				<a href={resolve('/fees')} class="hover:text-zinc-950">Fees</a>
 				<a href={resolve('/instances')} class="hover:text-zinc-950">Instances</a>
