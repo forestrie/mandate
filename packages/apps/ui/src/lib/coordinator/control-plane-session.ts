@@ -1,6 +1,7 @@
 import { browser } from '$app/environment';
 import { bytesToHex, hashMessage } from 'viem';
 import type { ControlPlaneScope } from '@mandate/coordinator-types';
+import { getConfiguredDefaultChainId } from '$lib/chains/wallet-chain.js';
 import { getSessionSignerBackend, isBurnerBackend } from '$lib/signing/resolve-backend.js';
 import { signBurnerPersonalMessage } from '$lib/signing/local-burner-personal-sign.js';
 import { getActiveEthereumProvider, getActiveWalletAddress } from '$lib/wallets/active-wallet.js';
@@ -58,7 +59,13 @@ export async function ensureControlPlaneSession(
 
 	return ensureCachedControlPlaneSession(authLogId, scopes, cache, {
 		fetch,
-		signMessage: signKs256Message
+		signMessage: signKs256Message,
+		// A Safe root is chain-bound: bind the console's chain into the signed
+		// envelope so the coordinator can refuse a wrong-chain session outright
+		// (it enforces envelope.chainId against the log's binding when present).
+		// EOA/burner signatures are chain-free — omit it there.
+		envelopeChainId: () =>
+			getSessionSignerBackend() === 'safe' ? String(getConfiguredDefaultChainId()) : undefined
 	});
 }
 

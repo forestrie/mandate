@@ -85,4 +85,65 @@ describe('control-plane-session-core', () => {
 		expect(isSessionFresh(session, 250_000)).toBe(true);
 		expect(isSessionFresh(session, 350_000)).toBe(false);
 	});
+
+	function challengeAndSessionFetch() {
+		return vi
+			.fn()
+			.mockResolvedValueOnce(
+				new Response(
+					JSON.stringify({
+						version: 'wcc-1',
+						domain: 'localhost',
+						coordinatorOrigin: 'http://localhost',
+						authLogId,
+						scopes,
+						nonce: 'nonce-1',
+						issuedAt: 100,
+						expiresAt: 200
+					}),
+					{ status: 200 }
+				)
+			)
+			.mockResolvedValueOnce(
+				new Response(JSON.stringify({ token: 'v1.new', expiresAt: 300, authLogId, scopes }), {
+					status: 200
+				})
+			);
+	}
+
+	it('binds envelopeChainId into the signed message and the posted envelope', async () => {
+		const fetch = challengeAndSessionFetch();
+		const signMessage = vi.fn<(message: string) => Promise<string>>(async () => '0xabc');
+
+		await exchangeControlPlaneSession(authLogId, scopes, {
+			fetch,
+			signMessage,
+			envelopeChainId: () => '84532',
+			challengePath: '/challenge',
+			sessionPath: '/session'
+		});
+
+		// The chain id is part of what the wallet signed (wcc-1 Chain ID line)…
+		expect(signMessage.mock.calls[0]![0]).toContain('Chain ID: 84532');
+		// …and of the envelope the coordinator receives and enforces.
+		const sessionBody = JSON.parse(fetch.mock.calls[1]![1]!.body as string);
+		expect(sessionBody.envelope.chainId).toBe('84532');
+	});
+
+	it('omits chainId entirely when the dep declines (chain-free EOA signers)', async () => {
+		const fetch = challengeAndSessionFetch();
+		const signMessage = vi.fn<(message: string) => Promise<string>>(async () => '0xabc');
+
+		await exchangeControlPlaneSession(authLogId, scopes, {
+			fetch,
+			signMessage,
+			envelopeChainId: () => undefined,
+			challengePath: '/challenge',
+			sessionPath: '/session'
+		});
+
+		expect(signMessage.mock.calls[0]![0]).not.toContain('Chain ID:');
+		const sessionBody = JSON.parse(fetch.mock.calls[1]![1]!.body as string);
+		expect('chainId' in sessionBody.envelope).toBe(false);
+	});
 });

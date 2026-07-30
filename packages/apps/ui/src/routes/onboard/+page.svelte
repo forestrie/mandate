@@ -19,16 +19,24 @@
 	} from '@mandate/register/onboard-client';
 	import { provisionModeDGenesis } from '@mandate/register/provision-mode-d';
 	import { ReservationConflictError } from '@mandate/register/reservation-conflict-error';
+	import { GenesisClientError } from '@mandate/register/genesis-client-error';
+	import { OnboardRedeemError } from '@mandate/register/onboard-client';
 	import { resolve } from '$app/paths';
 	import { onDestroy, onMount } from 'svelte';
 	import {
+		applyGenesisResult,
 		approvalCopy,
+		classifyRedeemFailure,
 		clearProgress,
 		deriveStep,
 		emptyProgress,
+		ensureForestR,
 		loadProgress,
 		normalizeUnivocityAddrInput,
+		pinnedSafeGuard,
+		repairFailureCopy,
 		saveProgress,
+		scrubProgressSecrets,
 		validateDetails,
 		type OnboardProgress,
 		type OnboardRequestStatus
@@ -56,7 +64,13 @@
 		if (progress.requestId && !isTerminal(progress.requestStatus)) schedulePoll();
 	});
 
-	onDestroy(() => stopPolling());
+	// Set in onDestroy so a poll mid-await at navigation cannot re-arm the
+	// timer and keep writing sessionStorage after unmount.
+	let destroyed = false;
+	onDestroy(() => {
+		destroyed = true;
+		stopPolling();
+	});
 
 	function isTerminal(status: OnboardRequestStatus | undefined): boolean {
 		return (
@@ -82,15 +96,16 @@
 	}
 
 	async function pollStatus() {
-		if (!progress.requestId) return;
+		if (!progress.requestId || destroyed) return;
 		try {
 			const status = await getOnboardRequestStatus(canopyApiBase(), progress.requestId);
+			if (destroyed) return;
 			progress.requestStatus = status.status as OnboardRequestStatus;
 			persist();
 		} catch {
 			// Polling failures are transient by construction — keep trying.
 		}
-		if (!isTerminal(progress.requestStatus)) schedulePoll();
+		if (!destroyed && !isTerminal(progress.requestStatus)) schedulePoll();
 	}
 
 	async function submitRequest() {
@@ -113,10 +128,13 @@
 			// read seam the Safe validation uses.
 			const provider = getInjectedProvider();
 			if (!provider) throw new Error('Wallet provider unavailable — reconnect and retry.');
+			// The probe runs over the connected wallet's RPC, which is not
+			// necessarily the typed chain — canopy re-verifies server-side on the
+			// typed chain either way, so this is a fast-fail courtesy check.
 			const code = await defaultSafeReadTransport(provider).getCode(`0x${univocityAddr}`);
 			if (!code || code === '0x') {
 				throw new Error(
-					`No contract code at 0x${univocityAddr} on chain ${progress.chainId}. Deploy the univocity instance first (univocity-tools), then retry.`
+					`No contract code at 0x${univocityAddr} (checked via the connected wallet's RPC). Deploy the univocity instance first (univocity-tools), then retry.`
 				);
 			}
 
@@ -141,6 +159,9 @@
 				attestation
 			});
 			progress.univocityAddr = univocityAddr;
+			// Pin the Safe that signed the attestation: genesis and every later
+			// signing step must use it even if the wallet reconnects to another.
+			progress.safeAddress = wallet.safeAddress;
 			progress.requestId = result.requestId;
 			progress.redeemCode = result.redeemCode;
 			progress.requestStatus = result.status as OnboardRequestStatus;
@@ -158,6 +179,9 @@
 		error = null;
 		busy = true;
 		try {
+			// Retrying is safe even after a crash between the server's redeem
+			// commit and our persist(): canopy re-issues a fresh token for a
+			// redeemed request presenting the valid code (plan-2607-46 slice 02).
 			progress.onboardToken = await redeemOnboardToken({
 				canopyBaseUrl: canopyApiBase(),
 				requestId: progress.requestId,
@@ -165,7 +189,16 @@
 			});
 			persist();
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Redeem failed';
+			if (err instanceof OnboardRedeemError) {
+				const failure = classifyRedeemFailure(err.status, err.detail);
+				error = failure.message;
+				if (failure.terminal) {
+					progress.requestStatus = 'expired';
+					persist();
+				}
+			} else {
+				error = err instanceof Error ? err.message : 'Redeem failed';
+			}
 		} finally {
 			busy = false;
 		}
@@ -179,25 +212,26 @@
 			error = 'Connect the owner wallet and validate the Safe first.';
 			return;
 		}
+		const guard = pinnedSafeGuard(progress, wallet.safeAddress);
+		if (guard) {
+			error = guard;
+			return;
+		}
 		busy = true;
 		try {
 			// Persist R before posting: a retry MUST re-use it (same-root genesis
 			// is idempotent; a fresh R would claim a second log id).
-			if (!progress.forestR) {
-				progress.forestR = crypto.randomUUID();
-				persist();
-			}
+			if (ensureForestR(progress)) persist();
 			const result = await provisionModeDGenesis({
 				onboardToken: progress.onboardToken,
 				canopyBaseUrl: canopyApiBase(),
 				univocityAddr: progress.univocityAddr,
 				chainId: progress.chainId.trim(),
-				safeAddress: wallet.safeAddress,
-				forestR: progress.forestR
+				// The PINNED Safe, not the live wallet: the attestation named it.
+				safeAddress: progress.safeAddress ?? wallet.safeAddress,
+				forestR: progress.forestR!
 			});
-			progress.logIdHex32 = result.logIdHex32;
-			progress.univocityInstanceId = result.univocityInstanceId;
-			progress.publicRootRegistered = result.genesis.coordinator?.publicRoot === 'ok';
+			applyGenesisResult(progress, result);
 			persist();
 		} catch (err) {
 			if (err instanceof ReservationConflictError) {
@@ -217,6 +251,11 @@
 			error = 'Connect the owner wallet and validate the Safe first.';
 			return;
 		}
+		const guard = pinnedSafeGuard(progress, wallet.safeAddress);
+		if (guard) {
+			error = guard;
+			return;
+		}
 		busy = true;
 		try {
 			// Re-running genesis is safe (idempotent for the same root) and is
@@ -227,6 +266,9 @@
 			}
 			await setLogSigningRoute(progress.logIdHex32, 'wallet');
 			progress.signingRouteSet = true;
+			// The wizard is complete — the redeem code and onboard token have no
+			// further use; do not leave credentials in sessionStorage.
+			scrubProgressSecrets(progress);
 			persist();
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Setting the signing route failed';
@@ -237,20 +279,28 @@
 
 	async function runGenesisRetryForPublicRoot() {
 		if (!progress.onboardToken || !progress.forestR) return;
-		const result = await provisionModeDGenesis({
-			onboardToken: progress.onboardToken,
-			canopyBaseUrl: canopyApiBase(),
-			univocityAddr: progress.univocityAddr,
-			chainId: progress.chainId.trim(),
-			safeAddress: wallet.safeAddress,
-			forestR: progress.forestR
-		});
+		let result;
+		try {
+			result = await provisionModeDGenesis({
+				onboardToken: progress.onboardToken,
+				canopyBaseUrl: canopyApiBase(),
+				univocityAddr: progress.univocityAddr,
+				chainId: progress.chainId.trim(),
+				safeAddress: progress.safeAddress ?? wallet.safeAddress,
+				forestR: progress.forestR
+			});
+		} catch (err) {
+			// Token expiry is not "retry shortly": the instance is registered and
+			// ops can finish the coordinator registration out-of-band (R4).
+			if (err instanceof GenesisClientError && err.status === 401) {
+				throw new Error(repairFailureCopy(401), { cause: err });
+			}
+			throw err;
+		}
 		progress.publicRootRegistered = result.genesis.coordinator?.publicRoot === 'ok';
 		persist();
 		if (progress.publicRootRegistered === false) {
-			throw new Error(
-				'The coordinator did not record the log root — the signing route cannot be authorised yet. Retry shortly.'
-			);
+			throw new Error(repairFailureCopy(undefined));
 		}
 	}
 
@@ -289,7 +339,7 @@
 
 	<ol class="flex flex-wrap gap-2 text-xs" aria-label="Wizard progress">
 		{#each steps as s, i (s.key)}
-			<li>
+			<li aria-current={i === stepIndex ? 'step' : undefined}>
 				<Badge variant={i === stepIndex ? 'default' : i < stepIndex ? 'secondary' : 'outline'}>
 					{i + 1}. {s.title}
 				</Badge>

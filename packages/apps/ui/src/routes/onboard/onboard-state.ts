@@ -20,6 +20,13 @@ export interface OnboardProgress {
 	univocityAddr: string;
 	label: string;
 	contactEmail: string;
+	/**
+	 * The Safe that signed the attestation, pinned at submit. Every later
+	 * signing/genesis step must use THIS address — the connected wallet can
+	 * change mid-wizard, and genesis with a different Safe would register a
+	 * root diverging from the attestation.
+	 */
+	safeAddress?: string;
 	/** Set once `requestOnboardToken` succeeds. */
 	requestId?: string;
 	redeemCode?: string;
@@ -115,6 +122,109 @@ export function validateDetails(progress: OnboardProgress): string | null {
 		return 'A contact email is required for the approval workflow.';
 	}
 	return null;
+}
+
+/**
+ * Guard for every step that acts on the attested Safe: null when the
+ * connected Safe matches the pinned one (or nothing is pinned yet), else a
+ * user-facing refusal naming both addresses.
+ */
+export function pinnedSafeGuard(
+	progress: OnboardProgress,
+	connectedSafeAddress: string | undefined
+): string | null {
+	if (!progress.safeAddress) return null;
+	if (
+		connectedSafeAddress &&
+		connectedSafeAddress.toLowerCase() === progress.safeAddress.toLowerCase()
+	) {
+		return null;
+	}
+	return `This request was attested by Safe ${progress.safeAddress}. Reconnect and validate that Safe to continue${connectedSafeAddress ? ` — the connected Safe ${connectedSafeAddress} cannot complete it` : ''}.`;
+}
+
+/**
+ * Choose (once) and keep the forest R. Returns true when R was just chosen —
+ * the caller MUST persist before posting genesis: a retry has to re-use the
+ * same R (same-root genesis is idempotent; a fresh R claims a second log id).
+ */
+export function ensureForestR(
+	progress: OnboardProgress,
+	generate: () => string = () => crypto.randomUUID()
+): boolean {
+	if (progress.forestR) return false;
+	progress.forestR = generate();
+	return true;
+}
+
+/** Apply a genesis result to progress; publicRoot registration is best-effort. */
+export function applyGenesisResult(
+	progress: OnboardProgress,
+	result: {
+		logIdHex32: string;
+		univocityInstanceId: string;
+		genesis: { coordinator?: { publicRoot?: string } };
+	}
+): void {
+	progress.logIdHex32 = result.logIdHex32;
+	progress.univocityInstanceId = result.univocityInstanceId;
+	progress.publicRootRegistered = result.genesis.coordinator?.publicRoot === 'ok';
+}
+
+export interface RedeemFailure {
+	message: string;
+	/** True only for the 410: the request expired and no retry can succeed. */
+	terminal: boolean;
+}
+
+/**
+ * Classify a redeem failure. Canopy's redeem is idempotent for this
+ * request's own retries (a redeemed request + valid code re-issues a fresh
+ * token), so everything except the 410 expiry is retryable in place.
+ */
+export function classifyRedeemFailure(status: number | undefined, detail?: string): RedeemFailure {
+	if (status === 410) {
+		return {
+			message:
+				'The onboard request expired before it could be redeemed. Start over to submit a new request.',
+			terminal: true
+		};
+	}
+	if (status === 409) {
+		return {
+			message: 'The redeem raced a concurrent attempt — retry Redeem.',
+			terminal: false
+		};
+	}
+	return {
+		message: detail?.trim()
+			? `Redeem failed: ${detail.trim()} — retry Redeem.`
+			: 'Redeem failed — retry Redeem. Redeeming again is safe: the server re-issues the token for this request.',
+		terminal: false
+	};
+}
+
+/**
+ * Copy for a failed genesis retry in the signing-route repair path. A 401
+ * means the onboard token expired — the instance IS registered to this R;
+ * ops can complete the coordinator registration out-of-band with the app
+ * token, after which setting the signing route needs no onboard token.
+ */
+export function repairFailureCopy(status: number | undefined): string {
+	if (status === 401) {
+		return 'The onboard token has expired, so the console cannot re-run genesis to repair the coordinator registration. Your instance is already registered — ask ops to complete the coordinator public-root registration, then retry this step (it does not need the onboard token).';
+	}
+	return 'The coordinator did not record the log root — the signing route cannot be authorised yet. Retry shortly.';
+}
+
+/**
+ * Drop the credentials once the wizard completes — the redeem code and
+ * onboard token have no post-onboarding use and should not linger in
+ * sessionStorage (residual replay-noise hygiene).
+ */
+export function scrubProgressSecrets(progress: OnboardProgress): void {
+	delete progress.redeemCode;
+	delete progress.onboardToken;
 }
 
 /** Human copy for the poll states — honest about the out-of-band approval. */

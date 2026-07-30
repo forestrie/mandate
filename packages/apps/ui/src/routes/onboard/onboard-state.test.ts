@@ -1,12 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+	applyGenesisResult,
 	approvalCopy,
+	classifyRedeemFailure,
 	clearProgress,
 	deriveStep,
 	emptyProgress,
+	ensureForestR,
 	loadProgress,
 	normalizeUnivocityAddrInput,
+	pinnedSafeGuard,
+	repairFailureCopy,
 	saveProgress,
+	scrubProgressSecrets,
 	validateDetails,
 	type OnboardProgress
 } from './onboard-state.js';
@@ -46,11 +52,112 @@ describe('deriveStep', () => {
 		expect(deriveStep(p)).toBe('failed');
 	});
 
-	it('a redeemed status without a stored token still lands on redeem (idempotent resume)', () => {
+	it('a redeemed status without a stored token lands on redeem — canopy re-issues a fresh token for the valid code (plan-2607-46 slice 02)', () => {
 		const p = details();
 		p.requestId = 'req-1';
 		p.requestStatus = 'redeemed';
 		expect(deriveStep(p)).toBe('redeem');
+	});
+});
+
+describe('pinnedSafeGuard', () => {
+	const pinned = `0x${'ab'.repeat(20)}`;
+
+	it('passes before anything is pinned and on a case-insensitive match', () => {
+		expect(pinnedSafeGuard(details(), `0x${'cd'.repeat(20)}`)).toBeNull();
+		const p = { ...details(), safeAddress: pinned };
+		expect(pinnedSafeGuard(p, pinned.toUpperCase().replace(/^0X/, '0x'))).toBeNull();
+	});
+
+	it('refuses a different or missing connected Safe, naming the attested one', () => {
+		const p = { ...details(), safeAddress: pinned };
+		const other = `0x${'ee'.repeat(20)}`;
+		expect(pinnedSafeGuard(p, other)).toMatch(new RegExp(`attested by Safe ${pinned}`));
+		expect(pinnedSafeGuard(p, other)).toContain(other);
+		expect(pinnedSafeGuard(p, undefined)).toMatch(/Reconnect and validate that Safe/);
+	});
+});
+
+describe('ensureForestR', () => {
+	it('chooses R exactly once — the caller persists before genesis, retries re-use it', () => {
+		const p = details();
+		expect(ensureForestR(p, () => 'r-1')).toBe(true);
+		expect(p.forestR).toBe('r-1');
+		expect(ensureForestR(p, () => 'r-2')).toBe(false);
+		expect(p.forestR).toBe('r-1');
+	});
+});
+
+describe('applyGenesisResult', () => {
+	it('records identifiers and treats anything but publicRoot ok as unregistered', () => {
+		const p = details();
+		applyGenesisResult(p, {
+			logIdHex32: 'a'.repeat(32),
+			univocityInstanceId: 'eip155:84532:0xcd',
+			genesis: { coordinator: { publicRoot: 'ok' } }
+		});
+		expect(p.logIdHex32).toBe('a'.repeat(32));
+		expect(p.univocityInstanceId).toBe('eip155:84532:0xcd');
+		expect(p.publicRootRegistered).toBe(true);
+
+		applyGenesisResult(p, {
+			logIdHex32: 'a'.repeat(32),
+			univocityInstanceId: 'eip155:84532:0xcd',
+			genesis: { coordinator: { publicRoot: 'error' } }
+		});
+		expect(p.publicRootRegistered).toBe(false);
+		applyGenesisResult(p, {
+			logIdHex32: 'a'.repeat(32),
+			univocityInstanceId: 'eip155:84532:0xcd',
+			genesis: {}
+		});
+		expect(p.publicRootRegistered).toBe(false);
+	});
+});
+
+describe('classifyRedeemFailure', () => {
+	it('only the 410 expiry is terminal', () => {
+		expect(classifyRedeemFailure(410)).toEqual({
+			message: expect.stringMatching(/expired.*Start over/s),
+			terminal: true
+		});
+		expect(classifyRedeemFailure(409).terminal).toBe(false);
+		expect(classifyRedeemFailure(409).message).toMatch(/retry Redeem/);
+		expect(classifyRedeemFailure(503).terminal).toBe(false);
+		expect(classifyRedeemFailure(undefined).terminal).toBe(false);
+	});
+
+	it('retryable copy says re-redeeming is safe and surfaces the server detail', () => {
+		expect(classifyRedeemFailure(undefined).message).toMatch(/re-issues the token/);
+		expect(classifyRedeemFailure(500, 'boom upstream').message).toContain('boom upstream');
+	});
+});
+
+describe('repairFailureCopy', () => {
+	it('distinguishes token expiry (ops can finish out-of-band) from retry-shortly', () => {
+		expect(repairFailureCopy(401)).toMatch(/token has expired/);
+		expect(repairFailureCopy(401)).toMatch(/already registered/);
+		expect(repairFailureCopy(401)).toMatch(/does not need the onboard token/);
+		expect(repairFailureCopy(undefined)).toMatch(/Retry shortly/);
+	});
+});
+
+describe('scrubProgressSecrets', () => {
+	it('drops the credentials but keeps identifiers, leaving the wizard at done', () => {
+		const p = details();
+		p.requestId = 'req-1';
+		p.redeemCode = 'rc';
+		p.onboardToken = 'token';
+		p.forestR = 'r-1';
+		p.logIdHex32 = 'a'.repeat(32);
+		p.univocityInstanceId = 'eip155:84532:0xcd';
+		p.signingRouteSet = true;
+		scrubProgressSecrets(p);
+		expect(p.redeemCode).toBeUndefined();
+		expect(p.onboardToken).toBeUndefined();
+		expect(p.requestId).toBe('req-1');
+		expect(p.forestR).toBe('r-1');
+		expect(deriveStep(p)).toBe('done');
 	});
 });
 
