@@ -17,6 +17,13 @@ export interface CachedControlPlaneSession {
 export interface ControlPlaneSessionDeps {
 	fetch: typeof fetch;
 	signMessage: (message: string) => Promise<string>;
+	/**
+	 * Decimal chain id to bind into the signed envelope (wcc-1 `Chain ID:`
+	 * line). The coordinator enforces it against the log's chain binding when
+	 * present (plan-2607-46 slice 03) — supply it whenever the signer is
+	 * chain-bound (the Safe backend); omit for chain-free EOA signers.
+	 */
+	envelopeChainId?: () => string | undefined | Promise<string | undefined>;
 	challengePath?: string;
 	sessionPath?: string;
 	nowMs?: () => number;
@@ -71,6 +78,8 @@ export async function exchangeControlPlaneSession(
 		issuedAt: challenge.issuedAt,
 		expiresAt: challenge.expiresAt
 	};
+	const chainId = await deps.envelopeChainId?.();
+	if (chainId) envelope.chainId = chainId;
 	const signature = await deps.signMessage(
 		(await import('@mandate/coordinator-types')).buildKs256ControlPlaneMessage(envelope)
 	);

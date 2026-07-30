@@ -10,6 +10,7 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./account-read-attestation": "./src/account-read-attestation.ts",
+		"./genesis-client-error": "./src/genesis-client-error.ts",
 		"./onboard-attestation": "./src/onboard-attestation.ts",
 		"./onboard-client": "./src/onboard-client.ts",
 		"./provision-mode-d": "./src/provision-mode-d.ts",

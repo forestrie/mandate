@@ -18,6 +18,15 @@ export interface CoordinatorMockOptions {
 	enabledByLogId?: Record<string, EnabledResponse>;
 	/** Recorded when the wizard posts `logs/{id}/signing-route`. */
 	onSigningRouteSet?: (logId: string, body: { mode: string }) => void;
+	/** Fail the first N `logs/{id}/signing-route` posts with a 503 problem. */
+	signingRouteFailures?: number;
+	/**
+	 * Recorded on every session exchange with the posted body — specs assert
+	 * the signed envelope's shape (e.g. `envelope.chainId` in Safe mode).
+	 */
+	onSessionExchange?: (body: {
+		envelope: { authLogId: string; scopes: string[]; chainId?: string };
+	}) => void;
 }
 
 function defaultEnabled(enabled = true): EnabledResponse {
@@ -44,6 +53,7 @@ export async function installCoordinatorMocks(
 		Object.entries(options.enabledByLogId ?? {})
 	);
 	let certificateSubmitCount = 0;
+	let signingRouteFailuresLeft = options.signingRouteFailures ?? 0;
 
 	await page.route('**/api/auth/challenge', async (route) => {
 		if (route.request().method() !== 'POST') {
@@ -75,8 +85,9 @@ export async function installCoordinatorMocks(
 			return;
 		}
 		const body = route.request().postDataJSON() as {
-			envelope: { authLogId: string; scopes: string[] };
+			envelope: { authLogId: string; scopes: string[]; chainId?: string };
 		};
+		options.onSessionExchange?.(body);
 		const now = Math.floor(Date.now() / 1000);
 		const response: SessionExchangeResponse = {
 			token: 'e2e-session-token',
@@ -169,6 +180,17 @@ export async function installCoordinatorMocks(
 
 		const signingRouteMatch = path.match(/^logs\/([^/]+)\/signing-route$/);
 		if (signingRouteMatch && method === 'POST') {
+			if (signingRouteFailuresLeft > 0) {
+				signingRouteFailuresLeft -= 1;
+				const { status, body } = problemJson({
+					type: 'about:blank',
+					title: 'Service Unavailable',
+					status: 503,
+					detail: 'signing-route temporarily unavailable (e2e injected)'
+				});
+				await route.fulfill({ status, contentType: 'application/problem+json', body });
+				return;
+			}
 			const body = request.postDataJSON() as { mode: string };
 			options.onSigningRouteSet?.(signingRouteMatch[1]!, body);
 			await route.fulfill({

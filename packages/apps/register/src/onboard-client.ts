@@ -119,6 +119,22 @@ export async function getOnboardRequestStatus(
 	};
 }
 
+/**
+ * Redeem failure carrying the HTTP status so callers can distinguish the
+ * terminal 410 (request expired — the code no longer re-issues a token,
+ * plan-2607-46 slice 02) from retryable outcomes (409 contention, 5xx).
+ */
+export class OnboardRedeemError extends Error {
+	constructor(
+		message: string,
+		readonly status: number,
+		readonly detail?: string
+	) {
+		super(message);
+		this.name = 'OnboardRedeemError';
+	}
+}
+
 export async function redeemOnboardToken(opts: RedeemOnboardOptions): Promise<string> {
 	const fetchImpl = opts.fetchImpl ?? fetch;
 	const response = await fetchImpl(
@@ -135,8 +151,10 @@ export async function redeemOnboardToken(opts: RedeemOnboardOptions): Promise<st
 
 	if (response.status !== 200) {
 		const detail = await response.text().catch(() => '');
-		throw new Error(
-			`redeem onboard: expected 200, got ${response.status}: ${detail.slice(0, 300)}`
+		throw new OnboardRedeemError(
+			`redeem onboard: expected 200, got ${response.status}: ${detail.slice(0, 300)}`,
+			response.status,
+			detail.slice(0, 300)
 		);
 	}
 
