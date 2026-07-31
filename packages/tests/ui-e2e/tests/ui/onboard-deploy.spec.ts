@@ -2,10 +2,12 @@ import { expect, test } from '@playwright/test';
 import {
 	E2E_SAFE_ADDRESS,
 	e2eDeployPlan,
+	installCanopyOnboardingMocks,
 	installCoordinatorMocks,
 	installDeployManifestMocks,
 	installInjectedWalletMock,
 	installSafeTxServiceMocks,
+	recordedSendTransactionRequests,
 	recordedTypedDataRequests
 } from '@forestrie/mandate-ui-e2e-kit';
 
@@ -131,4 +133,129 @@ test('deploy branch: STS failure is non-fatal — warn, keep the signature local
 	await expect(page.getByText('Deployment proposed')).toBeVisible();
 	expect(sts.proposalPosts()).toBe(2);
 	expect(sts.proposals).toHaveLength(1);
+});
+
+test('deploy branch: inline execute deploys, the poll adopts the instance, and the full onboard completes', async ({
+	page
+}) => {
+	const routesSet: Array<{ logId: string; mode: string }> = [];
+	await installCoordinatorMocks(page, {
+		onSigningRouteSet: (logId, body) => routesSet.push({ logId, mode: body.mode })
+	});
+	const onboarding = await installCanopyOnboardingMocks(page, { pollsUntilApproved: 0 });
+	await installDeployManifestMocks(page);
+	await installSafeTxServiceMocks(page);
+	const wallet = await installInjectedWalletMock(page);
+	const plan = e2eDeployPlan(E2E_SAFE_ADDRESS);
+
+	await openDeployBranch(page);
+	await page.getByRole('button', { name: 'Verify release & predict address' }).click();
+	await page.getByRole('button', { name: 'Propose to Safe', exact: true }).click();
+	await expect(page.getByText('Deployment proposed')).toBeVisible();
+
+	// The inline leg: execTransaction from the connected owner — the console's
+	// first eth_sendTransaction, and it has a `to` (the Safe).
+	await page.getByRole('button', { name: 'Execute with owner wallet' }).click();
+	await expect.poll(async () => (await recordedSendTransactionRequests(page)).length).toBe(1);
+	const [sent] = await recordedSendTransactionRequests(page);
+	expect(sent!.to.toLowerCase()).toBe(E2E_SAFE_ADDRESS);
+	// The deployment lands (as the mined receipt implies on a real chain).
+	await wallet.markDeployed(plan.predictedAddress);
+
+	// Auto-advance: the poll finds the code, adopts the instance, and returns
+	// to the attestation form with the address filled — no manual check.
+	await expect(page.getByLabel('Univocity contract address')).toHaveValue(plan.predictedAddress, {
+		timeout: 15_000
+	});
+	await expect(page.getByText('Instance deployed')).toBeVisible();
+
+	// From here the shipped flow is unchanged: attest → request → approval →
+	// redeem → genesis → signing route.
+	await page.getByLabel('Label', { exact: true }).fill('e2e inline deploy');
+	await page.getByLabel('Contact email').fill('ops@example.com');
+	await page.getByRole('button', { name: 'Sign attestation & request onboarding' }).click();
+	await page.getByRole('button', { name: 'Redeem' }).click({ timeout: 20_000 });
+	await page.getByRole('button', { name: 'Run genesis' }).click();
+	await page.getByRole('button', { name: 'Set wallet signing route' }).click();
+	await expect(page.getByText('Instance registered')).toBeVisible({ timeout: 15_000 });
+
+	// The onboarded instance IS the CREATE2 prediction, attested and genesis'd
+	// with the Safe as bootstrap key, and the wallet route was set.
+	expect(onboarding.onboardRequests[0]!.univocityAddr).toBe(
+		plan.predictedAddress.replace(/^0x/, '').toLowerCase()
+	);
+	expect(onboarding.genesisPosts).toHaveLength(1);
+	expect(onboarding.genesisPosts[0]!.bootstrapKeyHex).toBe(E2E_SAFE_ADDRESS.replace(/^0x/, ''));
+	expect(routesSet).toHaveLength(1);
+	expect(routesSet[0]!.mode).toBe('wallet');
+});
+
+test('deploy branch: inline execute succeeds with the STS down — execution never depends on the service', async ({
+	page
+}) => {
+	await installCoordinatorMocks(page, {});
+	await installDeployManifestMocks(page);
+	const sts = await installSafeTxServiceMocks(page, { proposalFailures: 99 });
+	const wallet = await installInjectedWalletMock(page);
+	const plan = e2eDeployPlan(E2E_SAFE_ADDRESS);
+
+	await openDeployBranch(page);
+	await page.getByRole('button', { name: 'Verify release & predict address' }).click();
+	await page.getByRole('button', { name: 'Propose to Safe', exact: true }).click();
+
+	// The proposal never reached the service, but the signature stayed local…
+	await expect(page.getByText('Proposal not recorded')).toBeVisible();
+	expect(sts.proposals).toHaveLength(0);
+
+	// …so the inline leg executes regardless.
+	await page.getByRole('button', { name: 'Execute with owner wallet' }).click();
+	await expect.poll(async () => (await recordedSendTransactionRequests(page)).length).toBe(1);
+	await wallet.markDeployed(plan.predictedAddress);
+	await expect(page.getByLabel('Univocity contract address')).toHaveValue(plan.predictedAddress, {
+		timeout: 15_000
+	});
+});
+
+test('deploy branch: jump-leg resume — executed elsewhere, the poll advances without a send', async ({
+	page
+}) => {
+	await installCoordinatorMocks(page, {});
+	await installDeployManifestMocks(page);
+	await installSafeTxServiceMocks(page);
+	const wallet = await installInjectedWalletMock(page);
+	const plan = e2eDeployPlan(E2E_SAFE_ADDRESS);
+
+	await openDeployBranch(page);
+	await page.getByRole('button', { name: 'Verify release & predict address' }).click();
+	await page.getByRole('button', { name: 'Propose to Safe', exact: true }).click();
+	await expect(page.getByText('Deployment proposed')).toBeVisible();
+
+	// Come back later: the proposal was executed from the Safe app meanwhile.
+	await page.reload();
+	await connectAndValidateSafe(page);
+	await expect(page.getByTestId('deploy-watching')).toBeVisible();
+	await wallet.markDeployed(plan.predictedAddress);
+
+	// The resumed poll finds the code and advances — no in-console execution.
+	await expect(page.getByLabel('Univocity contract address')).toHaveValue(plan.predictedAddress, {
+		timeout: 15_000
+	});
+	await expect(recordedSendTransactionRequests(page)).resolves.toHaveLength(0);
+});
+
+test('deploy branch: an execution the Safe would revert is surfaced honestly', async ({ page }) => {
+	await installCoordinatorMocks(page, {});
+	await installDeployManifestMocks(page);
+	await installSafeTxServiceMocks(page);
+	await installInjectedWalletMock(page, { executeRevert: 'estimate' });
+
+	await openDeployBranch(page);
+	await page.getByRole('button', { name: 'Verify release & predict address' }).click();
+	await page.getByRole('button', { name: 'Propose to Safe', exact: true }).click();
+	await page.getByRole('button', { name: 'Execute with owner wallet' }).click();
+
+	// Honest failure, no retry loop, nothing sent, nothing adopted.
+	await expect(page.getByText(/would revert this execution/)).toBeVisible();
+	await expect(recordedSendTransactionRequests(page)).resolves.toHaveLength(0);
+	await expect(page.getByTestId('deploy-predicted-address')).toBeVisible();
 });

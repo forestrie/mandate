@@ -22,6 +22,9 @@ export const E2E_SAFE_ADDRESS = '0x5afe5afe5afe5afe5afe5afe5afe5afe5afe5afe';
 /** The fixed signature the mock wallet returns (r‖s‖v, v = 27). */
 export const E2E_INJECTED_SIGNATURE = `0x${'11'.repeat(32)}${'22'.repeat(32)}1b`;
 
+/** The fixed hash `eth_sendTransaction` returns (the inline execute leg). */
+export const E2E_EXECUTE_TX_HASH = `0x${'e2ec'.repeat(16)}`;
+
 export interface InjectedWalletMockOptions {
 	address?: string;
 	chainId?: number;
@@ -39,6 +42,28 @@ export interface InjectedWalletMockOptions {
 	codeAddresses?: string[];
 	/** `nonce()` the mock Safe reports — the deploy branch's SafeTx nonce. */
 	safeNonce?: number;
+	/**
+	 * Make the inline execute leg fail: `'estimate'` throws from
+	 * `eth_estimateGas` (the Safe would revert), `'receipt'` mines the
+	 * transaction with status 0x0 (reverted on-chain).
+	 */
+	executeRevert?: 'estimate' | 'receipt';
+}
+
+export interface RecordedSendTransaction {
+	from: string;
+	to: string;
+	data: string;
+	gas?: string;
+}
+
+export interface InjectedWalletMockHandle {
+	/**
+	 * Report contract code at `address` from now on, on BOTH read paths
+	 * (network JSON-RPC intercept and page-side provider) — models the
+	 * deployment landing, whichever leg executed it.
+	 */
+	markDeployed(address: string): Promise<void>;
 }
 
 export interface RecordedTypedDataRequest {
@@ -145,7 +170,7 @@ async function installJsonRpcIntercept(page: Page, cfg: ChainReadConfig): Promis
 export async function installInjectedWalletMock(
 	page: Page,
 	options: InjectedWalletMockOptions = {}
-): Promise<void> {
+): Promise<InjectedWalletMockHandle> {
 	const config = {
 		address: options.address ?? E2E_INJECTED_OWNER_ADDRESS,
 		chainId: options.chainId ?? 84532,
@@ -156,6 +181,8 @@ export async function installInjectedWalletMock(
 		chainReadsFail: options.chainReadsFail ?? false,
 		codeAddresses: options.codeAddresses ?? [],
 		safeNonce: options.safeNonce ?? 0,
+		executeRevert: options.executeRevert,
+		executeTxHash: E2E_EXECUTE_TX_HASH,
 		signature: E2E_INJECTED_SIGNATURE
 	};
 	await installJsonRpcIntercept(page, config);
@@ -163,11 +190,22 @@ export async function installInjectedWalletMock(
 		const word = (value: number): string => value.toString(16).padStart(64, '0');
 		const addressWord = (address: string): string =>
 			address.replace(/^0x/, '').toLowerCase().padStart(64, '0');
-		const record: { typedDataRequests: unknown[]; personalSignRequests: unknown[] } = {
+		const record: {
+			typedDataRequests: unknown[];
+			personalSignRequests: unknown[];
+			sendTransactionRequests: unknown[];
+		} = {
 			typedDataRequests: [],
-			personalSignRequests: []
+			personalSignRequests: [],
+			sendTransactionRequests: []
 		};
 		(window as unknown as Record<string, unknown>).__e2eInjectedWallet = record;
+		// The becomes-deployed bridge: specs mark an address deployed and the
+		// page-side reads pick it up (the network intercept shares the Node-side
+		// list the handle mutates).
+		(window as unknown as Record<string, unknown>).__e2eMarkDeployed = (address: string) => {
+			cfg.codeAddresses.push(address);
+		};
 
 		const listeners = new Map<string, Array<(...args: unknown[]) => void>>();
 		const provider = {
@@ -200,6 +238,24 @@ export async function installInjectedWalletMock(
 						const [message, address] = params as [string, string];
 						record.personalSignRequests.push({ message, address });
 						return cfg.signature;
+					}
+					case 'eth_estimateGas': {
+						if (cfg.executeRevert === 'estimate') {
+							throw new Error('execution reverted: GS026');
+						}
+						return '0x30000';
+					}
+					case 'eth_sendTransaction': {
+						const [tx] = params as [Record<string, unknown>];
+						record.sendTransactionRequests.push(tx);
+						return cfg.executeTxHash;
+					}
+					case 'eth_getTransactionReceipt': {
+						return {
+							transactionHash: cfg.executeTxHash,
+							status: cfg.executeRevert === 'receipt' ? '0x0' : '0x1',
+							logs: []
+						};
 					}
 					case 'eth_getCode': {
 						if (cfg.chainReadsFail) {
@@ -275,6 +331,19 @@ export async function installInjectedWalletMock(
 		});
 		(window as unknown as Record<string, unknown>).ethereum = provider;
 	}, config);
+
+	return {
+		async markDeployed(address: string): Promise<void> {
+			// Network intercept path: the route closure reads this array live.
+			config.codeAddresses.push(address);
+			// Page-side provider path: the init script holds its own copy.
+			await page.evaluate((addr) => {
+				(
+					window as unknown as { __e2eMarkDeployed?: (address: string) => void }
+				).__e2eMarkDeployed?.(addr);
+			}, address);
+		}
+	};
 }
 
 /** Read back the typed-data requests the mock wallet answered. */
@@ -300,5 +369,19 @@ export async function recordedPersonalSignRequests(
 					personalSignRequests: Array<{ message: string; address: string }>;
 				}
 			).personalSignRequests
+	);
+}
+
+/** Read back the transactions the mock wallet was asked to send. */
+export async function recordedSendTransactionRequests(
+	page: Page
+): Promise<RecordedSendTransaction[]> {
+	return page.evaluate(
+		() =>
+			(
+				(window as unknown as Record<string, unknown>).__e2eInjectedWallet as {
+					sendTransactionRequests: RecordedSendTransaction[];
+				}
+			).sendTransactionRequests
 	);
 }

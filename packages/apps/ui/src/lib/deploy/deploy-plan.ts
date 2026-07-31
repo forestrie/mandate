@@ -5,15 +5,18 @@ import {
 	computeSafeTxHash,
 	DEFAULT_CREATE_CALL,
 	DEFAULT_SAFE_TX_SERVICE_URL,
+	defaultDelay,
 	encodePerformCreate2Calldata,
 	ks256AddressToKey,
+	packSafeSignatures,
 	postSafeTransaction,
 	predictCreate2Address,
 	safeBatchSaltAtIndex,
 	SafeServiceError,
+	type DelayFn,
 	type SafeTxFields
 } from '@forestrie/deploy-core';
-import { bytesToHex, type Address, type Hex } from 'viem';
+import { bytesToHex, encodeFunctionData, type Address, type Hex } from 'viem';
 import type { EthereumProvider } from '$lib/privy/client.js';
 import type { SafeReadTransport } from '$lib/wallets/safe-validation.js';
 import { safeOwnerSignatureBytes } from '$lib/signing/safe-backend.js';
@@ -135,6 +138,13 @@ export async function readSafeNonce(
 export interface ProposeDeploymentResult {
 	safeTxHash: Hex;
 	nonce: bigint;
+	/**
+	 * The 27/28-lifted owner signature over the SafeTx. Held locally (and
+	 * persisted with the plan) so BOTH execution legs work without the STS:
+	 * inline `execTransaction` packs it, and re-proposing is never required
+	 * just because the service was down (Q5).
+	 */
+	ownerSignature: Hex;
 	/** True when the Safe Transaction Service accepted the proposal. */
 	proposed: boolean;
 	/**
@@ -195,9 +205,182 @@ export async function proposeSafeDeployment(input: {
 		});
 	} catch (error) {
 		if (error instanceof SafeServiceError) {
-			return { safeTxHash, nonce, proposed: false, stsDetail: error.message };
+			return {
+				safeTxHash,
+				nonce,
+				ownerSignature: signature,
+				proposed: false,
+				stsDetail: error.message
+			};
 		}
 		throw error;
 	}
-	return { safeTxHash, nonce, proposed: true };
+	return { safeTxHash, nonce, ownerSignature: signature, proposed: true };
+}
+
+/** `Safe.execTransaction` — the inline execution leg's call target. */
+const SAFE_EXEC_TRANSACTION_ABI = [
+	{
+		type: 'function',
+		name: 'execTransaction',
+		stateMutability: 'payable',
+		inputs: [
+			{ name: 'to', type: 'address' },
+			{ name: 'value', type: 'uint256' },
+			{ name: 'data', type: 'bytes' },
+			{ name: 'operation', type: 'uint8' },
+			{ name: 'safeTxGas', type: 'uint256' },
+			{ name: 'baseGas', type: 'uint256' },
+			{ name: 'gasPrice', type: 'uint256' },
+			{ name: 'gasToken', type: 'address' },
+			{ name: 'refundReceiver', type: 'address' },
+			{ name: 'signatures', type: 'bytes' }
+		],
+		outputs: [{ name: 'success', type: 'bool' }]
+	}
+] as const;
+
+/**
+ * keccak256("ExecutionFailure(bytes32,uint256)") — with zero safeTxGas the
+ * Safe requires the inner call to succeed, but a legacy Safe (or a gas-limited
+ * execution) can complete the OUTER transaction while the inner deployment
+ * reverted; the honest signal is this event in the receipt.
+ */
+export const SAFE_EXECUTION_FAILURE_TOPIC =
+	'0x23428b18acfb3ea64b08dc0c1d296ea9c09702c09083ca5272e64d115b687d23';
+
+/** The execution definitively did not deploy — distinct from "still waiting". */
+export class SafeExecutionRevertedError extends Error {
+	constructor(
+		message: string,
+		readonly txHash?: Hex
+	) {
+		super(message);
+		this.name = 'SafeExecutionRevertedError';
+	}
+}
+
+interface ExecutionReceipt {
+	status?: string;
+	logs?: Array<{ topics?: string[] }>;
+}
+
+export interface ExecuteDeploymentResult {
+	/** Hash of the owner's execution transaction. */
+	txHash: Hex;
+}
+
+/**
+ * Inline execution leg (Q5, slice 03): pack the locally held owner signature
+ * and send `Safe.execTransaction` from the connected owner — the console's
+ * first `eth_sendTransaction`. The call has a `to` (the Safe), structurally
+ * avoiding the MetaMask no-`to` contract-creation failure. Never touches the
+ * Safe Transaction Service.
+ *
+ * Failures are surfaced honestly, never retried here: gas estimation refusal
+ * means the Safe would revert (stale nonce, bad signature, or the deployment
+ * already landed — the caller's code-at-address check disambiguates the happy
+ * case), wallet refusal propagates, and a mined-but-failed execution throws
+ * `SafeExecutionRevertedError`.
+ */
+export async function executeSafeDeployment(input: {
+	provider: EthereumProvider;
+	transport: SafeReadTransport;
+	ownerAddress: string;
+	plan: Pick<DeployPlan, 'safeAddress' | 'createCall' | 'salt' | 'deploymentData'>;
+	/** The nonce the persisted signature covers. */
+	nonce: bigint;
+	/** The 27/28 owner signature recorded at propose time. */
+	ownerSignature: Hex;
+	receiptAttempts?: number;
+	receiptDelayMs?: number;
+	delay?: DelayFn;
+}): Promise<ExecuteDeploymentResult> {
+	// The signature commits to the nonce: once the Safe has moved past it the
+	// recorded SafeTx can never execute, so say that instead of letting the
+	// wallet surface an opaque GS025/GS026 revert.
+	const currentNonce = await readSafeNonce(input.transport, input.plan.safeAddress);
+	if (currentNonce !== input.nonce) {
+		throw new Error(
+			`The Safe's nonce has advanced (signed at nonce ${input.nonce}, now ${currentNonce}) — the recorded signature can no longer execute. Re-propose to sign a fresh transaction.`
+		);
+	}
+	const tx = buildSafeTxFields({
+		to: input.plan.createCall,
+		data: encodePerformCreate2Calldata(input.plan.deploymentData, input.plan.salt),
+		operation: 0,
+		nonce: input.nonce
+	});
+	const call = {
+		from: input.ownerAddress,
+		to: input.plan.safeAddress,
+		data: encodeFunctionData({
+			abi: SAFE_EXEC_TRANSACTION_ABI,
+			functionName: 'execTransaction',
+			args: [
+				tx.to,
+				tx.value,
+				tx.data,
+				tx.operation,
+				tx.safeTxGas,
+				tx.baseGas,
+				tx.gasPrice,
+				tx.gasToken,
+				tx.refundReceiver,
+				packSafeSignatures([
+					{ owner: input.ownerAddress as Address, signature: input.ownerSignature }
+				])
+			]
+		})
+	};
+
+	let gas: string;
+	try {
+		gas = (await input.provider.request({ method: 'eth_estimateGas', params: [call] })) as string;
+	} catch (error) {
+		const detail = error instanceof Error ? error.message : String(error);
+		throw new SafeExecutionRevertedError(
+			`Gas estimation failed — the Safe would revert this execution: ${detail}`
+		);
+	}
+
+	// Wallet refusal (the owner declining the transaction) propagates as-is.
+	const txHash = (await input.provider.request({
+		method: 'eth_sendTransaction',
+		params: [{ ...call, gas }]
+	})) as Hex;
+	if (typeof txHash !== 'string' || !txHash.startsWith('0x')) {
+		throw new Error('Wallet returned an invalid transaction hash');
+	}
+
+	const attempts = input.receiptAttempts ?? 60;
+	const delay = input.delay ?? defaultDelay;
+	for (let attempt = 0; attempt < attempts; attempt++) {
+		const receipt = (await input.provider.request({
+			method: 'eth_getTransactionReceipt',
+			params: [txHash]
+		})) as ExecutionReceipt | null;
+		if (receipt) {
+			if (Number.parseInt(receipt.status ?? '0x0', 16) !== 1) {
+				throw new SafeExecutionRevertedError(
+					`The execution transaction reverted on-chain (${txHash}) — nothing was deployed.`,
+					txHash
+				);
+			}
+			const executionFailed = receipt.logs?.some(
+				(log) => log.topics?.[0]?.toLowerCase() === SAFE_EXECUTION_FAILURE_TOPIC
+			);
+			if (executionFailed) {
+				throw new SafeExecutionRevertedError(
+					`The Safe reported ExecutionFailure (${txHash}) — the deployment inside the transaction reverted.`,
+					txHash
+				);
+			}
+			return { txHash };
+		}
+		await delay(input.receiptDelayMs ?? 2000);
+	}
+	throw new Error(
+		`Timed out waiting for the execution receipt (${txHash}). The transaction may still land — the wizard keeps watching the predicted address.`
+	);
 }

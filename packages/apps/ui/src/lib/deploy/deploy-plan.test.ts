@@ -22,8 +22,11 @@ import type { SafeReadTransport } from '$lib/wallets/safe-validation.js';
 import {
 	buildDeployPlan,
 	buildSafeTxTypedDataJson,
+	executeSafeDeployment,
 	proposeSafeDeployment,
-	readSafeNonce
+	readSafeNonce,
+	SAFE_EXECUTION_FAILURE_TOPIC,
+	SafeExecutionRevertedError
 } from './deploy-plan.js';
 
 const SAFE_ADDRESS = '0xCdD289cC5420529d1C4D0498FA3DaAb549A07a63';
@@ -214,6 +217,9 @@ describe('proposeSafeDeployment', () => {
 
 		expect(result.proposed).toBe(true);
 		expect(result.nonce).toBe(0n);
+		// The lifted signature is returned for local keeping — the execute leg
+		// packs it without ever consulting the STS (Q5).
+		expect(result.ownerSignature).toBe(signature);
 		const tx = buildSafeTxFields({
 			to: built.createCall,
 			data: encodePerformCreate2Calldata(built.deploymentData, built.salt),
@@ -301,5 +307,144 @@ describe('proposeSafeDeployment', () => {
 			plan: plan()
 		});
 		expect(posts[0]!.signature).toBe(`0x${'11'.repeat(32)}${'22'.repeat(32)}1b`);
+	});
+});
+
+describe('executeSafeDeployment', () => {
+	const ownerSignature = `0x${'11'.repeat(32)}${'22'.repeat(32)}1b` as Hex;
+	const txHash = `0x${'e2ec'.repeat(16)}` as Hex;
+	/** `execTransaction` — the Safe interface selector. */
+	const EXEC_SELECTOR = '0x6a761202';
+
+	function execProvider(
+		recorded: Array<{ method: string; params: unknown[] }>,
+		overrides: Partial<Record<string, () => unknown>> = {}
+	) {
+		return {
+			request: vi.fn(async ({ method, params }: { method: string; params?: unknown[] }) => {
+				recorded.push({ method, params: params ?? [] });
+				const override = overrides[method];
+				if (override) return override();
+				if (method === 'eth_estimateGas') return '0x30000';
+				if (method === 'eth_sendTransaction') return txHash;
+				if (method === 'eth_getTransactionReceipt') return { status: '0x1', logs: [] };
+				throw new Error(`unexpected method ${method}`);
+			})
+		};
+	}
+
+	function execute(
+		provider: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> },
+		overrides: { nonce?: bigint; currentNonceWord?: string } = {}
+	) {
+		return executeSafeDeployment({
+			provider,
+			transport: fakeTransport(overrides.currentNonceWord ?? `0x${'0'.repeat(64)}`),
+			ownerAddress: OWNER_ADDRESS,
+			plan: plan(),
+			nonce: overrides.nonce ?? 0n,
+			ownerSignature,
+			receiptDelayMs: 1,
+			delay: async () => {}
+		});
+	}
+
+	it('pins the vendored Safe ExecutionFailure topic', () => {
+		expect(SAFE_EXECUTION_FAILURE_TOPIC).toBe(
+			keccak256(toHex('ExecutionFailure(bytes32,uint256)'))
+		);
+	});
+
+	it('estimates, sends execTransaction from the owner to the Safe, and waits for the receipt', async () => {
+		const requests: Array<{ method: string; params: unknown[] }> = [];
+		const result = await execute(execProvider(requests));
+		expect(result.txHash).toBe(txHash);
+		expect(requests.map((r) => r.method)).toEqual([
+			'eth_estimateGas',
+			'eth_sendTransaction',
+			'eth_getTransactionReceipt'
+		]);
+		const [sent] = (requests[1]!.params ?? []) as [
+			{ from: string; to: string; data: string; gas: string }
+		];
+		expect(sent.from).toBe(OWNER_ADDRESS);
+		// The tx HAS a `to` — the Safe — so wallets treat it as a normal
+		// contract interaction (the MetaMask no-`to` failure never applies).
+		expect(sent.to).toBe(SAFE_ADDRESS);
+		expect(sent.gas).toBe('0x30000');
+		expect(sent.data.startsWith(EXEC_SELECTOR)).toBe(true);
+		// The packed owner signature rides in the calldata.
+		expect(sent.data).toContain(ownerSignature.slice(2));
+		// … wrapping the performCreate2 call for the planned salt.
+		expect(sent.data).toContain(plan().salt.slice(2));
+	});
+
+	it('refuses to execute once the Safe nonce has advanced past the signature', async () => {
+		const requests: Array<{ method: string; params: unknown[] }> = [];
+		await expect(
+			execute(execProvider(requests), { currentNonceWord: `0x${'0'.repeat(63)}2` })
+		).rejects.toThrow(/nonce has advanced.*Re-propose/);
+		expect(requests).toHaveLength(0);
+	});
+
+	it('surfaces a gas-estimation refusal as the Safe refusing the execution', async () => {
+		const requests: Array<{ method: string; params: unknown[] }> = [];
+		const provider = execProvider(requests, {
+			eth_estimateGas: () => {
+				throw new Error('execution reverted: GS026');
+			}
+		});
+		await expect(execute(provider)).rejects.toThrow(SafeExecutionRevertedError);
+		await expect(execute(provider)).rejects.toThrow(/would revert.*GS026/);
+		expect(requests.filter((r) => r.method === 'eth_sendTransaction')).toHaveLength(0);
+	});
+
+	it('propagates the owner declining the transaction', async () => {
+		const provider = execProvider([], {
+			eth_sendTransaction: () => {
+				throw new Error('User rejected the request');
+			}
+		});
+		await expect(execute(provider)).rejects.toThrow(/User rejected/);
+	});
+
+	it('reports an on-chain revert of the execution transaction honestly', async () => {
+		const provider = execProvider([], {
+			eth_getTransactionReceipt: () => ({ status: '0x0', logs: [] })
+		});
+		await expect(execute(provider)).rejects.toThrow(/reverted on-chain/);
+	});
+
+	it('reports a mined-but-failed execution via the ExecutionFailure event', async () => {
+		const provider = execProvider([], {
+			eth_getTransactionReceipt: () => ({
+				status: '0x1',
+				logs: [{ topics: [SAFE_EXECUTION_FAILURE_TOPIC] }]
+			})
+		});
+		await expect(execute(provider)).rejects.toThrow(/ExecutionFailure/);
+	});
+
+	it('polls until the receipt lands', async () => {
+		let polls = 0;
+		const delays: number[] = [];
+		const provider = execProvider([], {
+			eth_getTransactionReceipt: () => (++polls < 3 ? null : { status: '0x1', logs: [] })
+		});
+		const result = await executeSafeDeployment({
+			provider,
+			transport: fakeTransport(`0x${'0'.repeat(64)}`),
+			ownerAddress: OWNER_ADDRESS,
+			plan: plan(),
+			nonce: 0n,
+			ownerSignature,
+			receiptDelayMs: 5,
+			delay: async (ms) => {
+				delays.push(ms);
+			}
+		});
+		expect(result.txHash).toBe(txHash);
+		expect(polls).toBe(3);
+		expect(delays).toEqual([5, 5]);
 	});
 });

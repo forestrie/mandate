@@ -16,7 +16,11 @@
 		UNIVOCITY_RELEASES_PAGE_URL
 	} from '$lib/deploy/deploy-config.js';
 	import { fetchVerifiedRelease, type VerifiedRelease } from '$lib/deploy/manifest-client.js';
-	import { buildDeployPlan, proposeSafeDeployment } from '$lib/deploy/deploy-plan.js';
+	import {
+		buildDeployPlan,
+		executeSafeDeployment,
+		proposeSafeDeployment
+	} from '$lib/deploy/deploy-plan.js';
 	import { safeDashboardUrl } from '@forestrie/deploy-core';
 	import type { Address, Hex } from 'viem';
 	import { buildOnboardAttestationKs256 } from '@mandate/register/onboard-attestation';
@@ -56,12 +60,14 @@
 	} from './onboard-state.js';
 
 	const APPROVAL_POLL_INTERVAL_MS = 5000;
+	const DEPLOY_POLL_INTERVAL_MS = 5000;
 
 	let progress = $state<OnboardProgress>(emptyProgress());
 	let busy = $state(false);
 	let error = $state<string | null>(null);
 	let conflict = $state<ReservationConflictError | null>(null);
 	let pollTimer = $state<ReturnType<typeof setTimeout> | null>(null);
+	let deployPollTimer = $state<ReturnType<typeof setTimeout> | null>(null);
 
 	// Inline-deploy branch of the details step (plan-2607-47 slice 02).
 	let detailsMode = $state<'paste' | 'deploy'>('paste');
@@ -89,7 +95,13 @@
 			deployIndex = String(progress.deploy.instanceIndex);
 			// Resume lands back on the deploy sub-step until the deployed
 			// instance has been adopted as the wizard's address input.
-			if (!progress.univocityAddr) detailsMode = 'deploy';
+			if (!progress.univocityAddr) {
+				detailsMode = 'deploy';
+				// Jump-leg resume: if a SafeTx was signed, the execution may be
+				// happening (or have happened) in the Safe app — watch the
+				// predicted address and advance the moment the code appears.
+				if (progress.deploy.safeTxHash) scheduleDeployPoll();
+			}
 		} else {
 			deployTag = defaultUnivocityReleaseTag() ?? '';
 		}
@@ -102,6 +114,7 @@
 	onDestroy(() => {
 		destroyed = true;
 		stopPolling();
+		stopDeployPolling();
 	});
 
 	function isTerminal(status: OnboardRequestStatus | undefined): boolean {
@@ -206,6 +219,39 @@
 		}
 	}
 
+	function stopDeployPolling() {
+		if (deployPollTimer) clearTimeout(deployPollTimer);
+		deployPollTimer = null;
+	}
+
+	function scheduleDeployPoll() {
+		stopDeployPolling();
+		deployPollTimer = setTimeout(() => void pollDeployed(), DEPLOY_POLL_INTERVAL_MS);
+	}
+
+	/**
+	 * Both execution legs converge here: watch the predicted address and, the
+	 * moment code appears, adopt the instance and return to the attestation
+	 * form — the operator never has to click "Check deployment" on the happy
+	 * path, whichever leg executed the SafeTx.
+	 */
+	async function pollDeployed() {
+		deployPollTimer = null;
+		if (destroyed || !progress.deploy || progress.univocityAddr) return;
+		try {
+			if (await predictedAddressHasCode(progress.deploy.predictedAddress)) {
+				if (destroyed) return;
+				alreadyDeployed = true;
+				adoptDeployedInstance();
+				return;
+			}
+		} catch {
+			// Transient read failures (or a not-yet-connected wallet on resume)
+			// are not verdicts — keep watching.
+		}
+		if (!destroyed) scheduleDeployPoll();
+	}
+
 	async function ensureVerifiedRelease(releaseTag: string): Promise<VerifiedRelease> {
 		if (verifiedRelease?.releaseTag === releaseTag) return verifiedRelease;
 		const release = await fetchVerifiedRelease(releaseTag);
@@ -297,13 +343,84 @@
 				chainId: getConfiguredDefaultChainId(),
 				plan
 			});
-			applyProposalResult(progress, { safeTxHash: result.safeTxHash, proposed: result.proposed });
+			applyProposalResult(progress, {
+				safeTxHash: result.safeTxHash,
+				nonce: result.nonce.toString(),
+				ownerSignature: result.ownerSignature,
+				proposed: result.proposed
+			});
 			persist();
 			if (!result.proposed) {
-				stsWarning = `The Safe Transaction Service did not record the proposal: ${result.stsDetail}. Your signature stays local — retry proposing, or execute from the next step once it lands (execution never depends on the service).`;
+				stsWarning = `The Safe Transaction Service did not record the proposal: ${result.stsDetail}. Your signature stays local — execute below with your owner wallet (execution never depends on the service), or retry proposing.`;
 			}
+			// The SafeTx exists now, whichever leg executes it — start watching.
+			scheduleDeployPoll();
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Proposing the deployment failed';
+		} finally {
+			busy = false;
+		}
+	}
+
+	/**
+	 * Inline execution leg (Q5): pack the locally held owner signature and
+	 * send `execTransaction` from the connected owner wallet — no Safe app,
+	 * no Transaction Service. Failures are surfaced honestly; there is no
+	 * retry loop, and the deploy poll keeps watching either way.
+	 */
+	async function executeDeploy() {
+		if (!progress.deploy?.ownerSignature || progress.deploy.nonce === undefined) return;
+		error = null;
+		deployNotice = null;
+		if (!safeReady) {
+			error = 'Connect the owner wallet and validate the Safe first.';
+			return;
+		}
+		const guard = deployPlanSafeGuard(progress, wallet.safeAddress);
+		if (guard) {
+			error = guard;
+			return;
+		}
+		busy = true;
+		try {
+			const release = await ensureVerifiedRelease(progress.deploy.releaseTag);
+			const plan = buildDeployPlan({
+				safeAddress: progress.deploy.safeAddress,
+				releaseTag: progress.deploy.releaseTag,
+				instanceIndex: progress.deploy.instanceIndex,
+				bytecode: release.bytecode
+			});
+			if (plan.predictedAddress.toLowerCase() !== progress.deploy.predictedAddress.toLowerCase()) {
+				// The re-verified manifest no longer reproduces what was signed —
+				// drop the stale proposal rather than execute bytes we can't vouch for.
+				applyDeployPlan(progress, plan);
+				persist();
+				throw new Error(
+					'The verified release no longer reproduces the recorded prediction — re-propose before executing.'
+				);
+			}
+			const provider = getInjectedProvider();
+			if (!provider) throw new Error('Wallet provider unavailable — reconnect and retry.');
+			await executeSafeDeployment({
+				provider,
+				transport: defaultSafeReadTransport(provider),
+				ownerAddress: wallet.address!,
+				plan,
+				nonce: BigInt(progress.deploy.nonce),
+				ownerSignature: progress.deploy.ownerSignature as Hex
+			});
+			// Executed and mined: the code is normally visible immediately …
+			alreadyDeployed = await predictedAddressHasCode(plan.predictedAddress);
+			if (alreadyDeployed) {
+				adoptDeployedInstance();
+			} else {
+				// … but an RPC read lagging the receipt is not a failure verdict.
+				deployNotice =
+					'Execution confirmed — waiting for the contract code to appear at the predicted address.';
+				scheduleDeployPoll();
+			}
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Executing the deployment failed';
 		} finally {
 			busy = false;
 		}
@@ -330,6 +447,7 @@
 
 	/** Adopt the deployed instance and return to the details form. */
 	function adoptDeployedInstance() {
+		stopDeployPolling();
 		useDeployedInstance(progress);
 		persist();
 		detailsMode = 'paste';
@@ -467,6 +585,7 @@
 
 	function startOver() {
 		stopPolling();
+		stopDeployPolling();
 		clearProgress();
 		progress = emptyProgress();
 		progress.chainId = String(getConfiguredDefaultChainId());
@@ -617,7 +736,8 @@
 						{:else}
 							{#if progress.deploy.proposed}
 								<Alert title="Deployment proposed">
-									The transaction is queued with the Safe Transaction Service. Execute it with your
+									The transaction is queued with the Safe Transaction Service. Execute it below with
+									your connected owner wallet, or with your
 									<!-- eslint-disable svelte/no-navigation-without-resolve -- external Safe app deep link -->
 									Safe (<a
 										class="underline"
@@ -627,7 +747,8 @@
 										)}
 										target="_blank"
 										rel="noreferrer">open in the Safe app</a
-									>), then check for the deployment here.
+									>) — the wizard watches the predicted address and continues automatically either
+									way.
 									<!-- eslint-enable svelte/no-navigation-without-resolve -->
 								</Alert>
 							{/if}
@@ -639,10 +760,20 @@
 											? 'Re-propose to Safe'
 											: 'Propose to Safe'}
 								</Button>
+								{#if progress.deploy.ownerSignature}
+									<Button onclick={executeDeploy} disabled={busy || !safeReady}>
+										Execute with owner wallet
+									</Button>
+								{/if}
 								<Button variant="outline" onclick={checkDeployed} disabled={busy}>
 									Check deployment
 								</Button>
 							</div>
+							{#if deployPollTimer !== null}
+								<p class="text-sm text-zinc-600" data-testid="deploy-watching">
+									Watching the predicted address for the deployment…
+								</p>
+							{/if}
 						{/if}
 					{/if}
 				{:else}
@@ -657,6 +788,12 @@
 						>
 						also works. The wizard verifies code exists at the address.
 					</p>
+					{#if progress.deploy && progress.univocityAddr.toLowerCase() === progress.deploy.predictedAddress.toLowerCase()}
+						<Alert title="Instance deployed">
+							Your Safe's deployment landed at the predicted address and has been filled in below —
+							continue with the onboarding request.
+						</Alert>
+					{/if}
 					<div class="grid gap-4 sm:grid-cols-2">
 						<div class="space-y-2">
 							<label class="block text-sm font-medium text-zinc-800" for="onboard-chain-id"

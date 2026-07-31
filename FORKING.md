@@ -103,6 +103,7 @@ sequenceDiagram
 | **A**  | Fork on a shared Forestrie dev lane                                                                                                       |
 | **B**  | Independent fork; prebuilt deployer + release tag — no Foundry — see [releases](https://github.com/forestrie/univocity/releases)          |
 | **B′** | Same as **B** but in the browser — [univocity-deploy](https://univocity-deploy.pages.dev) (EOA only; manifest + sidecar verified in-page) |
+| **B″** | Safe 1x1 (Mode D) forks: inline in the mandate console's `/onboard` wizard — propose + execute with the owner wallet, no CLI              |
 | **C**  | Custom contract changes                                                                                                                   |
 | **D**  | Local smoke only — not production                                                                                                         |
 
@@ -131,7 +132,6 @@ For Safe multisig deploys, use `deploy propose imutable` / `deploy approve` with
 `--release-root` or `--from-manifest` (pass `--manifest-sidecar` with the local
 `.sha256` file when using a downloaded manifest); see
 [univocity-tools CLI docs](https://github.com/forestrie/univocity-tools/blob/main/docs/agents/cli.md).
-Safe deploy is **CLI-only** (no browser Safe path).
 
 **B′ (browser):** open [univocity-deploy](https://univocity-deploy.pages.dev),
 connect a wallet (Privy or injected MetaMask), select **Base Sepolia (84532)** —
@@ -141,6 +141,16 @@ drag-dropped offline), deploy **ImutableUnivocity** via EOA, then download
 `{ chainId, univocityAddr, bootstrapAlg }` for Step 2 below. Integrity model
 matches CLI Path B
 ([ADR-0010](https://github.com/forestrie/univocity-tools/blob/main/docs/adr/adr-0010-deploy-manifest-format.md)).
+
+**B″ (mandate console, Safe 1x1 / Mode D):** in the `/onboard` wizard choose
+**Deploy one now** — the console fetches the release manifest via its own
+byte proxy, verifies manifest + sidecar **in-page** (same ADR-0010 integrity
+model as B′), predicts the deterministic CREATE2 address for your validated
+Safe, then signs one SafeTx with the owner wallet. Execute it inline from the
+console (`execTransaction` from the owner) or from the Safe app queue — the
+wizard watches the predicted address and continues into onboarding
+automatically. Proposal to the Safe Transaction Service is best-effort;
+execution never depends on it (ADR-0060, devdocs).
 
 **C (opt-in — counterfactual UUPS):** for predict-before-deploy and deterministic
 multi-forest anchors, use the Univocity deployer CLI **UUPS** path. Imutable
