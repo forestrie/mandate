@@ -16,7 +16,7 @@ import {
 	type DelayFn,
 	type SafeTxFields
 } from '@forestrie/deploy-core';
-import { bytesToHex, encodeFunctionData, type Address, type Hex } from 'viem';
+import { bytesToHex, encodeFunctionData, getAddress, type Address, type Hex } from 'viem';
 import type { EthereumProvider } from '$lib/privy/client.js';
 import type { SafeReadTransport } from '$lib/wallets/safe-validation.js';
 import { safeOwnerSignatureBytes } from '$lib/signing/safe-backend.js';
@@ -160,6 +160,16 @@ export interface ProposeDeploymentResult {
  * declining the signature) throws; STS trouble does NOT — it is reported in
  * the result so the wizard can warn and carry on.
  */
+/**
+ * The STS checksum-validates every address field (422 otherwise), while
+ * wallets and pasted input commonly carry lowercase — normalise to EIP-55
+ * at the service boundary. Lowercasing first keeps mixed-case input from
+ * tripping viem's own checksum assertion.
+ */
+function checksummedAddress(address: string): Address {
+	return getAddress(address.toLowerCase());
+}
+
 export async function proposeSafeDeployment(input: {
 	provider: EthereumProvider;
 	transport: SafeReadTransport;
@@ -168,7 +178,7 @@ export async function proposeSafeDeployment(input: {
 	plan: Pick<DeployPlan, 'safeAddress' | 'createCall' | 'salt' | 'deploymentData'>;
 	serviceUrl?: string;
 }): Promise<ProposeDeploymentResult> {
-	const safe = input.plan.safeAddress as Address;
+	const safe = checksummedAddress(input.plan.safeAddress);
 	const nonce = await readSafeNonce(input.transport, input.plan.safeAddress);
 	const tx = buildSafeTxFields({
 		to: input.plan.createCall,
@@ -180,10 +190,7 @@ export async function proposeSafeDeployment(input: {
 
 	const signatureRaw = (await input.provider.request({
 		method: 'eth_signTypedData_v4',
-		params: [
-			input.ownerAddress,
-			buildSafeTxTypedDataJson(tx, input.chainId, input.plan.safeAddress)
-		]
+		params: [input.ownerAddress, buildSafeTxTypedDataJson(tx, input.chainId, safe)]
 	})) as string;
 	if (typeof signatureRaw !== 'string' || !signatureRaw.startsWith('0x')) {
 		throw new Error('Wallet returned an invalid SafeTx signature');
@@ -199,7 +206,7 @@ export async function proposeSafeDeployment(input: {
 			safe,
 			tx,
 			safeTxHash,
-			sender: input.ownerAddress as Address,
+			sender: checksummedAddress(input.ownerAddress),
 			signature,
 			origin: 'mandate console /onboard'
 		});

@@ -31,6 +31,8 @@ import {
 
 const SAFE_ADDRESS = '0xCdD289cC5420529d1C4D0498FA3DaAb549A07a63';
 const OWNER_ADDRESS = '0x242382c2b4279205dd2c180232ef1673d5192ad7';
+// EIP-55 forms the STS demands (it 422s lowercase address fields).
+const OWNER_ADDRESS_CHECKSUMMED = '0x242382C2B4279205Dd2C180232eF1673d5192AD7';
 const CHAIN_ID = 84532;
 const BYTECODE = '0x600160005260206000f3' as Hex;
 
@@ -238,18 +240,45 @@ describe('proposeSafeDeployment', () => {
 		expect(typedData.primaryType).toBe('SafeTx');
 		expect(typedData.domain.verifyingContract).toBe(SAFE_ADDRESS);
 
-		// The gateway got the matching contractTransactionHash and sender.
+		// The gateway got the matching contractTransactionHash and a
+		// checksummed sender — wallets report lowercase, the STS 422s it
+		// ("Address … is not checksumed", live dogfood 2026-07-31).
 		expect(posts).toHaveLength(1);
 		expect(posts[0]!.url).toBe(
 			`https://api.safe.global/tx-service/basesep/api/v1/safes/${SAFE_ADDRESS}/multisig-transactions/`
 		);
 		expect(posts[0]!.body).toMatchObject({
 			contractTransactionHash: result.safeTxHash,
-			sender: OWNER_ADDRESS,
+			sender: OWNER_ADDRESS_CHECKSUMMED,
 			signature,
 			operation: 0,
 			nonce: '0'
 		});
+	});
+
+	it('checksums a lowercase Safe address into the URL and typed-data domain', async () => {
+		const requests: Array<{ method: string; params: unknown[] }> = [];
+		const posts: Array<{ url: string }> = [];
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async (url: RequestInfo | URL) => {
+				posts.push({ url: String(url) });
+				return new Response('', { status: 201 });
+			})
+		);
+		const built = plan();
+		await proposeSafeDeployment({
+			provider: fakeProvider(requests),
+			transport: fakeTransport(`0x${'0'.repeat(64)}`),
+			ownerAddress: OWNER_ADDRESS,
+			chainId: CHAIN_ID,
+			plan: { ...built, safeAddress: built.safeAddress.toLowerCase() }
+		});
+		expect(posts[0]!.url).toContain(`/safes/${SAFE_ADDRESS}/`);
+		const typedData = JSON.parse(requests[0]!.params[1] as string) as {
+			domain: { verifyingContract: string };
+		};
+		expect(typedData.domain.verifyingContract).toBe(SAFE_ADDRESS);
 	});
 
 	it('reports STS unavailability as a non-fatal result — propose is best-effort (Q5)', async () => {
