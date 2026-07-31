@@ -52,6 +52,13 @@ export const EXPECTED_IDENTITIES = {
 		repository: 'forestrie/canopy',
 		workflowPath: '.github/workflows/publish-delegation-cose.yml'
 	},
+	// Univocity deployment core — manifest verify, CREATE2 planning and the
+	// Safe propose/execute client for the /onboard inline deploy branch
+	// (plan-2607-47, FOR-512/513).
+	'@forestrie/deploy-core': {
+		repository: 'forestrie/univocity-tools',
+		workflowPath: '.github/workflows/publish-deploy-core.yml'
+	},
 	// The platform CBOR/COSE codec (FOR-484: replaces the banned cbor-x).
 	'@forestrie/encoding': {
 		repository: 'forestrie/canopy',
