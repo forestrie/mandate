@@ -47,6 +47,27 @@ const ALWAYS_DENY_SYSTEM_CONDITION: PolicyCondition = {
 	value: '0'
 };
 
+/**
+ * x402 payment allowance (FOR-485 residual): chains where the Mode C wallet
+ * may sign typed data in the canonical USDC contract's EIP-712 domain — the
+ * `TransferWithAuthorization` a canopy x402 challenge demands. DENY rules
+ * override ALLOW in Privy, so the carve-out must NARROW the per-chain deny
+ * (chainId matches AND the verifying contract is NOT this USDC), not add an
+ * ALLOW rule. Domain scoping is the boundary Privy can express with the
+ * vocabulary this repo has live-verified; it admits every primary type in
+ * USDC's domain (e.g. EIP-2612 Permit too) — equivalent risk, since the
+ * allowance's whole point is letting mandate-signed payments move USDC.
+ *
+ * Deliberately Base Sepolia ONLY for now: if the `neq` operator or the
+ * `verifyingContract` field name is ever wrong, the narrowed rule silently
+ * never matches and that chain's typed-data deny fails OPEN — confined here
+ * to testnet. Verify with the live policy matrix before adding mainnet
+ * entries.
+ */
+const X402_USDC_DOMAIN_ALLOWANCES: Partial<Record<string, string>> = {
+	'84532': '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
+};
+
 function denyConditionsForMethod(
 	method: (typeof DENIED_MODE_C_POLICY_METHODS)[number]
 ): PolicyCondition[] {
@@ -73,6 +94,8 @@ function denyConditionsForMethod(
 				operator: 'eq',
 				value: chainId
 			}));
+		// (x402 narrowing for this method happens in buildDeniedModeCRules —
+		// the per-chain conditions above are the base shape.)
 		case 'eth_sign7702Authorization':
 			return [ETH_SIGN7702_DENY_CONDITION];
 		case 'earn_deposit':
@@ -90,6 +113,27 @@ function buildDeniedModeCRules(): PolicyRule[] {
 		const conditions = denyConditionsForMethod(method);
 		if (method === 'eth_signTypedData_v4') {
 			for (const condition of conditions) {
+				const usdc = X402_USDC_DOMAIN_ALLOWANCES[String(condition.value)];
+				if (usdc) {
+					// Narrowed deny: everything on this chain EXCEPT typed data
+					// in the canonical USDC domain — the x402 payment signature
+					// (see X402_USDC_DOMAIN_ALLOWANCES for the risk posture).
+					rules.push({
+						name: `Deny ${method} chain ${condition.value} except x402 USDC domain`,
+						method,
+						conditions: [
+							condition,
+							{
+								field_source: 'ethereum_typed_data_domain',
+								field: 'verifyingContract',
+								operator: 'neq',
+								value: usdc
+							}
+						],
+						action: 'DENY'
+					});
+					continue;
+				}
 				rules.push({
 					name: `Deny ${method} chain ${condition.value}`,
 					method,

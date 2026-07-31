@@ -74,6 +74,20 @@ export function registrationBlockLabel(read: FeeAccountRead): string {
 	return `Block ${read.registrationBlock}`;
 }
 
+/**
+ * Copy for a failed account read. The 401/403 case carries the clock-skew
+ * hint (plan-2607-02 R7): the read attestation is valid for a ~90 s window,
+ * so a client clock far enough behind canopy mints already-expired
+ * attestations and sees uniform authorization refusals — indistinguishable
+ * from a bad credential without this hint.
+ */
+export function accountReadFailureCopy(status: number | undefined, message: string): string {
+	if (status === 401 || status === 403) {
+		return `${message} — if this repeats, check this device's clock: a clock more than ~90 seconds behind the server signs already-expired read attestations, which are refused uniformly.`;
+	}
+	return message;
+}
+
 /** USDC atomic units (6 decimals) → "$1.00" display. */
 export function formatUsdcAtomic(atomic: string): string {
 	if (!/^[0-9]+$/.test(atomic)) return atomic;
