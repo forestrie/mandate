@@ -44,6 +44,7 @@
 	},
 	"dependencies": {
 		"@forestrie/delegation-cose": "^0.1.3",
+		"@forestrie/deploy-core": "^0.7.0",
 		"@forestrie/encoding": "^0.5.0",
 		"@mandate/coordinator-types": "workspace:*",
 		"@mandate/register": "workspace:*",

@@ -10,6 +10,10 @@
 		"COORDINATOR_UPSTREAM_URL": "https://coordinator.forest-2.forestrie.dev",
 		"ENABLE_WALLET_CHALLENGE_AUTH": "true",
 		"PUBLIC_CANOPY_API_URL": "https://api-a.forest-2.forestrie.dev",
-		"PUBLIC_RPC_URL": "https://sepolia.base.org"
+		"PUBLIC_RPC_URL": "https://sepolia.base.org",
+		// Default univocity release for the /onboard inline deploy branch —
+		// local/preview value; production resolves the newest release at deploy
+		// time (plan-2607-47 slice 02). The hermetic e2e suite pins this tag.
+		"PUBLIC_UNIVOCITY_RELEASE_TAG": "v0.1.8"
 	}
 }

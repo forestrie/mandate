@@ -1,6 +1,6 @@
 {
 	"name": "@forestrie/mandate-ui-e2e-kit",
-	"version": "0.5.0",
+	"version": "0.6.0",
 	"license": "MIT",
 	"type": "module",
 	"description": "Reusable Playwright fixtures and BFF mocks for mandate UI e2e (ARC-0024 Layer 1)",
@@ -37,6 +37,7 @@
 		"pnpm": ">=9.0.0"
 	},
 	"dependencies": {
+		"@forestrie/deploy-core": "^0.7.0",
 		"@forestrie/encoding": "^0.5.0"
 	},
 	"peerDependencies": {

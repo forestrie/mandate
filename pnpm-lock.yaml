@@ -180,6 +180,9 @@ importers:
       '@forestrie/delegation-cose':
         specifier: ^0.1.3
         version: 0.1.3
+      '@forestrie/deploy-core':
+        specifier: ^0.7.0
+        version: 0.7.0(typescript@6.0.3)(zod@3.25.76)
       '@forestrie/encoding':
         specifier: ^0.5.0
         version: 0.5.0
@@ -332,6 +335,9 @@ importers:
 
   packages/tests/ui-e2e-kit:
     dependencies:
+      '@forestrie/deploy-core':
+        specifier: ^0.7.0
+        version: 0.7.0(typescript@5.9.3)(zod@3.25.76)
       '@forestrie/encoding':
         specifier: ^0.5.0
         version: 0.5.0
@@ -811,6 +817,9 @@ packages:
 
   '@forestrie/delegation-cose@0.1.5':
     resolution: {integrity: sha512-W0G90VN6O2gGovFXWNEv0dU2byPrd7BSdq7V0PW8IEoC6QnkXHSPbD1JbyUrdV83V5LzptY7E5M+/J1/wGOSqw==}
+
+  '@forestrie/deploy-core@0.7.0':
+    resolution: {integrity: sha512-VVk3QN26bGKggB8QO2vSKj6UGBY+84h0Y8QmC2YqwoG3eZYkd3of04jwCCXz8jFdv6hSaBxwhx/v7Ve+3/zuTg==}
 
   '@forestrie/encoding@0.5.0':
     resolution: {integrity: sha512-vMuiY1qmYu5tPGPj0a/DmoOIF99QNdshp8lsug7IMMZBFLRq7d7UFIMTdOBvo5g3Diz5etSXXjBJJG+fWiLftQ==}
@@ -2812,6 +2821,24 @@ snapshots:
       '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
 
+  '@forestrie/deploy-core@0.7.0(typescript@5.9.3)(zod@3.25.76)':
+    dependencies:
+      viem: 2.50.4(typescript@5.9.3)(zod@3.25.76)
+    transitivePeerDependencies:
+      - bufferutil
+      - typescript
+      - utf-8-validate
+      - zod
+
+  '@forestrie/deploy-core@0.7.0(typescript@6.0.3)(zod@3.25.76)':
+    dependencies:
+      viem: 2.50.4(typescript@6.0.3)(zod@3.25.76)
+    transitivePeerDependencies:
+      - bufferutil
+      - typescript
+      - utf-8-validate
+      - zod
+
   '@forestrie/encoding@0.5.0':
     dependencies:
       '@noble/curves': 1.9.7
@@ -3435,6 +3462,11 @@ snapshots:
 
   abbrev@3.0.1: {}
 
+  abitype@1.2.3(typescript@5.9.3)(zod@3.25.76):
+    optionalDependencies:
+      typescript: 5.9.3
+      zod: 3.25.76
+
   abitype@1.2.3(typescript@6.0.3)(zod@3.25.76):
     optionalDependencies:
       typescript: 6.0.3
@@ -3954,6 +3986,21 @@ snapshots:
       type-check: 0.4.0
       word-wrap: 1.2.5
 
+  ox@0.14.22(typescript@5.9.3)(zod@3.25.76):
+    dependencies:
+      '@adraffy/ens-normalize': 1.11.1
+      '@noble/ciphers': 1.3.0
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.2.3(typescript@5.9.3)(zod@3.25.76)
+      eventemitter3: 5.0.1
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - zod
+
   ox@0.14.22(typescript@6.0.3)(zod@3.25.76):
     dependencies:
       '@adraffy/ens-normalize': 1.11.1
@@ -4269,6 +4316,23 @@ snapshots:
       punycode: 2.3.1
 
   util-deprecate@1.0.2: {}
+
+  viem@2.50.4(typescript@5.9.3)(zod@3.25.76):
+    dependencies:
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.2.3(typescript@5.9.3)(zod@3.25.76)
+      isows: 1.0.7(ws@8.20.1)
+      ox: 0.14.22(typescript@5.9.3)(zod@3.25.76)
+      ws: 8.20.1
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+      - zod
 
   viem@2.50.4(typescript@6.0.3)(zod@3.25.76):
     dependencies:

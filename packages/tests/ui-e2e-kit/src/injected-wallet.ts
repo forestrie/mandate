@@ -37,6 +37,8 @@ export interface InjectedWalletMockOptions {
 	 * Safe) — the onboard wizard's univocity deployed-contract check.
 	 */
 	codeAddresses?: string[];
+	/** `nonce()` the mock Safe reports — the deploy branch's SafeTx nonce. */
+	safeNonce?: number;
 }
 
 export interface RecordedTypedDataRequest {
@@ -54,6 +56,7 @@ interface ChainReadConfig {
 	chainId: number;
 	chainReadsFail: boolean;
 	codeAddresses: string[];
+	safeNonce: number;
 }
 
 function chainReadResult(cfg: ChainReadConfig, method: string, params: unknown[]): string {
@@ -92,6 +95,9 @@ function chainReadResult(cfg: ChainReadConfig, method: string, params: unknown[]
 		}
 		if (data === '0xe75235b8') {
 			return `0x${word(cfg.threshold)}`;
+		}
+		if (data === '0xaffed0e0') {
+			return `0x${word(cfg.safeNonce)}`;
 		}
 		throw new Error(`e2e chain: unmocked eth_call data ${data}`);
 	}
@@ -149,6 +155,7 @@ export async function installInjectedWalletMock(
 		safeVersion: options.safeVersion ?? '1.4.1',
 		chainReadsFail: options.chainReadsFail ?? false,
 		codeAddresses: options.codeAddresses ?? [],
+		safeNonce: options.safeNonce ?? 0,
 		signature: E2E_INJECTED_SIGNATURE
 	};
 	await installJsonRpcIntercept(page, config);
@@ -227,6 +234,9 @@ export async function installInjectedWalletMock(
 						}
 						if (data === '0xe75235b8') {
 							return `0x${word(cfg.threshold)}`;
+						}
+						if (data === '0xaffed0e0') {
+							return `0x${word(cfg.safeNonce)}`;
 						}
 						throw new Error(`e2e wallet: unmocked eth_call data ${data}`);
 					}
