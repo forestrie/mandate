@@ -71,6 +71,11 @@ jobs:
           # but `secret put` is wrangler's only scriptable Pages env write.
           echo "${{ vars.PUBLIC_CANOPY_API_URL }}" | pnpm exec wrangler pages secret put PUBLIC_CANOPY_API_URL --project-name=mandate-prod
           echo "${{ vars.PUBLIC_RPC_URL || 'https://sepolia.base.org' }}" | pnpm exec wrangler pages secret put PUBLIC_RPC_URL --project-name=mandate-prod
+          # BFF auth strategy. Unbound it defaults to app_token_bff, which
+          # swaps the browser's wallet-challenge session bearer for the app
+          # token — the coordinator then 401s every session-scoped call
+          # (signing-route, /delegations) on wallet-challenge deployments.
+          echo "wallet_challenge" | pnpm exec wrangler pages secret put COORDINATOR_AUTH_MODE --project-name=mandate-prod
 
       - name: Deploy production
         env:
