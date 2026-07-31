@@ -25,13 +25,17 @@ export {
 	type RecordedOnboardRequest
 } from './canopy-onboarding.js';
 export {
+	E2E_EXECUTE_TX_HASH,
 	E2E_INJECTED_OWNER_ADDRESS,
 	E2E_INJECTED_SIGNATURE,
 	E2E_SAFE_ADDRESS,
 	installInjectedWalletMock,
 	recordedPersonalSignRequests,
+	recordedSendTransactionRequests,
 	recordedTypedDataRequests,
+	type InjectedWalletMockHandle,
 	type InjectedWalletMockOptions,
+	type RecordedSendTransaction,
 	type RecordedTypedDataRequest
 } from './injected-wallet.js';
 export {

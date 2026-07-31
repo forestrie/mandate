@@ -244,13 +244,23 @@ describe('deploy branch state (plan-2607-47 slice 02)', () => {
 		expect(parseInstanceIndex('nope')).toBeNull();
 	});
 
+	const proposal = (proposed: boolean) => ({
+		safeTxHash: `0x${'99'.repeat(32)}`,
+		nonce: '7',
+		ownerSignature: `0x${'11'.repeat(32)}${'22'.repeat(32)}1b`,
+		proposed
+	});
+
 	it('applyDeployPlan keeps a recorded proposal only while the prediction is unchanged', () => {
 		const p = details();
 		applyDeployPlan(p, plan());
-		applyProposalResult(p, { safeTxHash: `0x${'99'.repeat(32)}`, proposed: true });
-		// Same salt + prediction (re-verify on resume): the proposal survives.
+		applyProposalResult(p, proposal(true));
+		// Same salt + prediction (re-verify on resume): the proposal survives,
+		// including the locally held signature the execute leg needs (Q5).
 		applyDeployPlan(p, plan());
 		expect(p.deploy?.safeTxHash).toBe(`0x${'99'.repeat(32)}`);
+		expect(p.deploy?.nonce).toBe('7');
+		expect(p.deploy?.ownerSignature).toBe(`0x${'11'.repeat(32)}${'22'.repeat(32)}1b`);
 		expect(p.deploy?.proposed).toBe(true);
 		// A different prediction (index bump) invalidates it — the old SafeTx
 		// deploys a different address.
@@ -261,16 +271,31 @@ describe('deploy branch state (plan-2607-47 slice 02)', () => {
 			predictedAddress: `0x${'34'.repeat(20)}`
 		});
 		expect(p.deploy?.safeTxHash).toBeUndefined();
+		expect(p.deploy?.nonce).toBeUndefined();
+		expect(p.deploy?.ownerSignature).toBeUndefined();
 		expect(p.deploy?.proposed).toBeUndefined();
 		expect(p.deploy?.instanceIndex).toBe(1);
 	});
 
-	it('applyProposalResult records best-effort STS outcomes', () => {
+	it('applyProposalResult records best-effort STS outcomes with the local signature', () => {
 		const p = details();
 		applyDeployPlan(p, plan());
-		applyProposalResult(p, { safeTxHash: `0x${'99'.repeat(32)}`, proposed: false });
+		applyProposalResult(p, proposal(false));
 		expect(p.deploy?.safeTxHash).toBe(`0x${'99'.repeat(32)}`);
+		expect(p.deploy?.nonce).toBe('7');
+		expect(p.deploy?.ownerSignature).toBe(`0x${'11'.repeat(32)}${'22'.repeat(32)}1b`);
 		expect(p.deploy?.proposed).toBe(false);
+	});
+
+	it('scrubProgressSecrets spends the deploy signature with the other residuals', () => {
+		const p = details();
+		applyDeployPlan(p, plan());
+		applyProposalResult(p, proposal(true));
+		scrubProgressSecrets(p);
+		expect(p.deploy?.ownerSignature).toBeUndefined();
+		// The audit-relevant identifiers stay.
+		expect(p.deploy?.safeTxHash).toBe(`0x${'99'.repeat(32)}`);
+		expect(p.deploy?.predictedAddress).toBe(`0x${'12'.repeat(20)}`);
 	});
 
 	it('deployPlanSafeGuard refuses a Safe other than the one the salt is bound to', () => {

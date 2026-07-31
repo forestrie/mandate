@@ -34,6 +34,15 @@ export interface OnboardDeployProgress {
 	predictedAddress: string;
 	/** Set once the SafeTx is signed; the hash is stable for a given nonce. */
 	safeTxHash?: string;
+	/** The Safe nonce the signature covers (decimal string). */
+	nonce?: string;
+	/**
+	 * The 27/28 owner signature over the SafeTx, kept so the inline execute
+	 * leg works across reloads without re-signing and never depends on the
+	 * Safe Transaction Service (Q5). Not a secret — it authorises exactly one
+	 * SafeTx at one nonce — but scrubbed with the other residuals at done.
+	 */
+	ownerSignature?: string;
 	/** True when the Safe Transaction Service accepted the proposal. */
 	proposed?: boolean;
 }
@@ -182,17 +191,26 @@ export function applyDeployPlan(
 		instanceIndex: plan.instanceIndex,
 		salt: plan.salt,
 		predictedAddress: plan.predictedAddress,
-		...(unchanged ? { safeTxHash: previous.safeTxHash, proposed: previous.proposed } : {})
+		...(unchanged
+			? {
+					safeTxHash: previous.safeTxHash,
+					nonce: previous.nonce,
+					ownerSignature: previous.ownerSignature,
+					proposed: previous.proposed
+				}
+			: {})
 	};
 }
 
 /** Record the propose outcome (STS acceptance is best-effort — Q5). */
 export function applyProposalResult(
 	progress: OnboardProgress,
-	result: { safeTxHash: string; proposed: boolean }
+	result: { safeTxHash: string; nonce: string; ownerSignature: string; proposed: boolean }
 ): void {
 	if (!progress.deploy) return;
 	progress.deploy.safeTxHash = result.safeTxHash;
+	progress.deploy.nonce = result.nonce;
+	progress.deploy.ownerSignature = result.ownerSignature;
 	progress.deploy.proposed = result.proposed;
 }
 
@@ -321,6 +339,9 @@ export function repairFailureCopy(status: number | undefined): string {
 export function scrubProgressSecrets(progress: OnboardProgress): void {
 	delete progress.redeemCode;
 	delete progress.onboardToken;
+	// The deploy signature authorised exactly one already-executed SafeTx —
+	// spent, so it has no post-onboarding use either.
+	delete progress.deploy?.ownerSignature;
 }
 
 /** Human copy for the poll states — honest about the out-of-band approval. */
