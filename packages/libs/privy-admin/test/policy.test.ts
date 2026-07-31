@@ -44,31 +44,39 @@ describe('buildDelegationSigningPolicy', () => {
 		expect(policy.name).toBe('Custom Mode C policy');
 	});
 
-	it('narrows the Base Sepolia typed-data deny to admit the x402 USDC domain', () => {
+	it('emits only Privy-valid rule shapes (live-verified vocabulary, 2026-07-31)', () => {
+		// Privy PATCH/POST validates: operators limited to this enum (there
+		// is NO negation — a `neq` rule 400s), and rule names cap at 50
+		// characters. Privy is also strictly deny-overrides, so a typed-data
+		// carve-out (e.g. an x402 USDC-domain allowance) is NOT expressible —
+		// and not needed: this policy governs mandate-as-additional-signer
+		// only, and the x402 payers sign with the user/owner wallet (Q9).
+		const VALID_OPERATORS = new Set([
+			'eq',
+			'gt',
+			'gte',
+			'lt',
+			'lte',
+			'in',
+			'in_condition_set',
+			'contains',
+			'starts_with',
+			'ends_with'
+		]);
 		const policy = buildDelegationSigningPolicy();
+		for (const rule of policy.rules) {
+			expect(rule.name.length, rule.name).toBeLessThanOrEqual(50);
+			for (const condition of rule.conditions) {
+				expect(VALID_OPERATORS.has(condition.operator), `${rule.name}: ${condition.operator}`).toBe(
+					true
+				);
+			}
+		}
+
+		// Typed-data denies stay unconditional per chain.
 		const typedDataDenies = policy.rules.filter((r) => r.method === 'eth_signTypedData_v4');
-
-		// The 84532 deny carries BOTH conditions: chain matches AND the
-		// verifying contract is NOT the canonical Base Sepolia USDC — so the
-		// x402 TransferWithAuthorization signature is admitted while every
-		// other typed-data domain on that chain stays denied.
-		const baseSepolia = typedDataDenies.find((r) =>
-			r.conditions.some((c) => c.field === 'chainId' && c.value === '84532')
-		);
-		expect(baseSepolia).toBeDefined();
-		expect(baseSepolia!.action).toBe('DENY');
-		expect(baseSepolia!.conditions).toHaveLength(2);
-		expect(baseSepolia!.conditions[1]).toMatchObject({
-			field_source: 'ethereum_typed_data_domain',
-			field: 'verifyingContract',
-			operator: 'neq',
-			value: '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
-		});
-
-		// Every other chain keeps the unconditional per-chain deny — the
-		// carve-out is deliberately testnet-only until live-verified.
 		for (const rule of typedDataDenies) {
-			if (rule === baseSepolia) continue;
+			expect(rule.action).toBe('DENY');
 			expect(rule.conditions).toHaveLength(1);
 			expect(rule.conditions[0]!.field).toBe('chainId');
 		}

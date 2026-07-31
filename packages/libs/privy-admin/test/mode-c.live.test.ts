@@ -132,7 +132,10 @@ describe.skipIf(!LIVE)('Mode C onboarding (live Privy)', () => {
 									{ name: 'verifyingContract', type: 'address' }
 								]
 							},
-							primaryType: 'EIP712Domain',
+							// snake_case: Privy's RPC schema 400s camelCase `primaryType`
+							// as an INPUT error, which would falsely satisfy the deny
+							// expectation below without ever reaching policy evaluation.
+							primary_type: 'EIP712Domain',
 							domain: {
 								name: 'Mandate Mode C live deny test',
 								version: '1',
@@ -154,6 +157,11 @@ describe.skipIf(!LIVE)('Mode C onboarding (live Privy)', () => {
 				});
 				expect(result.ok, `${denied.method}: ${result.body}`).toBe(false);
 				expect(result.status).toBeGreaterThanOrEqual(400);
+				// The refusal must come from POLICY evaluation — a schema/input
+				// 400 also reports ok:false and would pass silently while the
+				// policy was never consulted (this happened: camelCase
+				// `primaryType` input errors masqueraded as denials).
+				expect(result.body, `${denied.method}: ${result.body}`).toContain('policy_violation');
 			}
 		},
 		TIMEOUT_MS
