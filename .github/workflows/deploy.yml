@@ -32,6 +32,19 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # The /onboard inline deploy branch defaults to the NEWEST univocity
+      # release, resolved here to a concrete tag (plan-2607-47; a `latest`
+      # sentinel would put an anonymous GitHub lookup on the page path —
+      # the deploy-web 403 class).
+      - name: Resolve univocity release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=$(gh api repos/forestrie/univocity/releases/latest --jq .tag_name)
+          test -n "$TAG"
+          echo "PUBLIC_UNIVOCITY_RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+          echo "Default univocity release tag: $TAG"
+
       - name: Build
         env:
           CF_PAGES: '1'
@@ -71,6 +84,13 @@ jobs:
           # but `secret put` is wrangler's only scriptable Pages env write.
           echo "${{ vars.PUBLIC_CANOPY_API_URL }}" | pnpm exec wrangler pages secret put PUBLIC_CANOPY_API_URL --project-name=mandate-prod
           echo "${{ vars.PUBLIC_RPC_URL || 'https://sepolia.base.org' }}" | pnpm exec wrangler pages secret put PUBLIC_RPC_URL --project-name=mandate-prod
+          echo "$PUBLIC_UNIVOCITY_RELEASE_TAG" | pnpm exec wrangler pages secret put PUBLIC_UNIVOCITY_RELEASE_TAG --project-name=mandate-prod
+          # OPTIONAL GitHub token for the /api/deploy/manifest byte proxy
+          # (plan-2607-47 Q7a). Unset ⇒ the proxy uses the public release
+          # download URL, which is CDN-served and not API-rate-limited.
+          if [ -n "${{ secrets.MANDATE_GITHUB_TOKEN }}" ]; then
+            echo "${{ secrets.MANDATE_GITHUB_TOKEN }}" | pnpm exec wrangler pages secret put MANDATE_GITHUB_TOKEN --project-name=mandate-prod
+          fi
           # BFF auth strategy. Unbound it defaults to app_token_bff, which
           # swaps the browser's wallet-challenge session bearer for the app
           # token — the coordinator then 401s every session-scoped call
