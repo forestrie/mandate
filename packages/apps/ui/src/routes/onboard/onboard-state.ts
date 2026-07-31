@@ -14,12 +14,38 @@ const PROGRESS_STORAGE_KEY = 'mandate.session.onboard';
 
 export type OnboardRequestStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'redeemed';
 
+/**
+ * Inline-deploy sub-state of the details step (plan-2607-47 slice 02). The
+ * plan is deterministic (Q6): safe + release + index fully determine salt and
+ * predicted address, so persisting these five fields is enough to resume the
+ * deploy sub-step with the identical prediction; the (large) initcode is
+ * re-derived from the re-verified manifest when next needed.
+ */
+export interface OnboardDeployProgress {
+	/**
+	 * The Safe the salt/bootstrap key are bound to — pinned when the plan is
+	 * built, before the attestation pin exists. Proposing with a different
+	 * connected Safe would deploy an instance this wizard cannot onboard.
+	 */
+	safeAddress: string;
+	releaseTag: string;
+	instanceIndex: number;
+	salt: string;
+	predictedAddress: string;
+	/** Set once the SafeTx is signed; the hash is stable for a given nonce. */
+	safeTxHash?: string;
+	/** True when the Safe Transaction Service accepted the proposal. */
+	proposed?: boolean;
+}
+
 export interface OnboardProgress {
 	/** Instance inputs, fixed once the onboard request is submitted. */
 	chainId: string;
 	univocityAddr: string;
 	label: string;
 	contactEmail: string;
+	/** Present iff the operator took the "Deploy one now" branch. */
+	deploy?: OnboardDeployProgress;
 	/**
 	 * The Safe that signed the attestation, pinned at submit. Every later
 	 * signing/genesis step must use THIS address — the connected wallet can
@@ -122,6 +148,76 @@ export function validateDetails(progress: OnboardProgress): string | null {
 		return 'A contact email is required for the approval workflow.';
 	}
 	return null;
+}
+
+/** Instance index for the deploy branch: a small non-negative integer. */
+export function parseInstanceIndex(value: string): number | null {
+	if (!/^\d{1,6}$/.test(value.trim())) return null;
+	return Number.parseInt(value.trim(), 10);
+}
+
+/**
+ * Record a freshly built deploy plan. A re-plan that changes the prediction
+ * (different index, release or Safe) invalidates any recorded proposal — the
+ * old SafeTx deploys a different address.
+ */
+export function applyDeployPlan(
+	progress: OnboardProgress,
+	plan: {
+		safeAddress: string;
+		releaseTag: string;
+		instanceIndex: number;
+		salt: string;
+		predictedAddress: string;
+	}
+): void {
+	const previous = progress.deploy;
+	const unchanged =
+		previous &&
+		previous.salt === plan.salt &&
+		previous.predictedAddress.toLowerCase() === plan.predictedAddress.toLowerCase();
+	progress.deploy = {
+		safeAddress: plan.safeAddress,
+		releaseTag: plan.releaseTag,
+		instanceIndex: plan.instanceIndex,
+		salt: plan.salt,
+		predictedAddress: plan.predictedAddress,
+		...(unchanged ? { safeTxHash: previous.safeTxHash, proposed: previous.proposed } : {})
+	};
+}
+
+/** Record the propose outcome (STS acceptance is best-effort — Q5). */
+export function applyProposalResult(
+	progress: OnboardProgress,
+	result: { safeTxHash: string; proposed: boolean }
+): void {
+	if (!progress.deploy) return;
+	progress.deploy.safeTxHash = result.safeTxHash;
+	progress.deploy.proposed = result.proposed;
+}
+
+/**
+ * Guard for deploy-branch actions before the attestation pin exists: the
+ * connected Safe must be the one the plan's salt/bootstrap key are bound to.
+ */
+export function deployPlanSafeGuard(
+	progress: OnboardProgress,
+	connectedSafeAddress: string | undefined
+): string | null {
+	if (!progress.deploy) return null;
+	if (
+		connectedSafeAddress &&
+		connectedSafeAddress.toLowerCase() === progress.deploy.safeAddress.toLowerCase()
+	) {
+		return null;
+	}
+	return `This deployment is bound to Safe ${progress.deploy.safeAddress} (bootstrap key and salt). Reconnect and validate that Safe to continue${connectedSafeAddress ? ` — the connected Safe ${connectedSafeAddress} would deploy a different instance` : ''}.`;
+}
+
+/** Adopt the deployed (or predicted-and-live) instance as the wizard input. */
+export function useDeployedInstance(progress: OnboardProgress): void {
+	if (!progress.deploy) return;
+	progress.univocityAddr = progress.deploy.predictedAddress;
 }
 
 /**

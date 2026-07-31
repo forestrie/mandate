@@ -1,18 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+	applyDeployPlan,
 	applyGenesisResult,
+	applyProposalResult,
 	approvalCopy,
 	classifyRedeemFailure,
 	clearProgress,
+	deployPlanSafeGuard,
 	deriveStep,
 	emptyProgress,
 	ensureForestR,
 	loadProgress,
 	normalizeUnivocityAddrInput,
+	parseInstanceIndex,
 	pinnedSafeGuard,
 	repairFailureCopy,
 	saveProgress,
 	scrubProgressSecrets,
+	useDeployedInstance,
 	validateDetails,
 	type OnboardProgress
 } from './onboard-state.js';
@@ -217,5 +222,83 @@ describe('approvalCopy', () => {
 		expect(approvalCopy('approved')).toMatch(/redeem/i);
 		expect(approvalCopy('rejected')).toMatch(/rejected/);
 		expect(approvalCopy('expired')).toMatch(/expired/);
+	});
+});
+
+describe('deploy branch state (plan-2607-47 slice 02)', () => {
+	const SAFE = '0xCdD289cC5420529d1C4D0498FA3DaAb549A07a63';
+	const plan = () => ({
+		safeAddress: SAFE,
+		releaseTag: 'v0.1.8',
+		instanceIndex: 0,
+		salt: `0x${'ab'.repeat(32)}`,
+		predictedAddress: `0x${'12'.repeat(20)}`
+	});
+
+	it('parseInstanceIndex accepts small non-negative integers only', () => {
+		expect(parseInstanceIndex('0')).toBe(0);
+		expect(parseInstanceIndex(' 3 ')).toBe(3);
+		expect(parseInstanceIndex('-1')).toBeNull();
+		expect(parseInstanceIndex('1.5')).toBeNull();
+		expect(parseInstanceIndex('')).toBeNull();
+		expect(parseInstanceIndex('nope')).toBeNull();
+	});
+
+	it('applyDeployPlan keeps a recorded proposal only while the prediction is unchanged', () => {
+		const p = details();
+		applyDeployPlan(p, plan());
+		applyProposalResult(p, { safeTxHash: `0x${'99'.repeat(32)}`, proposed: true });
+		// Same salt + prediction (re-verify on resume): the proposal survives.
+		applyDeployPlan(p, plan());
+		expect(p.deploy?.safeTxHash).toBe(`0x${'99'.repeat(32)}`);
+		expect(p.deploy?.proposed).toBe(true);
+		// A different prediction (index bump) invalidates it — the old SafeTx
+		// deploys a different address.
+		applyDeployPlan(p, {
+			...plan(),
+			instanceIndex: 1,
+			salt: `0x${'cd'.repeat(32)}`,
+			predictedAddress: `0x${'34'.repeat(20)}`
+		});
+		expect(p.deploy?.safeTxHash).toBeUndefined();
+		expect(p.deploy?.proposed).toBeUndefined();
+		expect(p.deploy?.instanceIndex).toBe(1);
+	});
+
+	it('applyProposalResult records best-effort STS outcomes', () => {
+		const p = details();
+		applyDeployPlan(p, plan());
+		applyProposalResult(p, { safeTxHash: `0x${'99'.repeat(32)}`, proposed: false });
+		expect(p.deploy?.safeTxHash).toBe(`0x${'99'.repeat(32)}`);
+		expect(p.deploy?.proposed).toBe(false);
+	});
+
+	it('deployPlanSafeGuard refuses a Safe other than the one the salt is bound to', () => {
+		const p = details();
+		expect(deployPlanSafeGuard(p, SAFE)).toBeNull();
+		applyDeployPlan(p, plan());
+		expect(deployPlanSafeGuard(p, SAFE)).toBeNull();
+		expect(deployPlanSafeGuard(p, SAFE.toLowerCase())).toBeNull();
+		expect(deployPlanSafeGuard(p, `0x${'34'.repeat(20)}`)).toMatch(/different instance/);
+		expect(deployPlanSafeGuard(p, undefined)).toMatch(/Reconnect and validate/);
+	});
+
+	it('useDeployedInstance adopts the predicted address as the wizard input', () => {
+		const p = details();
+		p.univocityAddr = '';
+		useDeployedInstance(p);
+		expect(p.univocityAddr).toBe('');
+		applyDeployPlan(p, plan());
+		useDeployedInstance(p);
+		expect(p.univocityAddr).toBe(`0x${'12'.repeat(20)}`);
+	});
+
+	it('deploy state round-trips persistence and never advances the step machine', () => {
+		const p = details();
+		applyDeployPlan(p, plan());
+		expect(deriveStep(p)).toBe('details');
+		saveProgress(p);
+		expect(loadProgress().deploy).toEqual(p.deploy);
+		clearProgress();
 	});
 });

@@ -11,6 +11,14 @@
 	import { resolveSigningBackend, setSessionSignerBackend } from '$lib/signing/resolve-backend.js';
 	import { getInjectedProvider, getInjectedWalletState } from '$lib/wallets/stores.svelte.js';
 	import { defaultSafeReadTransport } from '$lib/wallets/safe-validation.js';
+	import {
+		defaultUnivocityReleaseTag,
+		UNIVOCITY_RELEASES_PAGE_URL
+	} from '$lib/deploy/deploy-config.js';
+	import { fetchVerifiedRelease, type VerifiedRelease } from '$lib/deploy/manifest-client.js';
+	import { buildDeployPlan, proposeSafeDeployment } from '$lib/deploy/deploy-plan.js';
+	import { safeDashboardUrl } from '@forestrie/deploy-core';
+	import type { Address, Hex } from 'viem';
 	import { buildOnboardAttestationKs256 } from '@mandate/register/onboard-attestation';
 	import {
 		getOnboardRequestStatus,
@@ -24,19 +32,24 @@
 	import { resolve } from '$app/paths';
 	import { onDestroy, onMount } from 'svelte';
 	import {
+		applyDeployPlan,
 		applyGenesisResult,
+		applyProposalResult,
 		approvalCopy,
 		classifyRedeemFailure,
 		clearProgress,
+		deployPlanSafeGuard,
 		deriveStep,
 		emptyProgress,
 		ensureForestR,
 		loadProgress,
 		normalizeUnivocityAddrInput,
+		parseInstanceIndex,
 		pinnedSafeGuard,
 		repairFailureCopy,
 		saveProgress,
 		scrubProgressSecrets,
+		useDeployedInstance,
 		validateDetails,
 		type OnboardProgress,
 		type OnboardRequestStatus
@@ -50,6 +63,16 @@
 	let conflict = $state<ReservationConflictError | null>(null);
 	let pollTimer = $state<ReturnType<typeof setTimeout> | null>(null);
 
+	// Inline-deploy branch of the details step (plan-2607-47 slice 02).
+	let detailsMode = $state<'paste' | 'deploy'>('paste');
+	let deployTag = $state('');
+	let deployIndex = $state('0');
+	/** Digest-verified release held in memory; re-fetched on resume as needed. */
+	let verifiedRelease = $state<VerifiedRelease | null>(null);
+	let alreadyDeployed = $state(false);
+	let deployNotice = $state<string | null>(null);
+	let stsWarning = $state<string | null>(null);
+
 	const wallet = $derived(getInjectedWalletState());
 	const safeReady = $derived(wallet.safeValidation?.status === 'valid');
 	const step = $derived(deriveStep(progress));
@@ -61,6 +84,15 @@
 		setSessionSignerBackend('safe');
 		progress = loadProgress();
 		if (!progress.chainId) progress.chainId = String(getConfiguredDefaultChainId());
+		if (progress.deploy) {
+			deployTag = progress.deploy.releaseTag;
+			deployIndex = String(progress.deploy.instanceIndex);
+			// Resume lands back on the deploy sub-step until the deployed
+			// instance has been adopted as the wizard's address input.
+			if (!progress.univocityAddr) detailsMode = 'deploy';
+		} else {
+			deployTag = defaultUnivocityReleaseTag() ?? '';
+		}
 		if (progress.requestId && !isTerminal(progress.requestStatus)) schedulePoll();
 	});
 
@@ -172,6 +204,135 @@
 		} finally {
 			busy = false;
 		}
+	}
+
+	async function ensureVerifiedRelease(releaseTag: string): Promise<VerifiedRelease> {
+		if (verifiedRelease?.releaseTag === releaseTag) return verifiedRelease;
+		const release = await fetchVerifiedRelease(releaseTag);
+		verifiedRelease = release;
+		return release;
+	}
+
+	async function predictedAddressHasCode(predictedAddress: string): Promise<boolean> {
+		const provider = getInjectedProvider();
+		if (!provider) throw new Error('Wallet provider unavailable — reconnect and retry.');
+		const code = await defaultSafeReadTransport(provider).getCode(predictedAddress);
+		return Boolean(code) && code !== '0x';
+	}
+
+	/** Verify the release in-page, build the deterministic plan, persist it. */
+	async function prepareDeploy() {
+		error = null;
+		deployNotice = null;
+		stsWarning = null;
+		if (!safeReady) {
+			error = 'Connect the owner wallet and validate the Safe first.';
+			return;
+		}
+		const releaseTag = deployTag.trim();
+		if (!releaseTag) {
+			error = 'Enter a univocity release tag — pick one from the releases page.';
+			return;
+		}
+		const instanceIndex = parseInstanceIndex(deployIndex);
+		if (instanceIndex === null) {
+			error = 'Instance index must be a small non-negative integer (0 for the first instance).';
+			return;
+		}
+		busy = true;
+		try {
+			const release = await ensureVerifiedRelease(releaseTag);
+			const plan = buildDeployPlan({
+				safeAddress: wallet.safeAddress!,
+				releaseTag,
+				instanceIndex,
+				bytecode: release.bytecode
+			});
+			applyDeployPlan(progress, plan);
+			persist();
+			// Deterministic salt makes code-at-the-predicted-address the resume
+			// fast-path (Q6): an earlier session's deploy is simply found again.
+			alreadyDeployed = await predictedAddressHasCode(plan.predictedAddress);
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Release verification failed';
+		} finally {
+			busy = false;
+		}
+	}
+
+	/** Sign the SafeTx with the owner wallet and propose it (best-effort STS). */
+	async function proposeDeploy() {
+		if (!progress.deploy) return;
+		error = null;
+		deployNotice = null;
+		stsWarning = null;
+		if (!safeReady) {
+			error = 'Connect the owner wallet and validate the Safe first.';
+			return;
+		}
+		const guard = deployPlanSafeGuard(progress, wallet.safeAddress);
+		if (guard) {
+			error = guard;
+			return;
+		}
+		busy = true;
+		try {
+			const release = await ensureVerifiedRelease(progress.deploy.releaseTag);
+			// Rebuild rather than trust the persisted fields: the plan is
+			// deterministic, and a manifest that no longer reproduces the
+			// persisted prediction must invalidate any recorded proposal.
+			const plan = buildDeployPlan({
+				safeAddress: progress.deploy.safeAddress,
+				releaseTag: progress.deploy.releaseTag,
+				instanceIndex: progress.deploy.instanceIndex,
+				bytecode: release.bytecode
+			});
+			applyDeployPlan(progress, plan);
+			const provider = getInjectedProvider();
+			if (!provider) throw new Error('Wallet provider unavailable — reconnect and retry.');
+			const result = await proposeSafeDeployment({
+				provider,
+				transport: defaultSafeReadTransport(provider),
+				ownerAddress: wallet.address!,
+				chainId: getConfiguredDefaultChainId(),
+				plan
+			});
+			applyProposalResult(progress, { safeTxHash: result.safeTxHash, proposed: result.proposed });
+			persist();
+			if (!result.proposed) {
+				stsWarning = `The Safe Transaction Service did not record the proposal: ${result.stsDetail}. Your signature stays local — retry proposing, or execute from the next step once it lands (execution never depends on the service).`;
+			}
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Proposing the deployment failed';
+		} finally {
+			busy = false;
+		}
+	}
+
+	/** Manual poll: has the proposed deployment landed at the predicted address? */
+	async function checkDeployed() {
+		if (!progress.deploy) return;
+		error = null;
+		deployNotice = null;
+		busy = true;
+		try {
+			alreadyDeployed = await predictedAddressHasCode(progress.deploy.predictedAddress);
+			if (!alreadyDeployed) {
+				deployNotice =
+					'No contract code at the predicted address yet — execute the proposed transaction with your Safe, then check again.';
+			}
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Deployment check failed';
+		} finally {
+			busy = false;
+		}
+	}
+
+	/** Adopt the deployed instance and return to the details form. */
+	function adoptDeployedInstance() {
+		useDeployedInstance(progress);
+		persist();
+		detailsMode = 'paste';
 	}
 
 	async function redeem() {
@@ -311,6 +472,13 @@
 		progress.chainId = String(getConfiguredDefaultChainId());
 		error = null;
 		conflict = null;
+		detailsMode = 'paste';
+		deployTag = defaultUnivocityReleaseTag() ?? '';
+		deployIndex = '0';
+		verifiedRelease = null;
+		alreadyDeployed = false;
+		deployNotice = null;
+		stsWarning = null;
 	}
 
 	const steps: Array<{ key: string; title: string }> = [
@@ -359,61 +527,184 @@
 		<Card class="p-6">
 			<div class="space-y-4">
 				<h2 class="text-lg font-medium">Instance details</h2>
-				<p class="text-sm text-zinc-600">
-					The univocity contract is deployed outside the console — use
-					<a
-						class="underline"
-						href="https://univocity-deploy.pages.dev"
-						target="_blank"
-						rel="noreferrer">univocity deploy</a
+				<div class="flex flex-wrap gap-2" role="group" aria-label="Instance source">
+					<Button
+						variant={detailsMode === 'paste' ? 'default' : 'outline'}
+						onclick={() => (detailsMode = 'paste')}
+						aria-pressed={detailsMode === 'paste'}
 					>
-					if you have not deployed one yet. The wizard verifies code exists at the address.
-				</p>
-				<div class="grid gap-4 sm:grid-cols-2">
-					<div class="space-y-2">
-						<label class="block text-sm font-medium text-zinc-800" for="onboard-chain-id"
-							>Chain id</label
-						>
-						<Input id="onboard-chain-id" bind:value={progress.chainId} placeholder="84532" />
-					</div>
-					<div class="space-y-2">
-						<label class="block text-sm font-medium text-zinc-800" for="onboard-univocity-addr"
-							>Univocity contract address</label
-						>
-						<Input
-							id="onboard-univocity-addr"
-							bind:value={progress.univocityAddr}
-							placeholder="0x…"
-							class="font-mono"
-						/>
-					</div>
-					<div class="space-y-2">
-						<label class="block text-sm font-medium text-zinc-800" for="onboard-label">Label</label>
-						<Input
-							id="onboard-label"
-							bind:value={progress.label}
-							placeholder="Names this request for the approving operator"
-						/>
-					</div>
-					<div class="space-y-2">
-						<label class="block text-sm font-medium text-zinc-800" for="onboard-contact-email"
-							>Contact email</label
-						>
-						<Input
-							id="onboard-contact-email"
-							bind:value={progress.contactEmail}
-							placeholder="you@example.com"
-						/>
-					</div>
+						I have an instance
+					</Button>
+					<Button
+						variant={detailsMode === 'deploy' ? 'default' : 'outline'}
+						onclick={() => (detailsMode = 'deploy')}
+						aria-pressed={detailsMode === 'deploy'}
+					>
+						Deploy one now
+					</Button>
 				</div>
-				<Button onclick={submitRequest} disabled={busy || !safeReady}>
-					{busy ? 'Signing & submitting…' : 'Sign attestation & request onboarding'}
-				</Button>
-				{#if !safeReady}
+				{#if detailsMode === 'deploy'}
 					<p class="text-sm text-zinc-600">
-						Connect the owner wallet and validate the Safe above to enable submission — the request
-						carries an attestation signed by the Safe.
+						Deploys a fresh ImutableUnivocity with your validated Safe as the
+						<span class="font-mono">ks256</span> bootstrap key. The release manifest is fetched via
+						the console and verified in this page before anything is signed; the deployment is
+						proposed as a Safe transaction from your owner wallet. Prefer an external tool?
+						<a
+							class="underline"
+							href="https://univocity-deploy.pages.dev"
+							target="_blank"
+							rel="noreferrer">univocity deploy</a
+						> remains available.
 					</p>
+					<div class="grid gap-4 sm:grid-cols-2">
+						<div class="space-y-2">
+							<label class="block text-sm font-medium text-zinc-800" for="deploy-release-tag"
+								>Release tag</label
+							>
+							<Input id="deploy-release-tag" bind:value={deployTag} placeholder="v0.1.8" />
+							<p class="text-xs text-zinc-500">
+								<!-- eslint-disable svelte/no-navigation-without-resolve -- external GitHub releases page -->
+								<a
+									class="underline"
+									href={UNIVOCITY_RELEASES_PAGE_URL}
+									target="_blank"
+									rel="noreferrer">Browse univocity releases</a
+								>
+								<!-- eslint-enable svelte/no-navigation-without-resolve -->
+							</p>
+						</div>
+						<div class="space-y-2">
+							<label class="block text-sm font-medium text-zinc-800" for="deploy-instance-index"
+								>Instance index</label
+							>
+							<Input id="deploy-instance-index" bind:value={deployIndex} placeholder="0" />
+							<p class="text-xs text-zinc-500">
+								Keep 0 unless you are deploying an additional instance of the same release with this
+								Safe — the index changes the deterministic deploy address.
+							</p>
+						</div>
+					</div>
+					<Button onclick={prepareDeploy} disabled={busy || !safeReady}>
+						{busy ? 'Verifying…' : 'Verify release & predict address'}
+					</Button>
+					{#if progress.deploy}
+						<dl class="grid gap-2 text-sm sm:grid-cols-[auto_1fr]">
+							<dt class="font-medium text-zinc-800">Release</dt>
+							<dd class="font-mono">
+								{progress.deploy.releaseTag} (instance index {progress.deploy.instanceIndex})
+							</dd>
+							<dt class="font-medium text-zinc-800">Predicted address</dt>
+							<dd class="font-mono" data-testid="deploy-predicted-address">
+								{progress.deploy.predictedAddress}
+							</dd>
+							{#if progress.deploy.safeTxHash}
+								<dt class="font-medium text-zinc-800">SafeTx hash</dt>
+								<dd class="font-mono">{progress.deploy.safeTxHash}</dd>
+							{/if}
+						</dl>
+						{#if stsWarning}
+							<Alert title="Proposal not recorded">{stsWarning}</Alert>
+						{/if}
+						{#if deployNotice}
+							<Alert title="Not deployed yet">{deployNotice}</Alert>
+						{/if}
+						{#if alreadyDeployed}
+							<Alert title="Deployed">
+								Contract code found at the predicted address — this instance is already deployed.
+								Continue with it below.
+							</Alert>
+							<Button onclick={adoptDeployedInstance} disabled={busy}>Use this instance</Button>
+						{:else}
+							{#if progress.deploy.proposed}
+								<Alert title="Deployment proposed">
+									The transaction is queued with the Safe Transaction Service. Execute it with your
+									<!-- eslint-disable svelte/no-navigation-without-resolve -- external Safe app deep link -->
+									Safe (<a
+										class="underline"
+										href={safeDashboardUrl(
+											progress.deploy.safeAddress as Address,
+											progress.deploy.safeTxHash as Hex
+										)}
+										target="_blank"
+										rel="noreferrer">open in the Safe app</a
+									>), then check for the deployment here.
+									<!-- eslint-enable svelte/no-navigation-without-resolve -->
+								</Alert>
+							{/if}
+							<div class="flex flex-wrap gap-2">
+								<Button onclick={proposeDeploy} disabled={busy || !safeReady}>
+									{busy
+										? 'Proposing…'
+										: progress.deploy.proposed
+											? 'Re-propose to Safe'
+											: 'Propose to Safe'}
+								</Button>
+								<Button variant="outline" onclick={checkDeployed} disabled={busy}>
+									Check deployment
+								</Button>
+							</div>
+						{/if}
+					{/if}
+				{:else}
+					<p class="text-sm text-zinc-600">
+						Paste the address of a deployed univocity contract, or switch to
+						<em>Deploy one now</em> to deploy inline with your Safe. External deployment via
+						<a
+							class="underline"
+							href="https://univocity-deploy.pages.dev"
+							target="_blank"
+							rel="noreferrer">univocity deploy</a
+						>
+						also works. The wizard verifies code exists at the address.
+					</p>
+					<div class="grid gap-4 sm:grid-cols-2">
+						<div class="space-y-2">
+							<label class="block text-sm font-medium text-zinc-800" for="onboard-chain-id"
+								>Chain id</label
+							>
+							<Input id="onboard-chain-id" bind:value={progress.chainId} placeholder="84532" />
+						</div>
+						<div class="space-y-2">
+							<label class="block text-sm font-medium text-zinc-800" for="onboard-univocity-addr"
+								>Univocity contract address</label
+							>
+							<Input
+								id="onboard-univocity-addr"
+								bind:value={progress.univocityAddr}
+								placeholder="0x…"
+								class="font-mono"
+							/>
+						</div>
+						<div class="space-y-2">
+							<label class="block text-sm font-medium text-zinc-800" for="onboard-label"
+								>Label</label
+							>
+							<Input
+								id="onboard-label"
+								bind:value={progress.label}
+								placeholder="Names this request for the approving operator"
+							/>
+						</div>
+						<div class="space-y-2">
+							<label class="block text-sm font-medium text-zinc-800" for="onboard-contact-email"
+								>Contact email</label
+							>
+							<Input
+								id="onboard-contact-email"
+								bind:value={progress.contactEmail}
+								placeholder="you@example.com"
+							/>
+						</div>
+					</div>
+					<Button onclick={submitRequest} disabled={busy || !safeReady}>
+						{busy ? 'Signing & submitting…' : 'Sign attestation & request onboarding'}
+					</Button>
+					{#if !safeReady}
+						<p class="text-sm text-zinc-600">
+							Connect the owner wallet and validate the Safe above to enable submission — the
+							request carries an attestation signed by the Safe.
+						</p>
+					{/if}
 				{/if}
 			</div>
 		</Card>

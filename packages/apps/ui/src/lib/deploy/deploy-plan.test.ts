@@ -1,0 +1,305 @@
+import { describe, expect, it, vi, afterEach } from 'vitest';
+import {
+	concatHex,
+	encodeAbiParameters,
+	hashTypedData,
+	keccak256,
+	toHex,
+	type Hex,
+	type TypedDataDefinition
+} from 'viem';
+import {
+	buildSafeTxFields,
+	computeSafeTxHash,
+	defaultSafeBatchSalt,
+	DEFAULT_CREATE_CALL,
+	encodePerformCreate2Calldata,
+	predictCreate2Address,
+	predictImutableFromPerformCreate2,
+	safeBatchSaltAtIndex
+} from '@forestrie/deploy-core';
+import type { SafeReadTransport } from '$lib/wallets/safe-validation.js';
+import {
+	buildDeployPlan,
+	buildSafeTxTypedDataJson,
+	proposeSafeDeployment,
+	readSafeNonce
+} from './deploy-plan.js';
+
+const SAFE_ADDRESS = '0xCdD289cC5420529d1C4D0498FA3DaAb549A07a63';
+const OWNER_ADDRESS = '0x242382c2b4279205dd2c180232ef1673d5192ad7';
+const CHAIN_ID = 84532;
+const BYTECODE = '0x600160005260206000f3' as Hex;
+
+// Vendored from safe-contracts (Safe >= 1.3.0): the typehashes the deployed
+// Safe hashes execTransaction checks against. Drift between our typed-data
+// JSON and these means the wallet signs a digest the Safe never accepts.
+const DOMAIN_SEPARATOR_TYPEHASH =
+	'0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218';
+const SAFE_TX_TYPEHASH = '0xbb8310d486368db6bd6f849402fdd73ad53d316b5a4b2644ad6efe0f941286d8';
+
+function plan() {
+	return buildDeployPlan({
+		safeAddress: SAFE_ADDRESS,
+		releaseTag: 'v0.1.8',
+		instanceIndex: 0,
+		bytecode: BYTECODE
+	});
+}
+
+describe('buildDeployPlan', () => {
+	it('index 0 uses the default Safe batch salt — existing deployments keep their address', () => {
+		expect(plan().salt).toBe(defaultSafeBatchSalt(SAFE_ADDRESS));
+		expect(
+			buildDeployPlan({
+				safeAddress: SAFE_ADDRESS,
+				releaseTag: 'v0.1.8',
+				instanceIndex: 3,
+				bytecode: BYTECODE
+			}).salt
+		).toBe(safeBatchSaltAtIndex(SAFE_ADDRESS, 3));
+	});
+
+	it('embeds the Safe as the ks256 bootstrap key in the initcode', () => {
+		const built = plan();
+		expect(built.deploymentData.startsWith(BYTECODE)).toBe(true);
+		expect(built.deploymentData).toContain(SAFE_ADDRESS.slice(2).toLowerCase());
+	});
+
+	it('round-trips salt/prediction through the slice-01 primitives', () => {
+		const built = plan();
+		expect(built.predictedAddress).toBe(
+			predictCreate2Address(DEFAULT_CREATE_CALL, built.salt, built.deploymentData)
+		);
+		// The calldata the proposal carries decodes back to the same prediction.
+		const calldata = encodePerformCreate2Calldata(built.deploymentData, built.salt);
+		expect(predictImutableFromPerformCreate2(DEFAULT_CREATE_CALL, calldata)).toBe(
+			built.predictedAddress
+		);
+	});
+
+	it('is deterministic and index-sensitive', () => {
+		expect(plan()).toEqual(plan());
+		const bumped = buildDeployPlan({
+			safeAddress: SAFE_ADDRESS,
+			releaseTag: 'v0.1.8',
+			instanceIndex: 1,
+			bytecode: BYTECODE
+		});
+		expect(bumped.predictedAddress).not.toBe(plan().predictedAddress);
+	});
+});
+
+describe('buildSafeTxTypedDataJson', () => {
+	const tx = buildSafeTxFields({
+		to: DEFAULT_CREATE_CALL,
+		data: '0x4847be6f' as Hex,
+		operation: 0,
+		nonce: 7n
+	});
+
+	it('uses the exact Safe type strings the vendored typehashes commit to', () => {
+		expect(keccak256(toHex('EIP712Domain(uint256 chainId,address verifyingContract)'))).toBe(
+			DOMAIN_SEPARATOR_TYPEHASH
+		);
+		expect(
+			keccak256(
+				toHex(
+					'SafeTx(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)'
+				)
+			)
+		).toBe(SAFE_TX_TYPEHASH);
+	});
+
+	it('hashes to the digest the Safe recomputes in checkSignatures (== computeSafeTxHash)', () => {
+		const typedData = JSON.parse(
+			buildSafeTxTypedDataJson(tx, CHAIN_ID, SAFE_ADDRESS)
+		) as TypedDataDefinition;
+		const domainSeparator = keccak256(
+			encodeAbiParameters(
+				[{ type: 'bytes32' }, { type: 'uint256' }, { type: 'address' }],
+				[DOMAIN_SEPARATOR_TYPEHASH, BigInt(CHAIN_ID), SAFE_ADDRESS]
+			)
+		);
+		const structHash = keccak256(
+			encodeAbiParameters(
+				[
+					{ type: 'bytes32' },
+					{ type: 'address' },
+					{ type: 'uint256' },
+					{ type: 'bytes32' },
+					{ type: 'uint8' },
+					{ type: 'uint256' },
+					{ type: 'uint256' },
+					{ type: 'uint256' },
+					{ type: 'address' },
+					{ type: 'address' },
+					{ type: 'uint256' }
+				],
+				[
+					SAFE_TX_TYPEHASH,
+					tx.to,
+					tx.value,
+					keccak256(tx.data),
+					tx.operation,
+					tx.safeTxGas,
+					tx.baseGas,
+					tx.gasPrice,
+					tx.gasToken,
+					tx.refundReceiver,
+					tx.nonce
+				]
+			)
+		);
+		const manualDigest = keccak256(concatHex(['0x1901', domainSeparator, structHash]));
+		expect(hashTypedData(typedData)).toBe(manualDigest);
+		expect(computeSafeTxHash(CHAIN_ID, SAFE_ADDRESS, tx)).toBe(manualDigest);
+	});
+});
+
+function fakeTransport(nonceWord: string): SafeReadTransport {
+	return {
+		call: vi.fn(async (_to: string, data: string) => {
+			if (data === '0xaffed0e0') return nonceWord;
+			throw new Error(`unexpected call ${data}`);
+		}),
+		getCode: vi.fn(async () => '0x'),
+		chainId: vi.fn(async () => CHAIN_ID)
+	};
+}
+
+describe('readSafeNonce', () => {
+	it('decodes the uint256 word', async () => {
+		await expect(readSafeNonce(fakeTransport(`0x${'0'.repeat(63)}5`), SAFE_ADDRESS)).resolves.toBe(
+			5n
+		);
+	});
+});
+
+describe('proposeSafeDeployment', () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	const signature = `0x${'11'.repeat(32)}${'22'.repeat(32)}1b`;
+
+	function fakeProvider(recorded: Array<{ method: string; params: unknown[] }>) {
+		return {
+			request: vi.fn(async ({ method, params }: { method: string; params?: unknown[] }) => {
+				recorded.push({ method, params: params ?? [] });
+				if (method === 'eth_signTypedData_v4') return signature;
+				throw new Error(`unexpected method ${method}`);
+			})
+		};
+	}
+
+	it('signs the SafeTx domain and posts the proposal to the gateway', async () => {
+		const requests: Array<{ method: string; params: unknown[] }> = [];
+		const posts: Array<{ url: string; body: Record<string, unknown> }> = [];
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+				posts.push({ url: String(url), body: JSON.parse(String(init?.body)) });
+				return new Response('', { status: 201 });
+			})
+		);
+		const built = plan();
+		const result = await proposeSafeDeployment({
+			provider: fakeProvider(requests),
+			transport: fakeTransport(`0x${'0'.repeat(64)}`),
+			ownerAddress: OWNER_ADDRESS,
+			chainId: CHAIN_ID,
+			plan: built
+		});
+
+		expect(result.proposed).toBe(true);
+		expect(result.nonce).toBe(0n);
+		const tx = buildSafeTxFields({
+			to: built.createCall,
+			data: encodePerformCreate2Calldata(built.deploymentData, built.salt),
+			operation: 0,
+			nonce: 0n
+		});
+		expect(result.safeTxHash).toBe(computeSafeTxHash(CHAIN_ID, SAFE_ADDRESS, tx));
+
+		// The wallet signed OUR SafeTx typed data, addressed to the owner.
+		expect(requests).toHaveLength(1);
+		expect(requests[0]!.params[0]).toBe(OWNER_ADDRESS);
+		const typedData = JSON.parse(requests[0]!.params[1] as string) as {
+			primaryType: string;
+			domain: { verifyingContract: string };
+		};
+		expect(typedData.primaryType).toBe('SafeTx');
+		expect(typedData.domain.verifyingContract).toBe(SAFE_ADDRESS);
+
+		// The gateway got the matching contractTransactionHash and sender.
+		expect(posts).toHaveLength(1);
+		expect(posts[0]!.url).toBe(
+			`https://api.safe.global/tx-service/basesep/api/v1/safes/${SAFE_ADDRESS}/multisig-transactions/`
+		);
+		expect(posts[0]!.body).toMatchObject({
+			contractTransactionHash: result.safeTxHash,
+			sender: OWNER_ADDRESS,
+			signature,
+			operation: 0,
+			nonce: '0'
+		});
+	});
+
+	it('reports STS unavailability as a non-fatal result — propose is best-effort (Q5)', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response('upstream down', { status: 503 }))
+		);
+		const result = await proposeSafeDeployment({
+			provider: fakeProvider([]),
+			transport: fakeTransport(`0x${'0'.repeat(64)}`),
+			ownerAddress: OWNER_ADDRESS,
+			chainId: CHAIN_ID,
+			plan: plan()
+		});
+		expect(result.proposed).toBe(false);
+		expect(result.stsDetail).toMatch(/unavailable|503/);
+	});
+
+	it('propagates a wallet signing refusal — that IS fatal to the action', async () => {
+		vi.stubGlobal('fetch', vi.fn());
+		const provider = {
+			request: vi.fn(async () => {
+				throw new Error('User rejected the request');
+			})
+		};
+		await expect(
+			proposeSafeDeployment({
+				provider,
+				transport: fakeTransport(`0x${'0'.repeat(64)}`),
+				ownerAddress: OWNER_ADDRESS,
+				chainId: CHAIN_ID,
+				plan: plan()
+			})
+		).rejects.toThrow(/User rejected/);
+		expect(fetch).not.toHaveBeenCalled();
+	});
+
+	it('lifts a v=0/1 wallet signature to the 27/28 flavour the STS demands', async () => {
+		const posts: Array<Record<string, unknown>> = [];
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+				posts.push(JSON.parse(String(init?.body)));
+				return new Response('', { status: 201 });
+			})
+		);
+		const provider = {
+			request: vi.fn(async () => `0x${'11'.repeat(32)}${'22'.repeat(32)}00`)
+		};
+		await proposeSafeDeployment({
+			provider,
+			transport: fakeTransport(`0x${'0'.repeat(64)}`),
+			ownerAddress: OWNER_ADDRESS,
+			chainId: CHAIN_ID,
+			plan: plan()
+		});
+		expect(posts[0]!.signature).toBe(`0x${'11'.repeat(32)}${'22'.repeat(32)}1b`);
+	});
+});

@@ -35,6 +35,20 @@ export {
 	type RecordedTypedDataRequest
 } from './injected-wallet.js';
 export {
+	E2E_DEPLOY_BYTECODE,
+	E2E_UNIVOCITY_RELEASE_TAG,
+	e2eDeployPlan,
+	installDeployManifestMocks,
+	type DeployManifestMockHandle,
+	type DeployManifestMockOptions
+} from './deploy-manifest.js';
+export {
+	installSafeTxServiceMocks,
+	type RecordedSafeProposal,
+	type SafeTxServiceMockHandle,
+	type SafeTxServiceMockOptions
+} from './safe-tx-service.js';
+export {
 	BURNER_KEY_STORAGE_KEY,
 	E2E_BURNER_ADDRESS,
 	E2E_BURNER_PRIVATE_KEY,
