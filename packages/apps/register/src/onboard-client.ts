@@ -38,6 +38,14 @@ export interface RedeemOnboardOptions {
 	canopyBaseUrl: string;
 	requestId: string;
 	redeemCode: string;
+	/**
+	 * Base64 x402 `X-PAYMENT` header value (FOR-511). Under canopy's
+	 * `paid`/`either` admission a valid payment approves a pending request
+	 * in the same redeem call; without one a pending redeem answers 402
+	 * with the `X-PAYMENT-REQUIRED` challenge
+	 * ({@link OnboardPaymentRequiredError}).
+	 */
+	paymentHeader?: string;
 	fetchImpl?: typeof fetch;
 }
 
@@ -135,22 +143,53 @@ export class OnboardRedeemError extends Error {
 	}
 }
 
+/**
+ * The 402 redeem outcome (FOR-511): this deployment approves paid requests,
+ * and the response carried the x402 challenge to sign. Distinct from the
+ * base class because a bare retry can never succeed — retrying without a
+ * payment yields the same 402 forever; the caller either pays (sign the
+ * challenge, redeem again with `paymentHeader`) or waits for ops approval.
+ */
+export class OnboardPaymentRequiredError extends OnboardRedeemError {
+	constructor(
+		message: string,
+		/** Base64 `X-PAYMENT-REQUIRED` header value — parse for price/asset/payTo. */
+		readonly challengeB64: string,
+		detail?: string
+	) {
+		super(message, 402, detail);
+		this.name = 'OnboardPaymentRequiredError';
+	}
+}
+
 export async function redeemOnboardToken(opts: RedeemOnboardOptions): Promise<string> {
 	const fetchImpl = opts.fetchImpl ?? fetch;
+	const headers: Record<string, string> = {
+		'Content-Type': 'application/cbor',
+		Accept: 'application/cbor'
+	};
+	if (opts.paymentHeader) {
+		headers['X-PAYMENT'] = opts.paymentHeader;
+	}
 	const response = await fetchImpl(
 		`${normalizeBase(opts.canopyBaseUrl)}/api/onboarding/requests/${encodeURIComponent(opts.requestId)}/redeem`,
 		{
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/cbor',
-				Accept: 'application/cbor'
-			},
+			headers,
 			body: cborIntKeyBytes(new Map([[CBOR_REDEEM_CODE, opts.redeemCode]])) as unknown as BodyInit
 		}
 	);
 
 	if (response.status !== 200) {
 		const detail = await response.text().catch(() => '');
+		const challengeB64 = response.headers.get('X-PAYMENT-REQUIRED');
+		if (response.status === 402 && challengeB64) {
+			throw new OnboardPaymentRequiredError(
+				`redeem onboard: payment required: ${detail.slice(0, 300)}`,
+				challengeB64,
+				detail.slice(0, 300)
+			);
+		}
 		throw new OnboardRedeemError(
 			`redeem onboard: expected 200, got ${response.status}: ${detail.slice(0, 300)}`,
 			response.status,

@@ -13,6 +13,9 @@ import {
 	loadProgress,
 	normalizeUnivocityAddrInput,
 	parseInstanceIndex,
+	paymentQuoteFromChallenge,
+	paymentRejectedCopy,
+	payToApproveCopy,
 	pinnedSafeGuard,
 	repairFailureCopy,
 	saveProgress,
@@ -212,6 +215,55 @@ describe('input validation', () => {
 		expect(validateDetails({ ...details(), univocityAddr: '0xnope' })).toMatch(/Univocity/);
 		expect(validateDetails({ ...details(), label: '  ' })).toMatch(/Label/);
 		expect(validateDetails({ ...details(), contactEmail: 'nope' })).toMatch(/email/);
+	});
+});
+
+describe('pay-to-approve quote (FOR-511)', () => {
+	function challengeB64(amount: string): string {
+		return btoa(
+			JSON.stringify({
+				x402Version: 2,
+				accepts: [
+					{
+						scheme: 'exact',
+						network: 'eip155:84532',
+						amount,
+						asset: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+						payTo: '0x' + '11'.repeat(20),
+						maxTimeoutSeconds: 300,
+						extra: { name: 'USDC', version: '2' }
+					}
+				],
+				resource: { url: '', description: '', mimeType: '' }
+			})
+		);
+	}
+
+	it('quotes the atomic amount from the challenge exact option', () => {
+		const b64 = challengeB64('100000000');
+		expect(paymentQuoteFromChallenge(b64)).toEqual({
+			challengeB64: b64,
+			amountAtomic: '100000000'
+		});
+	});
+
+	it('returns null (CTA hidden) for malformed or unpriceable challenges', () => {
+		expect(paymentQuoteFromChallenge('not-base64!')).toBeNull();
+		expect(paymentQuoteFromChallenge(btoa('{"accepts":[]}'))).toBeNull();
+		expect(paymentQuoteFromChallenge(challengeB64('1.5'))).toBeNull();
+	});
+
+	it('CTA copy carries the formatted price and keeps the ops path open', () => {
+		const copy = payToApproveCopy('$100.00');
+		expect(copy).toContain('$100.00 USDC');
+		expect(copy).toContain('waiting for the operator');
+	});
+
+	it('rejection copy names the reason and is honest that no funds moved', () => {
+		const copy = paymentRejectedCopy('payment authorization already used; sign a new payment');
+		expect(copy).toContain('payment authorization already used');
+		expect(copy).toContain('No funds moved');
+		expect(paymentRejectedCopy()).toContain('No funds moved');
 	});
 });
 

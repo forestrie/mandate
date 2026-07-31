@@ -215,7 +215,8 @@ test('onboard wizard: transient redeem failure retries in place, 410 expiry is t
 	await expect(page.getByText(/retry Redeem/)).toBeVisible();
 	await page.getByRole('button', { name: 'Redeem' }).click();
 	await expect(page.getByRole('heading', { name: 'Genesis' })).toBeVisible();
-	expect(onboarding.redeemPosts()).toBe(2);
+	// 3 = the pending pay-to-approve probe (FOR-511) + the two user redeems.
+	expect(onboarding.redeemPosts()).toBe(3);
 });
 
 test('onboard wizard: 410 on redeem marks the request expired (terminal)', async ({ page }) => {

@@ -18,9 +18,14 @@ export {
 	E2E_ONBOARD_REQUEST_ID,
 	E2E_ONBOARD_TOKEN,
 	E2E_UNIVOCITY_ADDR,
+	E2E_VETTED_REDEEM_DETAIL,
+	E2E_X402_NETWORK,
+	E2E_X402_PAYTO,
+	E2E_X402_USDC_ASSET,
 	installCanopyOnboardingMocks,
 	type CanopyOnboardingMockHandle,
 	type CanopyOnboardingMockOptions,
+	type RecordedOnboardPayment,
 	type RecordedGenesisPost,
 	type RecordedOnboardRequest
 } from './canopy-onboarding.js';

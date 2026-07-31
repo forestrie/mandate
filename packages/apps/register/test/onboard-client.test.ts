@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
 	getOnboardRequestStatus,
+	OnboardPaymentRequiredError,
+	OnboardRedeemError,
 	redeemOnboardToken,
 	requestOnboardToken
 } from '../src/onboard-client.js';
@@ -87,6 +89,82 @@ describe('onboard-client', () => {
 			fetchImpl
 		});
 		expect(token).toBe('tok-abc');
+	});
+
+	it('redeemOnboardToken sends the X-PAYMENT header when a payment is supplied (FOR-511)', async () => {
+		const { encodeCborDeterministic: encode } = await import('@forestrie/encoding');
+		let sentHeaders: Headers | undefined;
+		const fetchImpl = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+			sentHeaders = new Headers(init?.headers);
+			return new Response(new Uint8Array(encode({ token: 'tok-paid' })), {
+				status: 200,
+				headers: { 'Content-Type': 'application/cbor' }
+			});
+		});
+
+		const token = await redeemOnboardToken({
+			canopyBaseUrl: 'https://api.test',
+			requestId: 'id-1',
+			redeemCode: 'rc',
+			paymentHeader: 'cGF5bG9hZA==',
+			fetchImpl
+		});
+		expect(token).toBe('tok-paid');
+		expect(sentHeaders?.get('X-PAYMENT')).toBe('cGF5bG9hZA==');
+	});
+
+	it('redeemOnboardToken omits X-PAYMENT without a payment', async () => {
+		const { encodeCborDeterministic: encode } = await import('@forestrie/encoding');
+		let sentHeaders: Headers | undefined;
+		const fetchImpl = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+			sentHeaders = new Headers(init?.headers);
+			return new Response(new Uint8Array(encode({ token: 'tok' })), {
+				status: 200,
+				headers: { 'Content-Type': 'application/cbor' }
+			});
+		});
+		await redeemOnboardToken({
+			canopyBaseUrl: 'https://api.test',
+			requestId: 'id-1',
+			redeemCode: 'rc',
+			fetchImpl
+		});
+		expect(sentHeaders?.has('X-PAYMENT')).toBe(false);
+	});
+
+	it('redeemOnboardToken surfaces a 402 challenge as OnboardPaymentRequiredError', async () => {
+		const fetchImpl = vi.fn(
+			async () =>
+				new Response('Payment required to redeem this onboard request', {
+					status: 402,
+					headers: { 'X-PAYMENT-REQUIRED': 'Y2hhbGxlbmdl' }
+				})
+		);
+		const err = await redeemOnboardToken({
+			canopyBaseUrl: 'https://api.test',
+			requestId: 'id-1',
+			redeemCode: 'rc',
+			fetchImpl
+		}).catch((e: unknown) => e);
+		expect(err).toBeInstanceOf(OnboardPaymentRequiredError);
+		// It IS an OnboardRedeemError too — existing catch sites keep working.
+		expect(err).toBeInstanceOf(OnboardRedeemError);
+		const typed = err as OnboardPaymentRequiredError;
+		expect(typed.status).toBe(402);
+		expect(typed.challengeB64).toBe('Y2hhbGxlbmdl');
+		expect(typed.detail).toContain('Payment required');
+	});
+
+	it('a 402 without the challenge header stays a plain OnboardRedeemError', async () => {
+		const fetchImpl = vi.fn(async () => new Response('nope', { status: 402 }));
+		const err = await redeemOnboardToken({
+			canopyBaseUrl: 'https://api.test',
+			requestId: 'id-1',
+			redeemCode: 'rc',
+			fetchImpl
+		}).catch((e: unknown) => e);
+		expect(err).toBeInstanceOf(OnboardRedeemError);
+		expect(err).not.toBeInstanceOf(OnboardPaymentRequiredError);
 	});
 
 	it('getOnboardRequestStatus polls status', async () => {
