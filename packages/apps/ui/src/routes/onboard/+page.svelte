@@ -32,7 +32,13 @@
 	import { provisionModeDGenesis } from '@mandate/register/provision-mode-d';
 	import { ReservationConflictError } from '@mandate/register/reservation-conflict-error';
 	import { GenesisClientError } from '@mandate/register/genesis-client-error';
-	import { OnboardRedeemError } from '@mandate/register/onboard-client';
+	import {
+		OnboardPaymentRequiredError,
+		OnboardRedeemError
+	} from '@mandate/register/onboard-client';
+	import { signX402PaymentTypedData } from '$lib/payments/x402-payer.js';
+	import { getActiveEthereumProvider, getActiveWalletAddress } from '$lib/wallets/active-wallet.js';
+	import { formatUsdcAtomic } from '../fees/fee-account-state.js';
 	import { resolve } from '$app/paths';
 	import { onDestroy, onMount } from 'svelte';
 	import {
@@ -49,6 +55,9 @@
 		loadProgress,
 		normalizeUnivocityAddrInput,
 		parseInstanceIndex,
+		paymentQuoteFromChallenge,
+		paymentRejectedCopy,
+		payToApproveCopy,
 		pinnedSafeGuard,
 		repairFailureCopy,
 		saveProgress,
@@ -56,7 +65,8 @@
 		useDeployedInstance,
 		validateDetails,
 		type OnboardProgress,
-		type OnboardRequestStatus
+		type OnboardRequestStatus,
+		type PaymentQuote
 	} from './onboard-state.js';
 
 	const APPROVAL_POLL_INTERVAL_MS = 5000;
@@ -71,6 +81,12 @@
 
 	// Inline-deploy branch of the details step (plan-2607-47 slice 02).
 	let detailsMode = $state<'paste' | 'deploy'>('paste');
+
+	// Pay-to-approve (FOR-511): quoted from the deployment's own 402
+	// challenge — null (vetted policy, or no challenge yet) hides the CTA.
+	let payQuote = $state<PaymentQuote | null>(null);
+	let payBusy = $state(false);
+	let payNotice = $state<string | null>(null);
 	let deployTag = $state('');
 	let deployIndex = $state('0');
 	/** Digest-verified release held in memory; re-fetched on resume as needed. */
@@ -105,7 +121,10 @@
 		} else {
 			deployTag = defaultUnivocityReleaseTag() ?? '';
 		}
-		if (progress.requestId && !isTerminal(progress.requestStatus)) schedulePoll();
+		if (progress.requestId && !isTerminal(progress.requestStatus)) {
+			schedulePoll();
+			void probePaymentChallenge();
+		}
 	});
 
 	// Set in onDestroy so a poll mid-await at navigation cannot re-arm the
@@ -211,7 +230,10 @@
 			progress.redeemCode = result.redeemCode;
 			progress.requestStatus = result.status as OnboardRequestStatus;
 			persist();
-			if (!isTerminal(progress.requestStatus)) schedulePoll();
+			if (!isTerminal(progress.requestStatus)) {
+				schedulePoll();
+				void probePaymentChallenge();
+			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Onboard request failed';
 		} finally {
@@ -480,6 +502,90 @@
 			}
 		} finally {
 			busy = false;
+		}
+	}
+
+	/**
+	 * Discover whether this deployment approves paid requests (FOR-511): a
+	 * pending redeem WITHOUT a payment answers 402 + challenge under
+	 * `paid`/`either` admission, 409 under `vetted` (CTA stays hidden), or —
+	 * when ops approved between poll ticks — succeeds outright, in which
+	 * case it simply IS the redeem.
+	 */
+	async function probePaymentChallenge() {
+		if (!progress.requestId || !progress.redeemCode || destroyed) return;
+		if (progress.requestStatus && progress.requestStatus !== 'pending') return;
+		try {
+			const token = await redeemOnboardToken({
+				canopyBaseUrl: canopyApiBase(),
+				requestId: progress.requestId,
+				redeemCode: progress.redeemCode
+			});
+			if (destroyed) return;
+			progress.onboardToken = token;
+			progress.requestStatus = 'redeemed';
+			persist();
+			stopPolling();
+		} catch (err) {
+			if (destroyed) return;
+			if (err instanceof OnboardPaymentRequiredError) {
+				payQuote = paymentQuoteFromChallenge(err.challengeB64);
+			} else if (err instanceof OnboardRedeemError && err.status === 410) {
+				// The request expired while pending — same terminal state the
+				// redeem step would reach.
+				progress.requestStatus = 'expired';
+				persist();
+				stopPolling();
+			}
+			// vetted (409) or transient failure: no CTA — the ops copy stands
+			// and status polling continues regardless.
+		}
+	}
+
+	/**
+	 * Sign the quoted challenge with the owner EOA and redeem with the
+	 * payment — payment approves the pending request in the same call. The
+	 * payer is the injected owner wallet, never the Safe (the /fees Q9
+	 * posture: x402 is decoupled from the signing backend).
+	 */
+	async function payToApprove() {
+		const quote = payQuote;
+		if (!quote || !progress.requestId || !progress.redeemCode) return;
+		payNotice = null;
+		error = null;
+		payBusy = true;
+		try {
+			const provider = await getActiveEthereumProvider();
+			const payerAddress = await getActiveWalletAddress();
+			if (!provider || !payerAddress) {
+				throw new Error('Connect the Safe owner wallet to pay — the owner EOA is the payer.');
+			}
+			const xPayment = await signX402PaymentTypedData(quote.challengeB64, provider, payerAddress, {
+				amountAtomic: quote.amountAtomic,
+				chainId: getConfiguredDefaultChainId()
+			});
+			const token = await redeemOnboardToken({
+				canopyBaseUrl: canopyApiBase(),
+				requestId: progress.requestId,
+				redeemCode: progress.redeemCode,
+				paymentHeader: xPayment
+			});
+			progress.onboardToken = token;
+			progress.requestStatus = 'redeemed';
+			persist();
+			stopPolling();
+		} catch (err) {
+			if (err instanceof OnboardPaymentRequiredError) {
+				// Facilitator refusal or an already-spent authorization: no funds
+				// moved. Re-quote from the fresh challenge so a retry signs
+				// against the server's current price.
+				payNotice = paymentRejectedCopy(err.detail);
+				payQuote = paymentQuoteFromChallenge(err.challengeB64) ?? payQuote;
+			} else {
+				payNotice = err instanceof Error ? err.message : 'Payment failed';
+			}
+		} finally {
+			payBusy = false;
 		}
 	}
 
@@ -854,6 +960,21 @@
 					Request <span class="font-mono">{progress.requestId}</span> — status
 					<Badge>{progress.requestStatus ?? 'pending'}</Badge>
 				</p>
+				{#if payQuote}
+					<div class="space-y-2" data-testid="pay-to-approve">
+						<p class="text-sm text-zinc-600">
+							{payToApproveCopy(formatUsdcAtomic(payQuote.amountAtomic))}
+						</p>
+						{#if payNotice}
+							<Alert variant="destructive" title="Payment not accepted">{payNotice}</Alert>
+						{/if}
+						<Button onclick={payToApprove} disabled={payBusy} data-testid="pay-approve-button">
+							{payBusy
+								? 'Paying…'
+								: `Pay ${formatUsdcAtomic(payQuote.amountAtomic)} USDC to approve`}
+						</Button>
+					</div>
+				{/if}
 			</div>
 		</Card>
 	{:else if step === 'redeem'}

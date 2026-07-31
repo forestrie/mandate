@@ -10,6 +10,8 @@
  * attempt (server-side state is unaffected).
  */
 
+import { parseExactChallengeOption } from '$lib/payments/x402-payer.js';
+
 const PROGRESS_STORAGE_KEY = 'mandate.session.onboard';
 
 export type OnboardRequestStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'redeemed';
@@ -342,6 +344,52 @@ export function scrubProgressSecrets(progress: OnboardProgress): void {
 	// The deploy signature authorised exactly one already-executed SafeTx —
 	// spent, so it has no post-onboarding use either.
 	delete progress.deploy?.ownerSignature;
+}
+
+/**
+ * Pay-to-approve quote (FOR-511). The challenge and the quoted amount travel
+ * together: the pay action signs THIS challenge against THIS amount, so the
+ * price shown is by construction the price signed (the /fees R1 posture).
+ */
+export interface PaymentQuote {
+	/** Base64 `X-PAYMENT-REQUIRED` value the quote was parsed from. */
+	challengeB64: string;
+	/** Atomic USDC amount from the challenge's `exact` option. */
+	amountAtomic: string;
+}
+
+/**
+ * Quote the price out of a 402 challenge — never hardcode it. A malformed
+ * or unpriceable challenge returns null, which hides the pay CTA (the
+ * wait-for-ops path always remains).
+ */
+export function paymentQuoteFromChallenge(challengeB64: string): PaymentQuote | null {
+	try {
+		const option = parseExactChallengeOption(challengeB64);
+		if (!/^[0-9]+$/.test(option.amount)) return null;
+		return { challengeB64, amountAtomic: option.amount };
+	} catch {
+		return null;
+	}
+}
+
+/** CTA copy beside the wait-for-ops copy; `formattedPrice` is display-ready. */
+export function payToApproveCopy(formattedPrice: string): string {
+	return `This deployment also approves paid requests instantly — pay ${formattedPrice} USDC to approve now, or keep waiting for the operator.`;
+}
+
+/**
+ * Copy for a rejected payment attempt. Honest about funds: settlement is
+ * only enqueued after a token is minted, so a 402 on a paid redeem means
+ * no money moved — the signed authorization was refused (or already spent)
+ * and retrying signs a fresh one.
+ */
+export function paymentRejectedCopy(detail?: string): string {
+	const reason = detail?.trim();
+	const lead = reason
+		? `The payment was not accepted: ${reason}.`
+		: 'The payment was not accepted.';
+	return `${lead} No funds moved — pay again to sign a fresh authorization, or wait for operator approval.`;
 }
 
 /** Human copy for the poll states — honest about the out-of-band approval. */
