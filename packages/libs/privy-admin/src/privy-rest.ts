@@ -48,6 +48,26 @@ export class PrivyRestClient {
 		return (await response.json()) as PolicyResponse;
 	}
 
+	/**
+	 * Replace a policy's rules in place (PATCH). Enactment path for policy
+	 * revisions on an already-provisioned Mode C wallet — the wallet keeps
+	 * its policy id, so no re-attach is needed. `authorizationKey` is
+	 * required when the policy has an owner key quorum.
+	 */
+	async updatePolicy(
+		policyId: string,
+		body: Partial<PolicyCreateRequest>,
+		authorizationKey?: string
+	): Promise<PolicyResponse> {
+		const response = await this.request({
+			method: 'PATCH',
+			path: `/v1/policies/${policyId}`,
+			body: body as unknown as Record<string, unknown>,
+			...(authorizationKey ? { authorizationKey } : {})
+		});
+		return (await response.json()) as PolicyResponse;
+	}
+
 	async request(opts: PrivyAuthorizedRequestOptions): Promise<Response> {
 		const url = `${this.apiBase}${opts.path}`;
 		const body = opts.body ?? {};

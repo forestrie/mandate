@@ -6,6 +6,7 @@
 	import Card from '$lib/components/ui/card.svelte';
 	import Input from '$lib/components/ui/input.svelte';
 	import {
+		CanopyRequestError,
 		fetchFeeAccount,
 		requestCreditsChallenge,
 		submitCreditsPayment,
@@ -37,6 +38,7 @@
 	import { isUnivocityInstanceId } from '@mandate/register/univocity-instance-id';
 	import { onDestroy, onMount } from 'svelte';
 	import {
+		accountReadFailureCopy,
 		arrearsBadge,
 		creditsLanded,
 		DEFAULT_CREDITS_PER_PURCHASE,
@@ -162,7 +164,10 @@
 			saveStoredInstanceId(id);
 			account = await readAccount(id);
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to load fee account';
+			error = accountReadFailureCopy(
+				err instanceof CanopyRequestError ? err.status : undefined,
+				err instanceof Error ? err.message : 'Failed to load fee account'
+			);
 		} finally {
 			loading = false;
 		}

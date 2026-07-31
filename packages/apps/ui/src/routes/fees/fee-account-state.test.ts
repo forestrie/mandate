@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FeeAccountRead } from '$lib/payments/canopy-client.js';
 import {
+	accountReadFailureCopy,
 	arrearsBadge,
 	creditsLanded,
 	enforcementBadge,
@@ -97,5 +98,23 @@ describe('creditsLanded', () => {
 		expect(creditsLanded(BASE, { ...BASE, univocityInstanceId: other, creditsBalance: 999 })).toBe(
 			false
 		);
+	});
+});
+
+describe('accountReadFailureCopy', () => {
+	it('appends the clock-skew hint on authorization refusals (401/403)', () => {
+		for (const status of [401, 403]) {
+			const copy = accountReadFailureCopy(status, 'Forbidden');
+			expect(copy).toContain('Forbidden');
+			expect(copy).toContain('clock');
+			expect(copy).toContain('90 seconds');
+		}
+	});
+
+	it('leaves other failures untouched', () => {
+		expect(accountReadFailureCopy(404, 'unknown univocity instance')).toBe(
+			'unknown univocity instance'
+		);
+		expect(accountReadFailureCopy(undefined, 'network down')).toBe('network down');
 	});
 });
