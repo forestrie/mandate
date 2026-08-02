@@ -13,6 +13,17 @@ import { resolveSigner } from './signer/resolve-signer.js';
 import type { JwksResolver } from './webhook/jwks-resolver.js';
 import { verifyWebhookSignature, WebhookVerificationError } from './webhook/verify-signature.js';
 
+/**
+ * Horizon used when the coordinator states no window (ADR-0050 §2).
+ *
+ * The standing delegate-key delivery is window-less BY DESIGN — it means "you
+ * choose the bounds", not "the event is malformed". Signers sign over a
+ * horizon and TTL of their choosing, conventionally `mmrStart = 0`. 2^16-1
+ * matches the convention used by the canopy e2e kit's advance signer.
+ */
+export const ADVANCE_MMR_START = 0;
+export const ADVANCE_HORIZON_MMR_END = 65535;
+
 /** Short TTL while signing/submitting; full TTL applied after successful submit. */
 export const REQUEST_KEY_RESERVATION_TTL_SECONDS = 120;
 /** TTL after successful certificate submit (dedup for redelivery). */
@@ -47,15 +58,20 @@ function parseEvent(rawBody: string): DelegationRequiredEvent {
 		throw new BadRequestError('unsupported delegation.required event');
 	}
 	const submitUrl = event.certificateSubmitUrl ?? event.materialSubmitUrl;
-	if (
-		!event.requestKey ||
-		!event.logId ||
-		event.mmrStart === undefined ||
-		event.mmrEnd === undefined ||
-		!event.delegatedPublicKey ||
-		!submitUrl
-	) {
+	if (!event.requestKey || !event.logId || !event.delegatedPublicKey || !submitUrl) {
 		throw new BadRequestError('missing required delegation.required fields');
+	}
+	// mmrStart/mmrEnd are DELIBERATELY not required. ADR-0050 §2: webhook modes
+	// receive the same uniform delivery as demand pendings, and the standing
+	// delegate-key entry carries no window — the signer supplies its own. This
+	// used to 400, so the agent could never perform delegation-in-advance and
+	// any log routed to it stalled on "delegation material pending" (FOR-524).
+	// A partial window is still malformed: one bound without the other is not
+	// a shape the coordinator emits.
+	if ((event.mmrStart === undefined) !== (event.mmrEnd === undefined)) {
+		throw new BadRequestError(
+			'delegation.required must state both mmrStart and mmrEnd, or neither'
+		);
 	}
 	return { ...event, certificateSubmitUrl: submitUrl };
 }
@@ -101,6 +117,21 @@ export async function handleDelegationRequired(
 			return jsonResponse(400, { ok: false, error: error.message });
 		}
 		throw error;
+	}
+
+	// Resolve the window ONCE. A window-less (advance) delivery means the signer
+	// chooses; every downstream consumer — the certificate, the validator that
+	// cross-checks it, and the submission — must see the SAME bounds, or the
+	// validator rejects our own freshly-signed certificate.
+	const mmrStart = event.mmrStart ?? ADVANCE_MMR_START;
+	const mmrEnd = event.mmrEnd ?? ADVANCE_HORIZON_MMR_END;
+	if (event.mmrStart === undefined) {
+		// Worth saying: this is the delivery the agent used to reject outright, so
+		// its presence in logs is the signal that advance signing is working.
+		console.log(
+			`delegation.required advance (window-less) for log ${event.logId} — ` +
+				`signing over [${mmrStart}, ${mmrEnd}]`
+		);
 	}
 
 	const reservation = await deps.seenStore.tryReserve(
@@ -165,8 +196,8 @@ export async function handleDelegationRequired(
 	try {
 		certificate = await signer.buildCertificate({
 			logIdHex32: event.logId,
-			mmrStart: event.mmrStart,
-			mmrEnd: event.mmrEnd,
+			mmrStart,
+			mmrEnd,
 			delegatedPublicKeyCbor: base64ToBytes(event.delegatedPublicKey),
 			ttlSeconds: 3600
 		});
@@ -186,7 +217,10 @@ export async function handleDelegationRequired(
 	try {
 		await assertCertificateMatchesEvent({
 			certificate,
-			event,
+			// Resolved bounds, not the raw event: on an advance delivery the event
+			// states no window and the certificate necessarily carries the one we
+			// chose.
+			event: { ...event, mmrStart, mmrEnd },
 			rootSignerAddress: descriptor.rootSignerAddress
 		});
 	} catch (error) {
@@ -202,8 +236,8 @@ export async function handleDelegationRequired(
 		certificateSubmitUrl: event.certificateSubmitUrl,
 		coordinatorUpstreamUrl: deps.coordinatorUpstreamUrl,
 		logId: event.logId,
-		mmrStart: event.mmrStart,
-		mmrEnd: event.mmrEnd,
+		mmrStart,
+		mmrEnd,
 		delegatedPublicKeyBase64: event.delegatedPublicKey,
 		certificate,
 		fetchImpl: deps.fetchImpl
