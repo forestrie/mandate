@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+	ADVANCE_HORIZON_MMR_END,
+	ADVANCE_MMR_START,
 	handleDelegationRequired,
 	REQUEST_KEY_RESERVATION_TTL_SECONDS
 } from '../src/handle-delegation-required.js';
@@ -605,5 +607,100 @@ describe('handleDelegationRequired', () => {
 		const body = (await response.json()) as { ok?: boolean; error?: string };
 		expect(body).toEqual({ ok: false, error: 'delegation signing failed' });
 		expect(await seenStore.has(requestKey)).toBe(false);
+	});
+});
+
+describe('delegation-in-advance (window-less delivery, FOR-524)', () => {
+	/**
+	 * ADR-0050 §2: webhook signers receive the same uniform delivery as demand
+	 * pendings, and the standing delegate-key event states NO window — the
+	 * signer chooses its own bounds. The agent used to 400 these outright, so
+	 * it could never perform delegation-in-advance and any log routed to it
+	 * stalled on "delegation material pending".
+	 */
+	it('accepts a window-less event and signs over the signer-chosen horizon', async () => {
+		const root = await generateTestKs256Root();
+		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+		const { privateKey, publicJwk } = await generateWebhookSigningKeyPair();
+
+		let submitted: { mmrStart?: number; mmrEnd?: number; certificate?: string } = {};
+		const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = String(input);
+			if (url.endsWith('/api/delegations/certificate')) {
+				const body = JSON.parse(String(init?.body)) as {
+					mmrStart: number;
+					mmrEnd: number;
+					certificate: string;
+				};
+				submitted = body;
+				// The certificate must verify against the root, exactly as a
+				// windowed submission does — an advance cert is not a lesser one.
+				await assertCertificateVerifies(body.certificate, root.rootSignerAddressBytes);
+				return new Response(JSON.stringify({ ok: true }), { status: 200 });
+			}
+			throw new Error(`unexpected fetch: ${url}`);
+		});
+
+		const windowedEvent = buildDelegationRequiredEvent({
+			root,
+			delegatedPublicKeyCbor,
+			requestKey: 'advance-request-key'
+		});
+		// Strip the window: this is what the coordinator sends for a standing key.
+		const { mmrStart, mmrEnd, ...windowless } = windowedEvent;
+		void mmrStart;
+		void mmrEnd;
+		const eventBody = JSON.stringify(windowless);
+
+		const response = await handleDelegationRequired(
+			await signedWebhookRequest({ eventBody, privateKey }),
+			{
+				jwksResolver: createJwksResolver(publicJwk),
+				keyRegistry: new KeyRegistry(operatorKeysJson(root)),
+				seenStore: new MemorySeenStore(),
+				...TEST_AGENT_DEPS,
+				fetchImpl,
+				nowSeconds: NOW
+			}
+		);
+
+		expect(response.status).toBe(200);
+		// The bounds the signer chose, not undefined echoed back.
+		expect(submitted.mmrStart).toBe(ADVANCE_MMR_START);
+		expect(submitted.mmrEnd).toBe(ADVANCE_HORIZON_MMR_END);
+	});
+
+	it('still rejects a HALF-stated window as malformed', async () => {
+		const root = await generateTestKs256Root();
+		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+		const { privateKey, publicJwk } = await generateWebhookSigningKeyPair();
+
+		// One bound without the other is not a shape the coordinator emits;
+		// accepting it would silently invent the missing half.
+		const fullWindowEvent = buildDelegationRequiredEvent({
+			root,
+			delegatedPublicKeyCbor,
+			requestKey: 'half-window-key'
+		});
+		const { mmrEnd, ...halfWindow } = fullWindowEvent;
+		void mmrEnd;
+		const eventBody = JSON.stringify(halfWindow);
+
+		const response = await handleDelegationRequired(
+			await signedWebhookRequest({ eventBody, privateKey }),
+			{
+				jwksResolver: createJwksResolver(publicJwk),
+				keyRegistry: new KeyRegistry(operatorKeysJson(root)),
+				seenStore: new MemorySeenStore(),
+				...TEST_AGENT_DEPS,
+				fetchImpl: vi.fn(async () => {
+					throw new Error('must not submit a half-stated window');
+				}),
+				nowSeconds: NOW
+			}
+		);
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toMatchObject({ ok: false });
 	});
 });
