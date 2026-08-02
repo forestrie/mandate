@@ -15,6 +15,10 @@
 #             second decision point (plan 2608-05 Q2). `publish-ui-e2e-kit.yml`
 #             and `publish-mandate-register.yml` fire unchanged.
 #
+# `[no-release]` suppresses the SERVICE tag ONLY. A kit version bump still
+# publishes — that is Q2, not an oversight. To hold a kit back, do not bump its
+# version.
+#
 # Both mandate kits are pinned by the release manifest and installed by the T3
 # harness, so a kit that is bumped here but never published leaves the harness
 # exercising the previous contract with nothing reporting a problem. That is
