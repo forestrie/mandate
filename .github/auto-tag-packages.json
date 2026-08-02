@@ -1,6 +1,6 @@
 {
-  "packages": [
-    { "dir": "packages/tests/ui-e2e-kit", "tag_prefix": "mandate-ui-e2e-kit" },
-    { "dir": "packages/publish/mandate-register", "tag_prefix": "mandate-register" }
-  ]
+	"packages": [
+		{ "dir": "packages/tests/ui-e2e-kit", "tag_prefix": "mandate-ui-e2e-kit" },
+		{ "dir": "packages/publish/mandate-register", "tag_prefix": "mandate-register" }
+	]
 }
