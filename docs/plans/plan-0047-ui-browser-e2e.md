@@ -36,7 +36,7 @@ Two facts shape this plan:
    signing** path. A true end-to-end "register an instance" test is inherently
    cross-repo and belongs in the system-testing layer (arc-0024), not here.
 2. The platform mandates **Playwright Test** for e2e
-   ([devdocs adr-0003](https://github.com/forestrie/devdocs/blob/main/adr/adr-0003-e2e-testing-approach.md)).
+   ([devdocs adr-0003](https://github.com/forestrie/devdocs/blob/main/archive/2601/adr/adr-0003-e2e-testing-approach.md)).
    [Canopy `@canopy/api-e2e`](https://github.com/forestrie/canopy/tree/main/packages/tests/canopy-api)
    is the reference, but it is **API-mode only**; this is the platform's first
    **browser** Playwright suite, so it sets browser conventions
@@ -236,7 +236,7 @@ recorded in [plan-0046](plan-0046-package-f-review-remediation.md) F1
 ## Related
 
 - [devdocs arc-0024 — system-testing architecture](https://github.com/forestrie/devdocs/blob/main/arc/arc-0024-system-testing-architecture.md)
-- [devdocs adr-0003 — e2e testing approach (Playwright)](https://github.com/forestrie/devdocs/blob/main/adr/adr-0003-e2e-testing-approach.md)
+- [devdocs adr-0003 — e2e testing approach (Playwright)](https://github.com/forestrie/devdocs/blob/main/archive/2601/adr/adr-0003-e2e-testing-approach.md)
 - [canopy `@canopy/api-e2e`](https://github.com/forestrie/canopy/tree/main/packages/tests/canopy-api) — API-mode reference
 - [canopy plan-0044 — Package D cross-stack e2e (FOR-201)](https://github.com/forestrie/canopy/blob/main/docs/plans/plan-0044-package-d-cross-stack-e2e.md)
 - [plan-0044 — delegation console (Package C)](plan-0044-package-c-delegation-console.md)
