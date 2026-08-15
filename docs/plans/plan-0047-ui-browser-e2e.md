@@ -242,4 +242,4 @@ recorded in [plan-0046](plan-0046-package-f-review-remediation.md) F1
 - [plan-0044 — delegation console (Package C)](plan-0044-package-c-delegation-console.md)
 - [plan-0045 — Mode C browser revoke spike](plan-0045-mode-c-browser-revoke-spike.md)
 - [devdocs arc-0022 — BYOK delegation & operator-hosted sealing](https://github.com/forestrie/devdocs/blob/main/archive/2606/arc/arc-0022-byok-user-log-delegation-and-operator-hosted-sealing.md)
-- [devdocs arc-0023 — wallet-challenge control-plane auth](https://github.com/forestrie/devdocs/blob/main/arc/arc-0023-wallet-challenge-control-plane-auth.md)
+- [devdocs arc-0023 — wallet-challenge control-plane auth](https://github.com/forestrie/devdocs/blob/main/archive/2606/arc/arc-0023-wallet-challenge-control-plane-auth.md)
