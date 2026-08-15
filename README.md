@@ -289,5 +289,5 @@ pnpm sync:coordinator-types
 - [ADR-0002 delegation signer custody](docs/adr/adr-0002-delegation-signer-custody.md)
 - [ADR-0003 delegation signer backend](docs/adr/adr-0003-delegation-signer-backend.md)
 - [ADR-0001 auth strategy seams](docs/adr-0001-auth-strategy-seams.md)
-- [devdocs ARC-0022 BYOK sealing](https://github.com/forestrie/devdocs/blob/main/arc/arc-0022-byok-user-log-delegation-and-operator-hosted-sealing.md)
+- [devdocs ARC-0022 BYOK sealing](https://github.com/forestrie/devdocs/blob/main/archive/2606/arc/arc-0022-byok-user-log-delegation-and-operator-hosted-sealing.md)
 - [canopy plan-0021](https://github.com/forestrie/canopy/blob/main/docs/plans/plan-0021-delegation-coordinator-apis.md)
