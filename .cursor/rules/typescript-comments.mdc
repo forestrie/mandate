@@ -40,6 +40,7 @@ Prefer stable **GitHub blob links**:
 |--------|-----------|
 | Canopy API / coordinator | `https://github.com/forestrie/canopy/blob/main/docs/…` |
 | Platform ADR/ARC | `https://github.com/forestrie/devdocs/blob/main/arc/…` |
+| Moved decisions (ADR-0045/0064/0065, ARC-0019) | `https://github.com/forestrie/protocol/blob/main/decisions/…` |
 | On-chain grants | `https://github.com/forestrie/univocity/blob/main/docs/arc/…` |
 | Mandate docs | `https://github.com/forestrie/mandate/blob/main/…` |
 
