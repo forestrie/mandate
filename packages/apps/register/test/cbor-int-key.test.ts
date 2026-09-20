@@ -28,7 +28,9 @@ describe('cborIntKeyBytes', () => {
 	});
 
 	it('compares keys by length before bytes', () => {
-		expect(compareCanonicalKeys(new Uint8Array([0x20]), new Uint8Array([0x18, 0x18]))).toBeLessThan(0);
+		expect(compareCanonicalKeys(new Uint8Array([0x20]), new Uint8Array([0x18, 0x18]))).toBeLessThan(
+			0
+		);
 		expect(compareCanonicalKeys(new Uint8Array([0x02]), new Uint8Array([0x01]))).toBeGreaterThan(0);
 	});
 
@@ -43,11 +45,18 @@ describe('cborIntKeyBytes', () => {
 		// -68009 (…09a8), -68011 (…09aa), -68013 (…09ac), -68014 (…09ad), -68015 (…09ae)
 		const expected =
 			'a5' +
-			'3a000109a8' + '02' +
-			'3a000109aa' + '54' + '00'.repeat(20) +
-			'3a000109ac' + '1a00014a34' +
-			'3a000109ad' + '26' +
-			'3a000109ae' + '5840' + '00'.repeat(64);
+			'3a000109a8' +
+			'02' +
+			'3a000109aa' +
+			'54' +
+			'00'.repeat(20) +
+			'3a000109ac' +
+			'1a00014a34' +
+			'3a000109ad' +
+			'26' +
+			'3a000109ae' +
+			'5840' +
+			'00'.repeat(64);
 		expect(hex(body)).toBe(expected);
 	});
 });
