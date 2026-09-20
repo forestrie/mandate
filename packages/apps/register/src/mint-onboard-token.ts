@@ -1,5 +1,6 @@
 import { cborIntKeyBytes, decodeCborRecord } from './canopy-cbor.js';
 import { univocityInstanceIdFromChainBinding } from './univocity-instance-id.js';
+import { responseProblemDetail } from './problem-detail.js';
 
 /**
  * Break-glass onboard-token mint via the canopy ops API (ADR-0059 decision
@@ -65,11 +66,11 @@ export async function mintOnboardToken(opts: {
 		) as unknown as BodyInit
 	});
 	if (response.status === 409) {
-		const detail = await response.text().catch(() => '');
+		const detail = await responseProblemDetail(response);
 		throw new MintOnboardTokenConflictError(univocityInstanceId, detail.slice(0, 300));
 	}
 	if (response.status !== 201) {
-		const detail = await response.text().catch(() => '');
+		const detail = await responseProblemDetail(response);
 		throw new Error(
 			`mint onboard token: expected 201, got ${response.status}: ${detail.slice(0, 300)}`
 		);

@@ -1,6 +1,7 @@
 /** Self-service onboard request client (FOR-173). */
 
 import { cborIntKeyBytes, decodeCborRecord } from './canopy-cbor.js';
+import { responseProblemDetail } from './problem-detail.js';
 
 const CBOR_LABEL = 1;
 const CBOR_CHAIN_ID = 2;
@@ -91,7 +92,7 @@ export async function requestOnboardToken(
 	});
 
 	if (response.status !== 201) {
-		const detail = await response.text().catch(() => '');
+		const detail = await responseProblemDetail(response);
 		throw new Error(
 			`request onboard: expected 201, got ${response.status}: ${detail.slice(0, 300)}`
 		);
@@ -181,7 +182,7 @@ export async function redeemOnboardToken(opts: RedeemOnboardOptions): Promise<st
 	);
 
 	if (response.status !== 200) {
-		const detail = await response.text().catch(() => '');
+		const detail = await responseProblemDetail(response);
 		const challengeB64 = response.headers.get('X-PAYMENT-REQUIRED');
 		if (response.status === 402 && challengeB64) {
 			throw new OnboardPaymentRequiredError(

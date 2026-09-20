@@ -1,5 +1,6 @@
 import { decodeCborRecord } from './canopy-cbor.js';
 import { GenesisClientError } from './genesis-client-error.js';
+import { responseProblemDetail } from './problem-detail.js';
 import type { CoordinatorRegistrationStatus } from './coordinator-registration-status.js';
 import type { GenesisRegistrationResponse } from './genesis-registration-response.js';
 
@@ -47,11 +48,11 @@ export async function postGenesis(input: PostGenesisInput): Promise<GenesisRegis
 	});
 
 	if (!response.ok) {
-		const detail = await response.text().catch(() => '');
+		const detail = await responseProblemDetail(response);
 		throw new GenesisClientError(
 			`genesis POST failed: ${response.status}`,
 			response.status,
-			detail.slice(0, 500)
+			detail
 		);
 	}
 

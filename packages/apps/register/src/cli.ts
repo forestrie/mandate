@@ -687,5 +687,14 @@ async function main(): Promise<void> {
 
 main().catch((error: unknown) => {
 	console.error(error instanceof Error ? error.message : String(error));
+	// GenesisClientError and friends carry the server's problem detail
+	// separately from the message; print it so a rejected request explains
+	// itself (FOR-579).
+	if (error instanceof Error && 'detail' in error) {
+		const detail = (error as { detail?: unknown }).detail;
+		if (typeof detail === 'string' && detail.length > 0 && !error.message.includes(detail)) {
+			console.error(`  detail: ${detail}`);
+		}
+	}
 	process.exit(1);
 });
