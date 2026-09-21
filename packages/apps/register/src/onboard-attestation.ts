@@ -22,6 +22,7 @@ import {
 	encodeCoseSign1Raw,
 	encodeSigStructure
 } from '@forestrie/encoding';
+import { responseProblemDetail } from './problem-detail.js';
 
 export const ONBOARD_ATTESTATION_CONTENT_TYPE = 'application/forestrie-onboard-attestation+cwt';
 
@@ -192,7 +193,7 @@ export async function buildOnboardAttestationKs256Remote(
 		})
 	});
 	if (!response.ok) {
-		const detail = await response.text().catch(() => '');
+		const detail = await responseProblemDetail(response);
 		throw new Error(`attestation remote sign failed: ${response.status} ${detail.slice(0, 200)}`);
 	}
 	const body = (await response.json()) as { signature?: string };

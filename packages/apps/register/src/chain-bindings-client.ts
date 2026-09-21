@@ -8,6 +8,7 @@
  */
 
 import { decodeCborRecord } from './canopy-cbor.js';
+import { responseProblemDetail } from './problem-detail.js';
 
 export interface ChainBindingRecord {
 	state: 'reserved' | 'registered';
@@ -48,7 +49,7 @@ async function chainBindingFetch(
 	});
 	if (response.status === 404) return null;
 	if (!response.ok) {
-		const detail = await response.text().catch(() => '');
+		const detail = await responseProblemDetail(response);
 		throw new Error(`chain-binding ${method} failed: ${response.status}: ${detail.slice(0, 300)}`);
 	}
 	return decodeCborRecord(
