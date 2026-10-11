@@ -2,7 +2,7 @@
 
 Mandate: BYOK Univocity instance management (operator UI, delegation agent,
 signer, register). Human setup: [README.md](README.md). Platform glossary:
-[devdocs/glossary.md](../devdocs/glossary.md).
+[protocol/glossary.md](https://github.com/forestrie/protocol/blob/main/glossary.md).
 
 Sibling repos: **canopy** (delegation coordinator), **univocity** (contracts).
 
@@ -46,5 +46,6 @@ When work merges to `main`, remove the worktree:
 
 - **Plans**: [docs/plans/](docs/plans/)
 - **ADRs**: [docs/adr/](docs/adr/)
-- **Platform**: [../devdocs/](../devdocs/)
-- **Cursor rules**: [branch-naming](.cursor/rules/branch-naming.mdc)
+- **Platform**: [devdocs](https://github.com/forestrie/devdocs) — architecture, arc/, adr/ (private)
+- **Team rules and skills**: synced from [forestrie-agents](https://github.com/forestrie/forestrie-agents) (private) by `agentfiles sync` with `sync/mandate.manifest`. Rules in [.claude/rules/](.claude/rules/), skills in [.agents/skills/](.agents/skills/). Do not edit the copies; change forestrie-agents and re-sync.
+- **Cursor rules**: [.cursor/rules/](.cursor/rules/) (Cursor only; some are older hand-written copies of the team rules)
