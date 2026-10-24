@@ -27,7 +27,13 @@ function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
 	return diff === 0;
 }
 
-export async function assertCertificateMatchesEvent(opts: {
+/**
+ * Check a freshly-signed certificate before submitting it: valid root
+ * signature, bound to the event's log and delegated key, and covering the
+ * demanded window when the event states one. Covering, not equal: the
+ * agent widens the window it signs (ADR-0050 §2, FOR-612).
+ */
+export async function assertCertificateCoversEvent(opts: {
 	certificate: Uint8Array;
 	event: Pick<DelegationRequiredEvent, 'logId' | 'mmrStart' | 'mmrEnd' | 'delegatedPublicKey'>;
 	rootSignerAddress: string;
@@ -42,11 +48,16 @@ export async function assertCertificateMatchesEvent(opts: {
 	if (info.logIdHex32.toLowerCase() !== opts.event.logId.toLowerCase()) {
 		throw new CertificateValidationError('certificate logId does not match webhook event');
 	}
-	if (info.mmrStart !== opts.event.mmrStart) {
-		throw new CertificateValidationError('certificate mmrStart does not match webhook event');
+	const { mmrStart, mmrEnd } = opts.event;
+	if (mmrStart !== undefined && info.mmrStart > mmrStart) {
+		throw new CertificateValidationError(
+			`certificate mmrStart ${info.mmrStart} is after demanded mmrStart ${mmrStart}`
+		);
 	}
-	if (info.mmrEnd !== opts.event.mmrEnd) {
-		throw new CertificateValidationError('certificate mmrEnd does not match webhook event');
+	if (mmrEnd !== undefined && info.mmrEnd < mmrEnd) {
+		throw new CertificateValidationError(
+			`certificate mmrEnd ${info.mmrEnd} is before demanded mmrEnd ${mmrEnd}`
+		);
 	}
 
 	const expectedKey = parseDelegatedCoseKeyFromPayload(

@@ -7,7 +7,7 @@ import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
 import { bytesToBase64 } from '../src/bytes.js';
 import {
-	assertCertificateMatchesEvent,
+	assertCertificateCoversEvent,
 	CertificateValidationError
 } from '../src/delegation/validate-certificate.js';
 import { generateDelegatedPublicKeyCbor, TEST_LOG_ID } from './test-helpers.js';
@@ -36,7 +36,7 @@ async function buildTestCertificate(
 	);
 }
 
-describe('assertCertificateMatchesEvent', () => {
+describe('assertCertificateCoversEvent', () => {
 	it('accepts a valid certificate bound to the event', async () => {
 		const root = testRoot();
 		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
@@ -49,7 +49,7 @@ describe('assertCertificateMatchesEvent', () => {
 		};
 		const certificate = await buildTestCertificate(root, input);
 		await expect(
-			assertCertificateMatchesEvent({
+			assertCertificateCoversEvent({
 				certificate,
 				event: {
 					logId: TEST_LOG_ID,
@@ -75,7 +75,7 @@ describe('assertCertificateMatchesEvent', () => {
 		};
 		const certificate = await buildTestCertificate(root, input);
 		await expect(
-			assertCertificateMatchesEvent({
+			assertCertificateCoversEvent({
 				certificate,
 				event: {
 					logId: TEST_LOG_ID,
@@ -88,7 +88,7 @@ describe('assertCertificateMatchesEvent', () => {
 		).rejects.toThrow(CertificateValidationError);
 	});
 
-	it('rejects when event mmrEnd does not match certificate', async () => {
+	it('rejects a certificate that ends before the demanded window', async () => {
 		const root = testRoot();
 		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
 		const input: DelegationInput = {
@@ -100,7 +100,7 @@ describe('assertCertificateMatchesEvent', () => {
 		};
 		const certificate = await buildTestCertificate(root, input);
 		await expect(
-			assertCertificateMatchesEvent({
+			assertCertificateCoversEvent({
 				certificate,
 				event: {
 					logId: TEST_LOG_ID,
@@ -111,5 +111,75 @@ describe('assertCertificateMatchesEvent', () => {
 				rootSignerAddress: root.rootSignerAddress
 			})
 		).rejects.toThrow(CertificateValidationError);
+	});
+
+	it('accepts a certificate that covers a narrower demanded window', async () => {
+		const root = testRoot();
+		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+		const certificate = await buildTestCertificate(root, {
+			logIdHex32: TEST_LOG_ID,
+			mmrStart: 0,
+			mmrEnd: 21 + 65535,
+			delegatedPublicKeyCbor,
+			ttlSeconds: 3600
+		});
+		await expect(
+			assertCertificateCoversEvent({
+				certificate,
+				event: {
+					logId: TEST_LOG_ID,
+					mmrStart: 7,
+					mmrEnd: 21,
+					delegatedPublicKey: bytesToBase64(delegatedPublicKeyCbor)
+				},
+				rootSignerAddress: root.rootSignerAddress
+			})
+		).resolves.toBeUndefined();
+	});
+
+	it('rejects a certificate that starts after the demanded window', async () => {
+		const root = testRoot();
+		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+		const certificate = await buildTestCertificate(root, {
+			logIdHex32: TEST_LOG_ID,
+			mmrStart: 8,
+			mmrEnd: 100,
+			delegatedPublicKeyCbor,
+			ttlSeconds: 3600
+		});
+		await expect(
+			assertCertificateCoversEvent({
+				certificate,
+				event: {
+					logId: TEST_LOG_ID,
+					mmrStart: 7,
+					mmrEnd: 21,
+					delegatedPublicKey: bytesToBase64(delegatedPublicKeyCbor)
+				},
+				rootSignerAddress: root.rootSignerAddress
+			})
+		).rejects.toThrow(CertificateValidationError);
+	});
+
+	it('accepts any range for a window-less event', async () => {
+		const root = testRoot();
+		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+		const certificate = await buildTestCertificate(root, {
+			logIdHex32: TEST_LOG_ID,
+			mmrStart: 0,
+			mmrEnd: 65535,
+			delegatedPublicKeyCbor,
+			ttlSeconds: 3600
+		});
+		await expect(
+			assertCertificateCoversEvent({
+				certificate,
+				event: {
+					logId: TEST_LOG_ID,
+					delegatedPublicKey: bytesToBase64(delegatedPublicKeyCbor)
+				},
+				rootSignerAddress: root.rootSignerAddress
+			})
+		).resolves.toBeUndefined();
 	});
 });

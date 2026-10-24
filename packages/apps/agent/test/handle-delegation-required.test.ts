@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-	ADVANCE_HORIZON_MMR_END,
+	ADVANCE_HORIZON_SPAN,
 	ADVANCE_MMR_START,
 	handleDelegationRequired,
 	REQUEST_KEY_RESERVATION_TTL_SECONDS
 } from '../src/handle-delegation-required.js';
+import { parseDelegationCertificate } from '@forestrie/delegation-cose';
 import { MemorySeenStore } from '../src/dedup/seen-store.js';
 import { KeyRegistry } from '../src/signer/key-registry.js';
 import type { JwksResolver } from '../src/webhook/jwks-resolver.js';
@@ -667,7 +668,7 @@ describe('delegation-in-advance (window-less delivery, FOR-524)', () => {
 		expect(response.status).toBe(200);
 		// The bounds the signer chose, not undefined echoed back.
 		expect(submitted.mmrStart).toBe(ADVANCE_MMR_START);
-		expect(submitted.mmrEnd).toBe(ADVANCE_HORIZON_MMR_END);
+		expect(submitted.mmrEnd).toBe(ADVANCE_HORIZON_SPAN);
 	});
 
 	it('still rejects a HALF-stated window as malformed', async () => {
@@ -702,5 +703,82 @@ describe('delegation-in-advance (window-less delivery, FOR-524)', () => {
 
 		expect(response.status).toBe(400);
 		expect(await response.json()).toMatchObject({ ok: false });
+	});
+});
+
+describe('demanded-window widening (FOR-612)', () => {
+	/**
+	 * Signing exactly the demanded window meant every later seal missed
+	 * coverage and paged the owner again: one owner signature per seal
+	 * window. ADR-0050 §2 lets the signer cover "at least the demanded
+	 * window", so the agent signs from 0 to a span past the demanded end.
+	 */
+	async function signWindowedEvent(window: { mmrStart: number; mmrEnd: number }) {
+		const root = await generateTestKs256Root();
+		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+		const { privateKey, publicJwk } = await generateWebhookSigningKeyPair();
+
+		let submitted: { mmrStart?: number; mmrEnd?: number; certificate?: string } = {};
+		const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = String(input);
+			if (url.endsWith('/api/delegations/certificate')) {
+				submitted = JSON.parse(String(init?.body)) as typeof submitted;
+				return new Response(JSON.stringify({ ok: true }), { status: 200 });
+			}
+			throw new Error(`unexpected fetch: ${url}`);
+		});
+
+		const event = {
+			...buildDelegationRequiredEvent({
+				root,
+				delegatedPublicKeyCbor,
+				requestKey: 'windowed-request-key'
+			}),
+			...window
+		};
+		const seenStore = new MemorySeenStore();
+		const response = await handleDelegationRequired(
+			await signedWebhookRequest({ eventBody: JSON.stringify(event), privateKey }),
+			{
+				jwksResolver: createJwksResolver(publicJwk),
+				keyRegistry: new KeyRegistry(operatorKeysJson(root)),
+				seenStore,
+				...TEST_AGENT_DEPS,
+				fetchImpl,
+				nowSeconds: NOW
+			}
+		);
+		return { response, submitted, root, seenStore };
+	}
+
+	it('signs [0, mmrEnd + span] for a demanded window', async () => {
+		const { response, submitted, root, seenStore } = await signWindowedEvent({
+			mmrStart: 7,
+			mmrEnd: 21
+		});
+
+		expect(response.status).toBe(200);
+		expect(submitted.mmrStart).toBe(ADVANCE_MMR_START);
+		expect(submitted.mmrEnd).toBe(21 + ADVANCE_HORIZON_SPAN);
+		await assertCertificateVerifies(submitted.certificate!, root.rootSignerAddressBytes);
+		// The coordinator requires the submitted range to equal the
+		// certificate's own range.
+		const info = parseDelegationCertificate(
+			Uint8Array.from(atob(submitted.certificate!), (c) => c.charCodeAt(0))
+		);
+		expect([info.mmrStart, info.mmrEnd]).toEqual([0, 21 + ADVANCE_HORIZON_SPAN]);
+		// Dedup stays keyed on the coordinator's request key.
+		expect(await seenStore.has('windowed-request-key')).toBe(true);
+	});
+
+	it('caps the widened end at the largest certificate-encodable index', async () => {
+		const { response, submitted } = await signWindowedEvent({
+			mmrStart: 0xffffff00,
+			mmrEnd: 0xfffffff0
+		});
+
+		expect(response.status).toBe(200);
+		expect(submitted.mmrStart).toBe(0);
+		expect(submitted.mmrEnd).toBe(0xffffffff);
 	});
 });
