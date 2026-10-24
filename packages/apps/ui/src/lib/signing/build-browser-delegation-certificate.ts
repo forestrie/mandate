@@ -6,7 +6,12 @@ import type { PendingEntry } from '@mandate/coordinator-types';
 import { base64ToBytes } from './bytes.js';
 import { parseEthAddress } from './ks256-sig-utils.js';
 import type { SigningBackend } from './signing-backend.js';
+import { signedWindowFor } from './signed-window.js';
 
+/**
+ * Delegation input for a pending entry, signing a window widened past the
+ * demanded end (see {@link signedWindowFor}).
+ */
 export function pendingEntryToDelegationInput(
 	entry: PendingEntry,
 	issuedAt?: number,
@@ -15,8 +20,7 @@ export function pendingEntryToDelegationInput(
 	const now = issuedAt ?? Math.floor(Date.now() / 1000);
 	return {
 		logIdHex32: entry.logIdHex32,
-		mmrStart: entry.mmrStart,
-		mmrEnd: entry.mmrEnd,
+		...signedWindowFor(entry),
 		delegatedPublicKeyCbor: base64ToBytes(entry.delegatedPublicKey),
 		issuedAt: now,
 		expiresAt: now + ttlSeconds,

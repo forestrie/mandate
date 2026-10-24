@@ -1,8 +1,9 @@
 import type { DelegationRequiredEvent } from '@mandate/coordinator-types';
 import { base64ToBytes } from './bytes.js';
 import { submitDelegationCertificate } from './coordinator/submit-certificate.js';
+import { signedWindowFor } from './delegation/signed-window.js';
 import {
-	assertCertificateMatchesEvent,
+	assertCertificateCoversEvent,
 	CertificateValidationError
 } from './delegation/validate-certificate.js';
 import { logDelegationOutcome } from './delegation/delegation-outcome-log.js';
@@ -13,16 +14,7 @@ import { resolveSigner } from './signer/resolve-signer.js';
 import type { JwksResolver } from './webhook/jwks-resolver.js';
 import { verifyWebhookSignature, WebhookVerificationError } from './webhook/verify-signature.js';
 
-/**
- * Horizon used when the coordinator states no window (ADR-0050 §2).
- *
- * The standing delegate-key delivery is window-less BY DESIGN — it means "you
- * choose the bounds", not "the event is malformed". Signers sign over a
- * horizon and TTL of their choosing, conventionally `mmrStart = 0`. 2^16-1
- * matches the convention used by the canopy e2e kit's advance signer.
- */
-export const ADVANCE_MMR_START = 0;
-export const ADVANCE_HORIZON_MMR_END = 65535;
+export { ADVANCE_HORIZON_SPAN, ADVANCE_MMR_START } from './delegation/signed-window.js';
 
 /** Short TTL while signing/submitting; full TTL applied after successful submit. */
 export const REQUEST_KEY_RESERVATION_TTL_SECONDS = 120;
@@ -119,12 +111,12 @@ export async function handleDelegationRequired(
 		throw error;
 	}
 
-	// Resolve the window ONCE. A window-less (advance) delivery means the signer
-	// chooses; every downstream consumer — the certificate, the validator that
-	// cross-checks it, and the submission — must see the SAME bounds, or the
-	// validator rejects our own freshly-signed certificate.
-	const mmrStart = event.mmrStart ?? ADVANCE_MMR_START;
-	const mmrEnd = event.mmrEnd ?? ADVANCE_HORIZON_MMR_END;
+	// Resolve the window ONCE: the certificate and the submission must carry
+	// the SAME bounds, since the coordinator requires the submitted range to
+	// equal the certificate's own. A windowed event is widened past its
+	// demanded end so later seals stay covered (FOR-612); a window-less
+	// (advance) delivery means the signer chooses.
+	const { mmrStart, mmrEnd } = signedWindowFor(event);
 	if (event.mmrStart === undefined) {
 		// Worth saying: this is the delivery the agent used to reject outright, so
 		// its presence in logs is the signal that advance signing is working.
@@ -215,12 +207,11 @@ export async function handleDelegationRequired(
 	}
 
 	try {
-		await assertCertificateMatchesEvent({
+		await assertCertificateCoversEvent({
 			certificate,
-			// Resolved bounds, not the raw event: on an advance delivery the event
-			// states no window and the certificate necessarily carries the one we
-			// chose.
-			event: { ...event, mmrStart, mmrEnd },
+			// The raw event: the certificate must cover the demanded window
+			// (when one is stated), not equal it.
+			event,
 			rootSignerAddress: descriptor.rootSignerAddress
 		});
 	} catch (error) {

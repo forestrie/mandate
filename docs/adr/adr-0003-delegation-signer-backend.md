@@ -63,9 +63,10 @@ not in the agent.
 - Continue using `buildDelegationCertificateKs256WithSigner` with backend
   `sign(sigStructure) => 65-byte sig`.
 - **`verifyDelegationCertificateKs256` before material submit** (defense in depth):
-  `@mandate/agent` calls `assertCertificateMatchesEvent` — signature verification
-  against the descriptor `rootSignerAddress` plus `logId` / `mmrStart` / `mmrEnd`
-  binding to the webhook event.
+  `@mandate/agent` calls `assertCertificateCoversEvent` — signature verification
+  against the descriptor `rootSignerAddress` plus `logId` binding to the
+  webhook event, and a certificate range covering the event's demanded
+  `mmrStart` / `mmrEnd` (the agent widens what it signs; FOR-612).
 - **`requestKey` reservation:** `tryReserve` before signing (120s TTL); re-mark
   with full TTL after successful submit; clear on failure. Cloudflare KV is
   eventually consistent — two concurrent webhook deliveries may both pass a

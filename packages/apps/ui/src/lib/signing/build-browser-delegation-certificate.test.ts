@@ -13,7 +13,11 @@ import {
 } from '@forestrie/delegation-cose';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
-import { buildBrowserDelegationCertificate } from './build-browser-delegation-certificate.js';
+import type { PendingEntry } from '@mandate/coordinator-types';
+import {
+	buildBrowserDelegationCertificate,
+	pendingEntryToDelegationInput
+} from './build-browser-delegation-certificate.js';
 import type { SigningBackend } from './signing-backend.js';
 import { bytesToBase64 } from './bytes.js';
 
@@ -117,5 +121,34 @@ describe('buildBrowserDelegationCertificate', () => {
 		);
 
 		expect(bytesToBase64(browserStyle)).toBe(bytesToBase64(agentStyle));
+	});
+});
+
+describe('pendingEntryToDelegationInput (FOR-612)', () => {
+	function entry(window: { mmrStart: number; mmrEnd: number }): PendingEntry {
+		return {
+			id: 'pending-1',
+			authLogIdHex32: 'a'.repeat(32),
+			logIdHex32: 'b'.repeat(32),
+			delegatedPublicKeyHash: 'hash',
+			delegatedPublicKey: 'ZGVsZWdhdGVkLWtleQ==',
+			requestedAt: 1_700_000_000,
+			...window
+		};
+	}
+
+	// Signing exactly the demanded window made every later seal raise a new
+	// demand: one owner signature per seal window.
+	it('widens a demanded window to [0, mmrEnd + 65535]', () => {
+		const input = pendingEntryToDelegationInput(entry({ mmrStart: 7, mmrEnd: 21 }), 1_700_000_000);
+		expect([input.mmrStart, input.mmrEnd]).toEqual([0, 21 + 65535]);
+	});
+
+	it('caps the widened end at the largest certificate-encodable index', () => {
+		const input = pendingEntryToDelegationInput(
+			entry({ mmrStart: 0xffffff00, mmrEnd: 0xfffffff0 }),
+			1_700_000_000
+		);
+		expect([input.mmrStart, input.mmrEnd]).toEqual([0, 0xffffffff]);
 	});
 });
