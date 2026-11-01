@@ -5,22 +5,23 @@
  * share no runtime library). ADR-0050 §2 lets a signer cover "at least the
  * demanded window"; signing exactly the demanded window made every later
  * seal raise a new demand, one owner signature per seal window (FOR-612).
+ * MMR indices are uint64 end to end (FOR-613).
  */
+
+import { UINT64_MAX } from '@forestrie/delegation-cose';
 
 /** Distance past the demanded end the console signs. */
-export const ADVANCE_HORIZON_SPAN = 65535;
+export const ADVANCE_HORIZON_SPAN = 65535n;
 
 /**
- * Largest MMR index a certificate can carry: `@forestrie/delegation-cose`
- * encodes with cbor-x, which writes integers above uint32 as float64.
+ * `[0, mmrEnd + span]`, the end clamped at 2^64-1 (the largest MMR index)
+ * and never below the demanded end.
  */
-export const MAX_CERTIFICATE_MMR_INDEX = 0xffffffff;
-
-/** `[0, mmrEnd + span]`, capped, and never narrower than the demand. */
-export function signedWindowFor(demanded: { mmrEnd: number }): {
-	mmrStart: number;
-	mmrEnd: number;
+export function signedWindowFor(demanded: { mmrEnd: bigint }): {
+	mmrStart: bigint;
+	mmrEnd: bigint;
 } {
-	const widenedEnd = Math.min(demanded.mmrEnd + ADVANCE_HORIZON_SPAN, MAX_CERTIFICATE_MMR_INDEX);
-	return { mmrStart: 0, mmrEnd: Math.max(demanded.mmrEnd, widenedEnd) };
+	const widenedEnd = demanded.mmrEnd + ADVANCE_HORIZON_SPAN;
+	const clampedEnd = widenedEnd > UINT64_MAX ? UINT64_MAX : widenedEnd;
+	return { mmrStart: 0n, mmrEnd: clampedEnd < demanded.mmrEnd ? demanded.mmrEnd : clampedEnd };
 }

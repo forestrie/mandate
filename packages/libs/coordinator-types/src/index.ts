@@ -40,3 +40,4 @@ export type {
 	ProblemDetails,
 	SigningRouteMutationResponse
 } from './responses.js';
+export { parseMmrRange, type MmrRange } from './mmr-range.js';

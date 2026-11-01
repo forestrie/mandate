@@ -11,6 +11,7 @@ import type {
 	SubmitDelegationCertificateRequest
 } from '@mandate/coordinator-types';
 import { controlPlaneAuthHeaders } from './control-plane-session.js';
+import { parsePendingListResponse, type PendingDelegationList } from './pending-delegation.js';
 
 function bffBase(): string {
 	return (PUBLIC_COORDINATOR_BFF_BASE || '/api/coordinator').replace(/\/$/, '');
@@ -46,16 +47,24 @@ async function bffFetch<T>(
 	return (await response.json()) as T;
 }
 
+/**
+ * List pending delegations for an authority log, each range parsed to
+ * `bigint` (see {@link parsePendingListResponse}); a malformed range throws.
+ */
 export async function listPendingDelegations(
 	authLogId: string,
 	opts?: { offset?: number; limit?: number }
-): Promise<PendingListResponse> {
+): Promise<PendingDelegationList> {
 	const params = new URLSearchParams({ authLogId });
 	if (opts?.offset !== undefined) params.set('offset', String(opts.offset));
 	if (opts?.limit !== undefined) params.set('limit', String(opts.limit));
-	return bffFetch<PendingListResponse>(`delegations/pending?${params}`, undefined, authLogId, [
-		'delegations:read'
-	]);
+	const response = await bffFetch<PendingListResponse>(
+		`delegations/pending?${params}`,
+		undefined,
+		authLogId,
+		['delegations:read']
+	);
+	return parsePendingListResponse(response);
 }
 
 export async function submitDelegationCertificate(

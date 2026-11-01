@@ -378,13 +378,23 @@ doppler run --project mandate-forestrie --config dev -- \
 
 ### Provision e2e (FOR-100 / FOR-101)
 
-Mint onboard token (canopy checkout):
+Mint an onboard token. The body is CBOR encoded with `@forestrie/encoding`
+(cbor-x is banned here; see `packages/apps/register/src/canopy-cbor.ts`).
+Keys 3 (`chainId`) and 4 (`univocityAddr`, 40 lowercase hex) are mandatory:
+the token is scoped to, and reserves, that univocity instance. Run from
+`packages/apps/register` so the import resolves:
 
 ```sh
 curl -sS -X POST "$E2E_CANOPY_API_URL/api/payments/onboard-tokens" \
   -H "Authorization: Bearer $E2E_CANOPY_OPS_ADMIN_TOKEN" \
   -H "Content-Type: application/cbor" \
-  --data-binary @<(node -e "const {encode}=require('cbor-x');process.stdout.write(encode(new Map([[1,'mandate-dev']])))")
+  --data-binary @<(node --input-type=module -e "
+    import { encodeCborDeterministic } from '@forestrie/encoding';
+    const e = process.env;
+    const addr = e.E2E_CANOPY_UNIVOCITY_ADDR.replace(/^0x/i, '').toLowerCase();
+    process.stdout.write(encodeCborDeterministic(new Map([
+      [1, 'mandate-dev'], [3, e.E2E_CANOPY_CHAIN_ID], [4, addr]
+    ])));")
 ```
 
 Store token as `E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN` in Doppler **`e2e`**.

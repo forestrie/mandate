@@ -8,7 +8,7 @@ import {
 	PAYLOAD_DELEGATED_KEY,
 	verifyDelegationCertificateKs256
 } from '@forestrie/delegation-cose';
-import type { DelegationRequiredEvent } from '@mandate/coordinator-types';
+import type { DelegationDemand } from './delegation-demand.js';
 import { base64ToBytes, parseEthAddress } from '../bytes.js';
 
 export class CertificateValidationError extends Error {
@@ -35,7 +35,8 @@ function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
  */
 export async function assertCertificateCoversEvent(opts: {
 	certificate: Uint8Array;
-	event: Pick<DelegationRequiredEvent, 'logId' | 'mmrStart' | 'mmrEnd' | 'delegatedPublicKey'>;
+	/** The parsed demand: a `bigint` window, compared exactly (FOR-613). */
+	event: Pick<DelegationDemand, 'logId' | 'mmrStart' | 'mmrEnd' | 'delegatedPublicKey'>;
 	rootSignerAddress: string;
 }): Promise<void> {
 	const rootSignerAddressBytes = parseEthAddress(opts.rootSignerAddress);

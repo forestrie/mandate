@@ -53,8 +53,8 @@ describe('RemoteKs256Signer', () => {
 
 		await signer.buildCertificate({
 			logIdHex32: TEST_LOG_ID,
-			mmrStart: 1,
-			mmrEnd: 2,
+			mmrStart: 1n,
+			mmrEnd: 2n,
 			delegatedPublicKeyCbor,
 			ttlSeconds: 3600
 		});
@@ -104,8 +104,8 @@ describe('RemoteKs256Signer', () => {
 			);
 			await signer.buildCertificate({
 				logIdHex32: TEST_LOG_ID,
-				mmrStart: 1,
-				mmrEnd: 2,
+				mmrStart: 1n,
+				mmrEnd: 2n,
 				delegatedPublicKeyCbor,
 				ttlSeconds: 3600
 			});
@@ -152,8 +152,8 @@ describe('RemoteKs256Signer', () => {
 
 		await signer.buildCertificate({
 			logIdHex32: TEST_LOG_ID,
-			mmrStart: 1,
-			mmrEnd: 2,
+			mmrStart: 1n,
+			mmrEnd: 2n,
 			delegatedPublicKeyCbor,
 			ttlSeconds: 3600
 		});

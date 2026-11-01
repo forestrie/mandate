@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
 	buildDelegationCertificateKs256,
 	verifyDelegationCertificateKs256,
+	parseDelegationCertificate,
+	UINT64_MAX,
 	encodeIntKeyCbor,
 	COSE_CRV,
 	COSE_CRV_P256,
@@ -13,7 +15,8 @@ import {
 } from '@forestrie/delegation-cose';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
-import type { PendingEntry } from '@mandate/coordinator-types';
+import type { PendingDelegation } from '$lib/coordinator/pending-delegation.js';
+import { buildSubmitCertificateBodyFromCert } from '../../routes/delegations/submit-payload.js';
 import {
 	buildBrowserDelegationCertificate,
 	pendingEntryToDelegationInput
@@ -74,8 +77,8 @@ describe('buildBrowserDelegationCertificate', () => {
 		const issuedAt = 1_700_000_100;
 		const input: DelegationInput = {
 			logIdHex32: 'b2c3d4e5f67890ab1234567890abcdef12',
-			mmrStart: 1,
-			mmrEnd: 100,
+			mmrStart: 1n,
+			mmrEnd: 100n,
 			delegatedPublicKeyCbor,
 			issuedAt,
 			expiresAt: issuedAt + 3600,
@@ -100,8 +103,8 @@ describe('buildBrowserDelegationCertificate', () => {
 		const issuedAt = 1_700_000_200;
 		const input: DelegationInput = {
 			logIdHex32: 'c3d4e5f67890ab1234567890abcdef1234',
-			mmrStart: 0,
-			mmrEnd: 10,
+			mmrStart: 0n,
+			mmrEnd: 10n,
 			delegatedPublicKeyCbor,
 			issuedAt,
 			expiresAt: issuedAt + 3600,
@@ -124,8 +127,8 @@ describe('buildBrowserDelegationCertificate', () => {
 	});
 });
 
-describe('pendingEntryToDelegationInput (FOR-612)', () => {
-	function entry(window: { mmrStart: number; mmrEnd: number }): PendingEntry {
+describe('pendingEntryToDelegationInput (FOR-612, FOR-613)', () => {
+	function entry(window: { mmrStart: bigint; mmrEnd: bigint }): PendingDelegation {
 		return {
 			id: 'pending-1',
 			authLogIdHex32: 'a'.repeat(32),
@@ -140,15 +143,66 @@ describe('pendingEntryToDelegationInput (FOR-612)', () => {
 	// Signing exactly the demanded window made every later seal raise a new
 	// demand: one owner signature per seal window.
 	it('widens a demanded window to [0, mmrEnd + 65535]', () => {
-		const input = pendingEntryToDelegationInput(entry({ mmrStart: 7, mmrEnd: 21 }), 1_700_000_000);
-		expect([input.mmrStart, input.mmrEnd]).toEqual([0, 21 + 65535]);
-	});
-
-	it('caps the widened end at the largest certificate-encodable index', () => {
 		const input = pendingEntryToDelegationInput(
-			entry({ mmrStart: 0xffffff00, mmrEnd: 0xfffffff0 }),
+			entry({ mmrStart: 7n, mmrEnd: 21n }),
 			1_700_000_000
 		);
-		expect([input.mmrStart, input.mmrEnd]).toEqual([0, 0xffffffff]);
+		expect([input.mmrStart, input.mmrEnd]).toEqual([0n, 21n + 65535n]);
+	});
+
+	// FOR-612 capped at 2^32-1 while delegation-cose 0.1.x (cbor-x) wrote
+	// larger integers as float64; 0.5.0 encodes uint64 canonically.
+	it('widens past uint32 without a cap', () => {
+		const input = pendingEntryToDelegationInput(
+			entry({ mmrStart: 0xffffff00n, mmrEnd: 0xfffffff0n }),
+			1_700_000_000
+		);
+		expect([input.mmrStart, input.mmrEnd]).toEqual([0n, 0xfffffff0n + 65535n]);
+	});
+
+	it.each([
+		['just below 2^64-1', UINT64_MAX - 10n],
+		['at 2^64-1', UINT64_MAX]
+	])('clamps the widened end at 2^64-1 when demanded %s', (_label, demandedEnd) => {
+		const input = pendingEntryToDelegationInput(
+			entry({ mmrStart: 0n, mmrEnd: demandedEnd }),
+			1_700_000_000
+		);
+		expect([input.mmrStart, input.mmrEnd]).toEqual([0n, UINT64_MAX]);
+	});
+});
+
+describe('sign, parse and submit round trip (FOR-613)', () => {
+	it.each([
+		['above 2^53', (1n << 53n) + 1n, (1n << 53n) + 1n + 65535n, '9007199254806528'],
+		['clamped at 2^64-1', UINT64_MAX - 1n, UINT64_MAX, '18446744073709551615']
+	])('keeps a window %s exact end to end', async (_label, demandedEnd, signedEnd, wireEnd) => {
+		const root = testRootFromPrivateKey(TEST_PRIVATE_KEY_HEX);
+		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+		const pending: PendingDelegation = {
+			id: 'pending-big',
+			authLogIdHex32: 'a'.repeat(32),
+			logIdHex32: 'c'.repeat(32),
+			mmrStart: demandedEnd - 5n,
+			mmrEnd: demandedEnd,
+			delegatedPublicKeyHash: 'hash',
+			delegatedPublicKey: bytesToBase64(delegatedPublicKeyCbor),
+			requestedAt: 1_700_000_000
+		};
+
+		const certificate = await buildBrowserDelegationCertificate(
+			pendingEntryToDelegationInput(pending, 1_700_000_000),
+			root.rootSignerAddress,
+			new LocalKs256Backend(root.sk)
+		);
+
+		await expect(
+			verifyDelegationCertificateKs256(certificate, root.rootSignerAddressBytes)
+		).resolves.toBe(true);
+		const info = parseDelegationCertificate(certificate);
+		expect([info.mmrStart, info.mmrEnd]).toEqual([0n, signedEnd]);
+		const body = buildSubmitCertificateBodyFromCert(pending, certificate);
+		expect([body.mmrStart, body.mmrEnd]).toEqual(['0', wireEnd]);
+		expect(BigInt(body.mmrEnd)).toBe(signedEnd);
 	});
 });

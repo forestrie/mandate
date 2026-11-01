@@ -1,7 +1,7 @@
 # GitHub Packages: `@forestrie/delegation-cose` — RETIRED (FOR-336)
 
 **Status: retired.** Mandate installs `@forestrie/delegation-cose` from
-**public npmjs** (`^0.1.3`, SLSA provenance, tokenless install). The GitHub
+**public npmjs** (`^0.5.0`, SLSA provenance, tokenless install). The GitHub
 Packages install path documented here (FOR-119 / FOR-109) was removed by
 FOR-336 / plan-2607-12 Phase 1:
 

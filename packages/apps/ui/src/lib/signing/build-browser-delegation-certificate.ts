@@ -2,7 +2,7 @@ import {
 	buildDelegationCertificateKs256WithSigner,
 	type DelegationInput
 } from '@forestrie/delegation-cose';
-import type { PendingEntry } from '@mandate/coordinator-types';
+import type { PendingDelegation } from '$lib/coordinator/pending-delegation.js';
 import { base64ToBytes } from './bytes.js';
 import { parseEthAddress } from './ks256-sig-utils.js';
 import type { SigningBackend } from './signing-backend.js';
@@ -13,7 +13,7 @@ import { signedWindowFor } from './signed-window.js';
  * demanded end (see {@link signedWindowFor}).
  */
 export function pendingEntryToDelegationInput(
-	entry: PendingEntry,
+	entry: PendingDelegation,
 	issuedAt?: number,
 	ttlSeconds = 3600
 ): DelegationInput {

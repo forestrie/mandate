@@ -39,7 +39,7 @@ test('parses the real lockfile shape: registry entry + importer refs', async () 
 	const { entries, importerRefs } = parseForestrieLockEntries(lock);
 	const cose = entries.find((e) => e.name === '@forestrie/delegation-cose');
 	assert.ok(cose, 'delegation-cose found in packages section');
-	assert.equal(cose.version, '0.1.3');
+	assert.equal(cose.version, '0.5.0');
 	assert.match(cose.integrity, /^sha512-/);
 	// workspace-linked @forestrie packages (ui-e2e-kit) must NOT be reported
 	assert.ok(importerRefs.every((r) => !r.version.startsWith('link:')));

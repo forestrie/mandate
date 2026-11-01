@@ -11,16 +11,16 @@ import {
 } from '@forestrie/delegation-cose';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
-import type { PendingEntry } from '@mandate/coordinator-types';
+import type { PendingDelegation } from '$lib/coordinator/pending-delegation.js';
 import { buildSubmitCertificateBodyFromCert } from './submit-payload.js';
 
-function pendingEntry(overrides: Partial<PendingEntry> = {}): PendingEntry {
+function pendingEntry(overrides: Partial<PendingDelegation> = {}): PendingDelegation {
 	return {
 		id: 'pending-1',
 		authLogIdHex32: 'a'.repeat(32),
 		logIdHex32: 'b'.repeat(32),
-		mmrStart: 0,
-		mmrEnd: 4,
+		mmrStart: 0n,
+		mmrEnd: 4n,
 		delegatedPublicKeyHash: 'hash',
 		delegatedPublicKey: 'ZGVsZWdhdGVkLWtleQ==',
 		requestedAt: 1_700_000_000,
@@ -50,8 +50,8 @@ describe('buildSubmitCertificateBodyFromCert', () => {
 		const certificate = await buildDelegationCertificateKs256(
 			{
 				logIdHex32: 'b'.repeat(32),
-				mmrStart: 0,
-				mmrEnd: 4 + 65535,
+				mmrStart: 0n,
+				mmrEnd: 4n + 65535n,
 				delegatedPublicKeyCbor,
 				issuedAt,
 				expiresAt: issuedAt + 3600,
@@ -71,7 +71,7 @@ describe('buildSubmitCertificateBodyFromCert', () => {
 		expect(body.expiresAt - body.issuedAt).toBe(3600);
 		// The coordinator requires the submitted range to equal the
 		// certificate's own; the signed range is wider than the entry's
-		// demanded [0, 4] (FOR-612).
-		expect([body.mmrStart, body.mmrEnd]).toEqual([0, 4 + 65535]);
+		// demanded [0, 4] (FOR-612). Decimal strings on the wire.
+		expect([body.mmrStart, body.mmrEnd]).toEqual(['0', String(4 + 65535)]);
 	});
 });

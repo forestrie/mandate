@@ -42,8 +42,8 @@ describe('assertCertificateCoversEvent', () => {
 		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
 		const input: DelegationInput = {
 			logIdHex32: TEST_LOG_ID,
-			mmrStart: 1,
-			mmrEnd: 8,
+			mmrStart: 1n,
+			mmrEnd: 8n,
 			delegatedPublicKeyCbor,
 			ttlSeconds: 3600
 		};
@@ -53,8 +53,8 @@ describe('assertCertificateCoversEvent', () => {
 				certificate,
 				event: {
 					logId: TEST_LOG_ID,
-					mmrStart: 1,
-					mmrEnd: 8,
+					mmrStart: 1n,
+					mmrEnd: 8n,
 					delegatedPublicKey: bytesToBase64(delegatedPublicKeyCbor)
 				},
 				rootSignerAddress: root.rootSignerAddress
@@ -68,8 +68,8 @@ describe('assertCertificateCoversEvent', () => {
 		const otherDelegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
 		const input: DelegationInput = {
 			logIdHex32: TEST_LOG_ID,
-			mmrStart: 1,
-			mmrEnd: 8,
+			mmrStart: 1n,
+			mmrEnd: 8n,
 			delegatedPublicKeyCbor,
 			ttlSeconds: 3600
 		};
@@ -79,8 +79,8 @@ describe('assertCertificateCoversEvent', () => {
 				certificate,
 				event: {
 					logId: TEST_LOG_ID,
-					mmrStart: 1,
-					mmrEnd: 8,
+					mmrStart: 1n,
+					mmrEnd: 8n,
 					delegatedPublicKey: bytesToBase64(otherDelegatedPublicKeyCbor)
 				},
 				rootSignerAddress: root.rootSignerAddress
@@ -93,8 +93,8 @@ describe('assertCertificateCoversEvent', () => {
 		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
 		const input: DelegationInput = {
 			logIdHex32: TEST_LOG_ID,
-			mmrStart: 1,
-			mmrEnd: 8,
+			mmrStart: 1n,
+			mmrEnd: 8n,
 			delegatedPublicKeyCbor,
 			ttlSeconds: 3600
 		};
@@ -104,8 +104,8 @@ describe('assertCertificateCoversEvent', () => {
 				certificate,
 				event: {
 					logId: TEST_LOG_ID,
-					mmrStart: 1,
-					mmrEnd: 99,
+					mmrStart: 1n,
+					mmrEnd: 99n,
 					delegatedPublicKey: bytesToBase64(delegatedPublicKeyCbor)
 				},
 				rootSignerAddress: root.rootSignerAddress
@@ -118,8 +118,8 @@ describe('assertCertificateCoversEvent', () => {
 		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
 		const certificate = await buildTestCertificate(root, {
 			logIdHex32: TEST_LOG_ID,
-			mmrStart: 0,
-			mmrEnd: 21 + 65535,
+			mmrStart: 0n,
+			mmrEnd: 21n + 65535n,
 			delegatedPublicKeyCbor,
 			ttlSeconds: 3600
 		});
@@ -128,8 +128,8 @@ describe('assertCertificateCoversEvent', () => {
 				certificate,
 				event: {
 					logId: TEST_LOG_ID,
-					mmrStart: 7,
-					mmrEnd: 21,
+					mmrStart: 7n,
+					mmrEnd: 21n,
 					delegatedPublicKey: bytesToBase64(delegatedPublicKeyCbor)
 				},
 				rootSignerAddress: root.rootSignerAddress
@@ -142,8 +142,8 @@ describe('assertCertificateCoversEvent', () => {
 		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
 		const certificate = await buildTestCertificate(root, {
 			logIdHex32: TEST_LOG_ID,
-			mmrStart: 8,
-			mmrEnd: 100,
+			mmrStart: 8n,
+			mmrEnd: 100n,
 			delegatedPublicKeyCbor,
 			ttlSeconds: 3600
 		});
@@ -152,8 +152,8 @@ describe('assertCertificateCoversEvent', () => {
 				certificate,
 				event: {
 					logId: TEST_LOG_ID,
-					mmrStart: 7,
-					mmrEnd: 21,
+					mmrStart: 7n,
+					mmrEnd: 21n,
 					delegatedPublicKey: bytesToBase64(delegatedPublicKeyCbor)
 				},
 				rootSignerAddress: root.rootSignerAddress
@@ -161,13 +161,39 @@ describe('assertCertificateCoversEvent', () => {
 		).rejects.toThrow(CertificateValidationError);
 	});
 
+	it('compares bounds above 2^53 exactly (bigint, not float)', async () => {
+		// As JS numbers 2^53 and 2^53+1 are equal, so a float compare would
+		// accept a certificate that stops one index short of the demand.
+		const root = testRoot();
+		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
+		const certificate = await buildTestCertificate(root, {
+			logIdHex32: TEST_LOG_ID,
+			mmrStart: 0n,
+			mmrEnd: 1n << 53n,
+			delegatedPublicKeyCbor,
+			ttlSeconds: 3600
+		});
+		await expect(
+			assertCertificateCoversEvent({
+				certificate,
+				event: {
+					logId: TEST_LOG_ID,
+					mmrStart: 0n,
+					mmrEnd: (1n << 53n) + 1n,
+					delegatedPublicKey: bytesToBase64(delegatedPublicKeyCbor)
+				},
+				rootSignerAddress: root.rootSignerAddress
+			})
+		).rejects.toThrow(/before demanded mmrEnd 9007199254740993/);
+	});
+
 	it('accepts any range for a window-less event', async () => {
 		const root = testRoot();
 		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();
 		const certificate = await buildTestCertificate(root, {
 			logIdHex32: TEST_LOG_ID,
-			mmrStart: 0,
-			mmrEnd: 65535,
+			mmrStart: 0n,
+			mmrEnd: 65535n,
 			delegatedPublicKeyCbor,
 			ttlSeconds: 3600
 		});
