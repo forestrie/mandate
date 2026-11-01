@@ -149,8 +149,8 @@ describe('handleSign', () => {
 		const certificate = await buildDelegationCertificateKs256WithSigner(
 			{
 				logIdHex32: TEST_LOG_ID,
-				mmrStart: 1,
-				mmrEnd: 8,
+				mmrStart: 1n,
+				mmrEnd: 8n,
 				delegatedPublicKeyCbor,
 				ttlSeconds: 3600
 			},

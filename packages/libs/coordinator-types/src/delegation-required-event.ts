@@ -8,9 +8,11 @@ export interface DelegationRequiredEvent {
 	/**
 	 * Demanded MMR window, inclusive. Omitted on the window-less standing
 	 * delegate-key delivery (ADR-0050 §2): the signer chooses its bounds.
+	 * Each bound is a canonical decimal uint64 string (plan-2611-01 D1):
+	 * parse with `parseDecimalUint64`, never as a JS number.
 	 */
-	mmrStart?: number;
-	mmrEnd?: number;
+	mmrStart?: string;
+	mmrEnd?: string;
 	delegatedPublicKey: string;
 	requestedAt: number;
 	certificateSubmitUrl: string;

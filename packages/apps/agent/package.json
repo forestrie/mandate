@@ -13,8 +13,8 @@
 		"test:live:mode-b": "vitest run test/mode-b-sealing.live.test.ts"
 	},
 	"dependencies": {
-		"@forestrie/delegation-cose": "^0.1.5",
-		"@forestrie/encoding": "^0.5.0",
+		"@forestrie/delegation-cose": "^0.5.0",
+		"@forestrie/encoding": "^0.10.0",
 		"@mandate/coordinator-types": "workspace:*",
 		"@mandate/signer-contract": "workspace:*"
 	},

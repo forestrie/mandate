@@ -1,6 +1,11 @@
-import type { DelegationRequiredEvent } from '@mandate/coordinator-types';
+import {
+	DecimalUint64Error,
+	parseMmrRange,
+	type DelegationRequiredEvent
+} from '@mandate/coordinator-types';
 import { base64ToBytes } from './bytes.js';
 import { submitDelegationCertificate } from './coordinator/submit-certificate.js';
+import type { DelegationDemand } from './delegation/delegation-demand.js';
 import { signedWindowFor } from './delegation/signed-window.js';
 import {
 	assertCertificateCoversEvent,
@@ -38,7 +43,7 @@ export interface DelegationRequiredResult {
 	duplicate?: true;
 }
 
-function parseEvent(rawBody: string): DelegationRequiredEvent {
+function parseEvent(rawBody: string): DelegationDemand {
 	let parsed: unknown;
 	try {
 		parsed = JSON.parse(rawBody);
@@ -65,7 +70,20 @@ function parseEvent(rawBody: string): DelegationRequiredEvent {
 			'delegation.required must state both mmrStart and mmrEnd, or neither'
 		);
 	}
-	return { ...event, certificateSubmitUrl: submitUrl };
+	const { mmrStart, mmrEnd, ...rest } = event;
+	if (mmrStart === undefined) {
+		return { ...rest, certificateSubmitUrl: submitUrl };
+	}
+	// Each bound is a canonical decimal uint64 string (canopy plan-2611-01
+	// D1); a JSON number is malformed, never coerced (hard cutover, D5).
+	try {
+		return { ...rest, ...parseMmrRange({ mmrStart, mmrEnd }), certificateSubmitUrl: submitUrl };
+	} catch (error) {
+		if (error instanceof DecimalUint64Error) {
+			throw new BadRequestError(`delegation.required ${error.message}`);
+		}
+		throw error;
+	}
 }
 
 export class BadRequestError extends Error {

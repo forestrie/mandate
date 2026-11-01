@@ -110,8 +110,8 @@ export function buildDelegationRequiredEvent(opts: {
 		version: 1,
 		logId,
 		authLogId: opts.authLogId ?? logId,
-		mmrStart: 1,
-		mmrEnd: 8,
+		mmrStart: '1',
+		mmrEnd: '8',
 		delegatedPublicKey,
 		requestedAt: 1_700_000_000,
 		materialSubmitUrl:

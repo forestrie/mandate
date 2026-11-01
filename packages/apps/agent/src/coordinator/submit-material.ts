@@ -1,4 +1,4 @@
-import type { SubmitMaterialRequest } from '@mandate/coordinator-types';
+import { formatDecimalUint64, type SubmitMaterialRequest } from '@mandate/coordinator-types';
 import { assertSameOrigin, bytesToBase64 } from '../bytes.js';
 import { parseDelegationCertificate } from '@forestrie/delegation-cose';
 
@@ -7,8 +7,8 @@ export async function submitDelegationMaterial(opts: {
 	coordinatorUpstreamUrl: string;
 	coordinatorAppToken: string;
 	logId: string;
-	mmrStart: number;
-	mmrEnd: number;
+	mmrStart: bigint;
+	mmrEnd: bigint;
 	delegatedPublicKeyBase64: string;
 	certificate: Uint8Array;
 	fetchImpl?: typeof fetch;
@@ -19,8 +19,9 @@ export async function submitDelegationMaterial(opts: {
 	const info = parseDelegationCertificate(opts.certificate);
 	const body: SubmitMaterialRequest = {
 		logId: opts.logId,
-		mmrStart: opts.mmrStart,
-		mmrEnd: opts.mmrEnd,
+		// Decimal strings on the wire (canopy plan-2611-01 D1).
+		mmrStart: formatDecimalUint64(opts.mmrStart),
+		mmrEnd: formatDecimalUint64(opts.mmrEnd),
 		delegatedPublicKey: opts.delegatedPublicKeyBase64,
 		certificate: bytesToBase64(opts.certificate),
 		issuedAt: info.issuedAt,

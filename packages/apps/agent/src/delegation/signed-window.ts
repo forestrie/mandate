@@ -7,36 +7,39 @@
  * and page the owner again, one signature per seal window (FOR-612). So the
  * agent signs from 0 to a fixed span past the demanded end, and a
  * window-less (standing key) event gets `[0, span]`.
+ *
+ * MMR indices are uint64 end to end (canopy plan-2611-01, FOR-613): the
+ * window is `bigint`, and `@forestrie/delegation-cose` encodes it as
+ * canonical CBOR uint64.
  */
 
+import { UINT64_MAX } from '@forestrie/delegation-cose';
+
 /** Start of every window the agent signs. */
-export const ADVANCE_MMR_START = 0;
+export const ADVANCE_MMR_START = 0n;
 
 /**
  * Distance past the demanded end (or past 0 for a window-less event) that
  * the agent signs. 2^16-1 matches the canopy e2e kit's advance signer.
  */
-export const ADVANCE_HORIZON_SPAN = 65535;
+export const ADVANCE_HORIZON_SPAN = 65535n;
 
-/**
- * Largest MMR index a certificate can carry. `@forestrie/delegation-cose`
- * encodes the payload with cbor-x, which writes integers above uint32 as
- * float64; strict CBOR decoders reject that, so the widened end is capped
- * here rather than the certificate becoming unreadable.
- */
-export const MAX_CERTIFICATE_MMR_INDEX = 0xffffffff;
-
+/** An inclusive MMR window, uint64 bounds. */
 export interface MmrWindow {
-	mmrStart: number;
-	mmrEnd: number;
+	mmrStart: bigint;
+	mmrEnd: bigint;
 }
 
 /**
- * Resolve the window to sign. Never narrower than the demanded window: if
- * the demanded end is already past the cap, it is signed as demanded.
+ * Resolve the window to sign: `[0, mmrEnd + span]`, the end clamped at
+ * 2^64-1 (the largest MMR index) and never below the demanded end.
  */
 export function signedWindowFor(demanded: Partial<MmrWindow>): MmrWindow {
-	const demandedEnd = demanded.mmrEnd ?? 0;
-	const widenedEnd = Math.min(demandedEnd + ADVANCE_HORIZON_SPAN, MAX_CERTIFICATE_MMR_INDEX);
-	return { mmrStart: ADVANCE_MMR_START, mmrEnd: Math.max(demandedEnd, widenedEnd) };
+	const demandedEnd = demanded.mmrEnd ?? 0n;
+	const widenedEnd = demandedEnd + ADVANCE_HORIZON_SPAN;
+	const clampedEnd = widenedEnd > UINT64_MAX ? UINT64_MAX : widenedEnd;
+	return {
+		mmrStart: ADVANCE_MMR_START,
+		mmrEnd: clampedEnd < demandedEnd ? demandedEnd : clampedEnd
+	};
 }

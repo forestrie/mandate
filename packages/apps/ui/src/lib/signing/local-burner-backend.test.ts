@@ -109,8 +109,8 @@ describe('LocalBurnerBackend', () => {
 		const issuedAt = 1_700_000_300;
 		const input: DelegationInput = {
 			logIdHex32: 'd4e5f67890ab1234567890abcdef123456',
-			mmrStart: 5,
-			mmrEnd: 42,
+			mmrStart: 5n,
+			mmrEnd: 42n,
 			delegatedPublicKeyCbor: await generateDelegatedPublicKeyCbor(),
 			issuedAt,
 			expiresAt: issuedAt + 3600,

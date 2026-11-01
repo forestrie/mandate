@@ -27,7 +27,14 @@ describe('samplePendingEntries', () => {
 		expect(entries).toHaveLength(2);
 		expect(entries[0]?.id).toBe('entry-1');
 		expect(entries[1]?.id).toBe('entry-2');
-		expect(entries[1]!.mmrStart).toBeGreaterThan(entries[0]!.mmrStart);
+		expect(BigInt(entries[1]!.mmrStart)).toBeGreaterThan(BigInt(entries[0]!.mmrStart));
+	});
+
+	it('carries range bounds as canonical decimal strings (plan-2611-01 D1)', () => {
+		for (const entry of samplePendingEntries(2)) {
+			expect(entry.mmrStart).toMatch(/^(0|[1-9][0-9]*)$/);
+			expect(entry.mmrEnd).toMatch(/^(0|[1-9][0-9]*)$/);
+		}
 	});
 });
 

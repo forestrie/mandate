@@ -15,7 +15,8 @@
 		buildBrowserDelegationCertificate,
 		pendingEntryToDelegationInput
 	} from '$lib/signing/build-browser-delegation-certificate.js';
-	import type { EnabledResponse, PendingEntry } from '@mandate/coordinator-types';
+	import type { EnabledResponse } from '@mandate/coordinator-types';
+	import type { PendingDelegation } from '$lib/coordinator/pending-delegation.js';
 	import {
 		getPrivySessionState,
 		getSupportedMandateChains,
@@ -62,7 +63,7 @@
 	let otpCode = $state('');
 	let otpSent = $state(false);
 	let otpBusy = $state(false);
-	let entries = $state<PendingEntry[]>([]);
+	let entries = $state<PendingDelegation[]>([]);
 	let loading = $state(false);
 	let message = $state<string | null>(null);
 	let error = $state<string | null>(null);
@@ -175,7 +176,7 @@
 		saveRowStatus(authLogId.trim(), rowStatus);
 	}
 
-	function statusFor(entry: PendingEntry): RowStatus {
+	function statusFor(entry: PendingDelegation): RowStatus {
 		return rowStatus[entry.id] ?? 'pending';
 	}
 
@@ -304,7 +305,7 @@
 		}
 	}
 
-	async function signAndSubmit(entry: PendingEntry) {
+	async function signAndSubmit(entry: PendingDelegation) {
 		if (!signerAddress) {
 			error =
 				signerMode === 'burner'

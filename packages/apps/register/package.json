@@ -25,7 +25,7 @@
 		"test:live:onboard": "vitest run test/onboard-request.live.test.ts"
 	},
 	"dependencies": {
-		"@forestrie/encoding": "^0.5.0",
+		"@forestrie/encoding": "^0.10.0",
 		"@mandate/privy-admin": "workspace:*"
 	},
 	"devDependencies": {
