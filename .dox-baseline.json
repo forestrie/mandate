@@ -1,0 +1,1165 @@
+{
+  "version": 1,
+  "findings": [
+    {
+      "check": "id-unique",
+      "path": "docs/adr/adr-0001-auth-strategy-seams.md",
+      "message": "id 'adr-0001-auth-strategy-seams' is also used by docs/adr-0001-auth-strategy-seams.md"
+    },
+    {
+      "check": "index-fresh",
+      "path": "docs/adr/README.md",
+      "message": "generated index missing"
+    },
+    {
+      "check": "links-local",
+      "path": "CONTEXT.md",
+      "message": "link leaves the repository: ../devdocs/arc/arc-0023-wallet-challenge-control-plane-auth.md"
+    },
+    {
+      "check": "links-local",
+      "path": "FORKING.md",
+      "message": "link leaves the repository: ../canopy/docs/demo/scitt-hackathon.md"
+    },
+    {
+      "check": "links-local",
+      "path": "FORKING.md",
+      "message": "link leaves the repository: ../canopy/docs/demo/scitt-hackathon.md"
+    },
+    {
+      "check": "links-local",
+      "path": "FORKING.md",
+      "message": "link leaves the repository: ../canopy/docs/demo/scitt-hackathon.md"
+    },
+    {
+      "check": "links-local",
+      "path": "FORKING.md",
+      "message": "link leaves the repository: ../canopy/docs/demo/scitt-hackathon.md#appendix-b--organizer-setup-not-the-main-show"
+    },
+    {
+      "check": "links-local",
+      "path": "FORKING.md",
+      "message": "link leaves the repository: ../canopy/docs/demo/scitt-hackathon.md#part-1--participant-flow"
+    },
+    {
+      "check": "links-local",
+      "path": "FORKING.md",
+      "message": "link leaves the repository: ../canopy/docs/grants.md"
+    },
+    {
+      "check": "links-local",
+      "path": "FORKING.md",
+      "message": "link leaves the repository: ../devdocs/arc/arc-021-payment-onboarding/03-phase-b-regular-forest.md"
+    },
+    {
+      "check": "links-local",
+      "path": "FORKING.md",
+      "message": "link leaves the repository: ../devdocs/arc/arc-021-payment-onboarding/06-end-to-end.md"
+    },
+    {
+      "check": "links-local",
+      "path": "FORKING.md",
+      "message": "link leaves the repository: ../devdocs/arc/arc-021-payment-onboarding/07-self-service-onboard-request.md"
+    },
+    {
+      "check": "links-local",
+      "path": "FORKING.md",
+      "message": "link leaves the repository: ../devdocs/arc/arc-021-payment-onboarding/README.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/adr/adr-0001-auth-strategy-seams.md",
+      "message": "relative link does not resolve: ../../devdocs/arc/arc-0022-byok-user-log-delegation-and-operator-hosted-sealing.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/adr/adr-0001-auth-strategy-seams.md",
+      "message": "relative link does not resolve: ../../devdocs/arc/arc-0023-wallet-challenge-control-plane-auth.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/adr/adr-0001-auth-strategy-seams.md",
+      "message": "relative link does not resolve: ../../devdocs/arc/arc-0023-wallet-challenge-control-plane-auth.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/adr/adr-0001-auth-strategy-seams.md",
+      "message": "relative link does not resolve: plans/plan-0001-bootstrap.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "link leaves the repository: ../../../devdocs/arc/arc-0019-grant-verification-model.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "link leaves the repository: ../../../devdocs/arc/arc-0022-byok-user-log-delegation-and-operator-hosted-sealing.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "link leaves the repository: ../../../devdocs/arc/arc-021-payment-onboarding/README.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "relative link does not resolve: plans/plan-0008-for-114-mode-c-kill-switch.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "relative link does not resolve: plans/plan-0045-package-e-mode-b-reference.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "relative link does not resolve: plans/plan-2607-01-browser-burner-signer-backend.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/plans/plan-0003-for-97-package-split.md",
+      "message": "link leaves the repository: ../../../canopy/docs/adr/adr-0005-delegation-webhook-delivery.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/plans/plan-0003-for-97-package-split.md",
+      "message": "link leaves the repository: ../../../canopy/docs/adr/adr-0006-webhook-source-authentication.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/plans/plan-0003-for-97-package-split.md",
+      "message": "link leaves the repository: ../../../devdocs/arc/arc-021-payment-onboarding/06-end-to-end.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/plans/plan-0005-for-104-signer-backend-spike.md",
+      "message": "relative link does not resolve: ./adr/adr-0002-delegation-signer-custody.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/plans/plan-0005-for-104-signer-backend-spike.md",
+      "message": "relative link does not resolve: ./adr/adr-0003-delegation-signer-backend.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/plans/plan-0044-package-c-delegation-console.md",
+      "message": "relative link does not resolve: ../.cursor/rules/branch-naming.mdc"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/plans/plan-0045-package-e-mode-b-reference.md",
+      "message": "link leaves the repository: ../../../devdocs/arc/arc-0022-byok-user-log-delegation-and-operator-hosted-sealing.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/plans/plan-0047-ui-browser-e2e.md",
+      "message": "relative link does not resolve: ../.cursor/rules/branch-naming.mdc"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/plans/plan-2607-01-browser-burner-signer-backend.md",
+      "message": "link leaves the repository: ../../../devdocs/arc/arc-0022-byok-user-log-delegation-and-operator-hosted-sealing.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/plans/plan-genesis-proof-of-possession.md",
+      "message": "link leaves the repository: ../../../devdocs/arc/arc-0021-registration-control-plane.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/plans/plan-genesis-proof-of-possession.md",
+      "message": "link leaves the repository: ../../../devdocs/arc/arc-0023-wallet-challenge-control-plane-auth.md"
+    },
+    {
+      "check": "links-local",
+      "path": "docs/plans/plan-wallet-challenge-followups.md",
+      "message": "link leaves the repository: ../../../devdocs/arc/arc-0023-wallet-challenge-control-plane-auth.md"
+    },
+    {
+      "check": "links-local",
+      "path": "packages/publish/mandate-register/README.md",
+      "message": "relative link does not resolve: ../../.github/workflows/publish-mandate-register.yml"
+    },
+    {
+      "check": "links-local",
+      "path": "packages/publish/mandate-register/README.md",
+      "message": "relative link does not resolve: ../../FORKING.md"
+    },
+    {
+      "check": "links-local",
+      "path": "packages/publish/mandate-register/README.md",
+      "message": "relative link does not resolve: ../../FORKING.md"
+    },
+    {
+      "check": "links-local",
+      "path": "packages/publish/mandate-register/README.md",
+      "message": "relative link does not resolve: ../../docs/adr/adr-0005-byok-delegation-modes.md"
+    },
+    {
+      "check": "links-local",
+      "path": "packages/publish/mandate-register/README.md",
+      "message": "relative link does not resolve: ../../docs/adr/adr-0005-byok-delegation-modes.md"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0001-bootstrap.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0002-rename-sylvestris-to-mandate.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0003-for-97-package-split.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0004-for-98-agent.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0005-for-104-signer-backend-spike.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0006-for-112-mode-c-onboarding.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0007-for-100-provisioning-e2e.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0008-for-114-mode-c-kill-switch.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0009-for-review-followups-test-maintainability.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0043-kill-switch-polish.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0044-kill-switch-polish-review-remediation.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0044-package-c-delegation-console.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0045-mode-c-browser-revoke-spike.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0045-package-e-mode-b-reference.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0046-package-f-review-remediation.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0047-ui-browser-e2e.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0048-tier1-tier2-review-remediation.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0049-ui-e2e-phase1-review-remediation.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-0050-ui-e2e-phase1-review-remediation.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-2607-01-browser-burner-signer-backend.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-2607-02-fee-surface-review-remediation.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-2607-03-safe-1x1-slice02-review-remediation.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-2607-04-safe-1x1-slice03-review-remediation.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-2607-05-safe-1x1-slice04-review-remediation.md",
+      "message": "plan document in a canon repository"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-genesis-proof-of-possession.md",
+      "message": "work file in a canon tree"
+    },
+    {
+      "check": "no-plans-in-canon",
+      "path": "docs/plans/plan-wallet-challenge-followups.md",
+      "message": "work file in a canon tree"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "CONTEXT.md",
+      "message": "plan id plan-0029 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "CONTEXT.md",
+      "message": "tracker id FOR-130 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "FORKING.md",
+      "message": "bold header (use frontmatter) **Date:** in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "FORKING.md",
+      "message": "bold header (use frontmatter) **Status:** in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "FORKING.md",
+      "message": "plan id plan-2607 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "FORKING.md",
+      "message": "plan id plan-2607 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "FORKING.md",
+      "message": "tracker id FOR-209 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "FORKING.md",
+      "message": "tracker id FOR-210 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "FORKING.md",
+      "message": "tracker id FOR-322 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "FORKING.md",
+      "message": "tracker id FOR-336 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "plan id plan-0001 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "plan id plan-0001 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "plan id plan-0003 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "plan id plan-0003 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "plan id plan-0003 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "plan id plan-0003 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "plan id plan-0004 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "plan id plan-0004 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "plan id plan-0005 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "plan id plan-0005 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "plan id plan-0021 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "plan id plan-0021 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "tracker id FOR-100 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "tracker id FOR-104 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "tracker id FOR-209 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "tracker id FOR-336 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "tracker id FOR-97 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "tracker id FOR-98 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "tracker id FOR-98 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "tracker id FOR-98 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "README.md",
+      "message": "tracker id FOR-99 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0001-auth-strategy-seams.md",
+      "message": "bold header (use frontmatter) **Date:** in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0001-auth-strategy-seams.md",
+      "message": "bold header (use frontmatter) **Status:** in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0001-auth-strategy-seams.md",
+      "message": "plan id plan-0001 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0001-auth-strategy-seams.md",
+      "message": "plan id plan-0001 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0001-auth-strategy-seams.md",
+      "message": "plan id plan-0029 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0001-auth-strategy-seams.md",
+      "message": "tracker id FOR-134 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0002-delegation-signer-custody.md",
+      "message": "tracker id FOR-100 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0002-delegation-signer-custody.md",
+      "message": "tracker id FOR-101 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0002-delegation-signer-custody.md",
+      "message": "tracker id FOR-98 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "bold header (use frontmatter) **Date:** in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "bold header (use frontmatter) **Status:** in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "plan id plan-0005 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "plan id plan-0005 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "plan id plan-0005 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "plan id plan-0005 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "tracker id FOR-100 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "tracker id FOR-104 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "tracker id FOR-104 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "tracker id FOR-104 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "tracker id FOR-104 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "tracker id FOR-105 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "tracker id FOR-105 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "tracker id FOR-110 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "tracker id FOR-118 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "tracker id FOR-118 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "tracker id FOR-207 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "tracker id FOR-209 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "tracker id FOR-612 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "tracker id FOR-98 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "tracker id FOR-98 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "tracker id FOR-98 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0004-delegation-cose-distribution.md",
+      "message": "plan id plan-2607 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0004-delegation-cose-distribution.md",
+      "message": "plan id plan-2607 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0004-delegation-cose-distribution.md",
+      "message": "tracker id FOR-106 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0004-delegation-cose-distribution.md",
+      "message": "tracker id FOR-109 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0004-delegation-cose-distribution.md",
+      "message": "tracker id FOR-110 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0004-delegation-cose-distribution.md",
+      "message": "tracker id FOR-218 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0004-delegation-cose-distribution.md",
+      "message": "tracker id FOR-336 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0004-delegation-cose-distribution.md",
+      "message": "tracker id FOR-336 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0004-delegation-cose-distribution.md",
+      "message": "tracker id FOR-366 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0004-delegation-cose-distribution.md",
+      "message": "tracker id FOR-366 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "plan id plan-0008 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "plan id plan-0008 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "plan id plan-0029 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "plan id plan-0029 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "plan id plan-0045 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "plan id plan-0045 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "plan id plan-2607 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "plan id plan-2607 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "plan id plan-2607 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-110 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-112 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-112 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-113 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-114 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-114 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-114 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-114 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-115 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-116 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-117 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-117 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-117 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-117 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-128 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-128 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-129 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-130 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-130 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-131 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-131 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-132 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-132 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-194 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-194 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-194 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-194 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-206 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-208 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-209 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-210 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-211 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-212 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "tracker id FOR-322 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0006-privy-secrets.md",
+      "message": "bold header (use frontmatter) **Status:** in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/adr/adr-0006-privy-secrets.md",
+      "message": "tracker id FOR-117 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/agents/github-packages-delegation-cose.md",
+      "message": "plan id plan-2607 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/agents/github-packages-delegation-cose.md",
+      "message": "tracker id FOR-109 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/agents/github-packages-delegation-cose.md",
+      "message": "tracker id FOR-119 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/agents/github-packages-delegation-cose.md",
+      "message": "tracker id FOR-336 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/agents/github-packages-delegation-cose.md",
+      "message": "tracker id FOR-336 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/agents/github-packages-delegation-cose.md",
+      "message": "tracker id FOR-360 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/agents/github-packages-delegation-cose.md",
+      "message": "tracker id FOR-361 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/agents/github-packages-local-auth.md",
+      "message": "tracker id FOR-336 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/agents/mode-b-fork.md",
+      "message": "tracker id FOR-210 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/agents/mode-b-fork.md",
+      "message": "tracker id FOR-210 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/plans/plan-genesis-proof-of-possession.md",
+      "message": "bold header (use frontmatter) **Status:** in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/plans/plan-wallet-challenge-followups.md",
+      "message": "bold header (use frontmatter) **Status:** in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/service-secrets.md",
+      "message": "plan id plan-0047 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/service-secrets.md",
+      "message": "tracker id FOR-100 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/service-secrets.md",
+      "message": "tracker id FOR-101 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/service-secrets.md",
+      "message": "tracker id FOR-112 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/service-secrets.md",
+      "message": "tracker id FOR-114 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/service-secrets.md",
+      "message": "tracker id FOR-114 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/service-secrets.md",
+      "message": "tracker id FOR-131 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/service-secrets.md",
+      "message": "tracker id FOR-209 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/service-secrets.md",
+      "message": "tracker id FOR-210 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/service-secrets.md",
+      "message": "tracker id FOR-215 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "docs/service-secrets.md",
+      "message": "tracker id FOR-493 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "packages/publish/mandate-register/README.md",
+      "message": "tracker id FOR-100 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "packages/publish/mandate-register/README.md",
+      "message": "tracker id FOR-112 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "packages/publish/mandate-register/README.md",
+      "message": "tracker id FOR-114 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "packages/publish/mandate-register/README.md",
+      "message": "tracker id FOR-131 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "packages/publish/mandate-register/README.md",
+      "message": "tracker id FOR-173 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "packages/publish/mandate-register/README.md",
+      "message": "tracker id FOR-311 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "packages/publish/mandate-register/README.md",
+      "message": "tracker id FOR-360 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "packages/tests/ui-e2e-kit/README.md",
+      "message": "tracker id FOR-361 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "packages/tests/ui-e2e/README.md",
+      "message": "plan id plan-0047 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "packages/tests/ui-e2e/README.md",
+      "message": "plan id plan-0047 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "spikes/for-104-delegation-signer/README.md",
+      "message": "plan id plan-2607 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "spikes/for-104-delegation-signer/README.md",
+      "message": "tracker id FOR-104 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "spikes/for-104-delegation-signer/README.md",
+      "message": "tracker id FOR-336 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "spikes/for-104-delegation-signer/README.md",
+      "message": "tracker id FOR-366 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "spikes/for-104-delegation-signer/gcp-bootstrap-checklist.md",
+      "message": "tracker id FOR-100 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "spikes/for-104-delegation-signer/gcp-bootstrap-checklist.md",
+      "message": "tracker id FOR-104 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "spikes/for-104-delegation-signer/gcp-bootstrap-checklist.md",
+      "message": "tracker id FOR-104 in canon prose"
+    },
+    {
+      "check": "no-work-ids",
+      "path": "spikes/for-104-delegation-signer/worker-compat-latency.md",
+      "message": "tracker id FOR-104 in canon prose"
+    },
+    {
+      "check": "placement",
+      "path": "docs/adr-0001-auth-strategy-seams.md",
+      "message": "adr document: belongs in adr"
+    },
+    {
+      "check": "schema",
+      "path": "docs/adr-0001-auth-strategy-seams.md",
+      "message": "no YAML frontmatter (adr)"
+    },
+    {
+      "check": "schema",
+      "path": "docs/adr/adr-0001-auth-strategy-seams.md",
+      "message": "no YAML frontmatter (adr)"
+    },
+    {
+      "check": "schema",
+      "path": "docs/adr/adr-0002-delegation-signer-custody.md",
+      "message": "no YAML frontmatter (adr)"
+    },
+    {
+      "check": "schema",
+      "path": "docs/adr/adr-0003-delegation-signer-backend.md",
+      "message": "no YAML frontmatter (adr)"
+    },
+    {
+      "check": "schema",
+      "path": "docs/adr/adr-0004-delegation-cose-distribution.md",
+      "message": "no YAML frontmatter (adr)"
+    },
+    {
+      "check": "schema",
+      "path": "docs/adr/adr-0005-byok-delegation-modes.md",
+      "message": "no YAML frontmatter (adr)"
+    },
+    {
+      "check": "schema",
+      "path": "docs/adr/adr-0006-privy-secrets.md",
+      "message": "no YAML frontmatter (adr)"
+    }
+  ]
+}
