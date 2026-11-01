@@ -5,6 +5,13 @@ vars:
   DOPPLER_CONFIG: dev
 
 tasks:
+  docs:lint:
+    desc: Check docs with dox against forestrie/dox (see .dox.toml)
+    env:
+      DOX_SCHEMA_REPO: forestrie/dox
+    cmds:
+      - dox lint
+
   repo-init:
     desc: >-
       Provision Cloudflare KV and gitignored wrangler.env.prod.json overlays;
