@@ -6,9 +6,13 @@ export const E2E_AUTH_LOG_ID = '11111111-1111-1111-1111-111111111111';
 /** User log id for kill-switch specs. */
 export const E2E_USER_LOG_ID = 'b2c3d4e5f67890ab1234567890abcdef12';
 
-/** Pre-generated P-256 COSE delegated public key (base64). */
+/**
+ * Pre-generated P-256 COSE delegated public key (base64): canonical CBOR,
+ * coordinates as plain bstr. (It was once cbor-x output with x/y wrapped in
+ * tag 64, which strict decoders reject.)
+ */
 export const SAMPLE_DELEGATED_PUBLIC_KEY_B64 =
-	'pAECIAEh2EBYIAhdWHosXL4fALSX75DOf7YF5g862MUyZhGN4Bc4/MJxIthAWCCAtLh7eiOZqeqCchGbn8+uH6jjVty+tgnNSKJFv/16Cg==';
+	'pAECIAEhWCAIXVh6LFy+HwC0l++Qzn+2BeYPOtjFMmYRjeAXOPzCcSJYIIC0uHt6I5mp6oJyEZufz64fqONW3L62Cc1IokW//XoK';
 
 export function samplePendingEntry(overrides: Partial<PendingEntry> = {}): PendingEntry {
 	return {

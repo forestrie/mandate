@@ -1,5 +1,11 @@
+import { decodeCborDeterministic } from '@forestrie/encoding';
 import { describe, expect, it } from 'vitest';
-import { E2E_AUTH_LOG_ID, samplePendingEntries, samplePendingEntry } from '../src/fixtures.js';
+import {
+	E2E_AUTH_LOG_ID,
+	SAMPLE_DELEGATED_PUBLIC_KEY_B64,
+	samplePendingEntries,
+	samplePendingEntry
+} from '../src/fixtures.js';
 
 describe('samplePendingEntry', () => {
 	it('uses authority log id without hyphens in authLogIdHex32', () => {
@@ -22,5 +28,19 @@ describe('samplePendingEntries', () => {
 		expect(entries[0]?.id).toBe('entry-1');
 		expect(entries[1]?.id).toBe('entry-2');
 		expect(entries[1]!.mmrStart).toBeGreaterThan(entries[0]!.mmrStart);
+	});
+});
+
+describe('SAMPLE_DELEGATED_PUBLIC_KEY_B64', () => {
+	it('is a canonical COSE_Key: plain bstr coordinates, no cbor-x tag 64', () => {
+		const bytes = Uint8Array.from(Buffer.from(SAMPLE_DELEGATED_PUBLIC_KEY_B64, 'base64'));
+		const key = decodeCborDeterministic(bytes) as Map<number, unknown>;
+		expect(key.get(1)).toBe(2);
+		expect(key.get(-1)).toBe(1);
+		for (const label of [-2, -3]) {
+			const coordinate = key.get(label);
+			expect(coordinate).toBeInstanceOf(Uint8Array);
+			expect((coordinate as Uint8Array).length).toBe(32);
+		}
 	});
 });
