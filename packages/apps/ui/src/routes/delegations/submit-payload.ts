@@ -1,9 +1,6 @@
-import {
-	formatDecimalUint64,
-	type SubmitDelegationCertificateRequest
-} from '@mandate/coordinator-types';
+import type { SubmitDelegationCertificateRequest } from '@mandate/coordinator-types';
 import type { PendingDelegation } from '$lib/coordinator/pending-delegation.js';
-import { parseDelegationCertificate } from '@forestrie/delegation-cose';
+import { formatDecimalUint64, parseDelegationCertificate } from '@forestrie/delegation-cose';
 import { bytesToBase64 } from '$lib/signing/bytes.js';
 
 /**

@@ -1,9 +1,6 @@
-import {
-	formatDecimalUint64,
-	type SubmitDelegationCertificateRequest
-} from '@mandate/coordinator-types';
+import type { SubmitDelegationCertificateRequest } from '@mandate/coordinator-types';
 import { assertSameOrigin, bytesToBase64 } from '../bytes.js';
-import { parseDelegationCertificate } from '@forestrie/delegation-cose';
+import { formatDecimalUint64, parseDelegationCertificate } from '@forestrie/delegation-cose';
 
 export async function submitDelegationCertificate(opts: {
 	certificateSubmitUrl: string;

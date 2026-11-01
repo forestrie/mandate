@@ -1,8 +1,5 @@
-import {
-	DecimalUint64Error,
-	parseMmrRange,
-	type DelegationRequiredEvent
-} from '@mandate/coordinator-types';
+import { DecimalUint64Error } from '@forestrie/delegation-cose';
+import { parseMmrRange, type DelegationRequiredEvent } from '@mandate/coordinator-types';
 import { base64ToBytes } from './bytes.js';
 import { submitDelegationCertificate } from './coordinator/submit-certificate.js';
 import type { DelegationDemand } from './delegation/delegation-demand.js';

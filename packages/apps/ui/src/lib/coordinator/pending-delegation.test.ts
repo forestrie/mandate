@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingEntry, PendingListResponse } from '@mandate/coordinator-types';
-import { DecimalUint64Error } from '@mandate/coordinator-types';
+import { DecimalUint64Error } from '@forestrie/delegation-cose';
 import { parsePendingListResponse } from './pending-delegation.js';
 
 function wireEntry(window: Record<string, unknown>): PendingEntry {

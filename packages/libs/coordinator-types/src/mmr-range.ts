@@ -5,7 +5,7 @@
  * both bounds canonical decimal uint64 strings, `mmrStart <= mmrEnd`.
  */
 
-import { DecimalUint64Error, parseDecimalUint64 } from './decimal-uint64.js';
+import { DecimalUint64Error, parseDecimalUint64 } from '@forestrie/delegation-cose';
 
 /** An inclusive MMR index range with `mmrStart <= mmrEnd`, as `bigint`. */
 export interface MmrRange {

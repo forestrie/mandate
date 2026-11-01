@@ -1,4 +1,4 @@
-import { formatDecimalUint64 } from '@mandate/coordinator-types';
+import { formatDecimalUint64 } from '@forestrie/delegation-cose';
 import type { DelegationDemand } from './delegation-demand.js';
 
 export type DelegationOutcome =

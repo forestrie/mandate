@@ -40,10 +40,4 @@ export type {
 	ProblemDetails,
 	SigningRouteMutationResponse
 } from './responses.js';
-export {
-	DecimalUint64Error,
-	formatDecimalUint64,
-	parseDecimalUint64,
-	UINT64_MAX
-} from './decimal-uint64.js';
 export { parseMmrRange, type MmrRange } from './mmr-range.js';
