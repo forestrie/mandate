@@ -667,7 +667,7 @@ describe('delegation-in-advance (window-less delivery, FOR-524)', () => {
 
 		expect(response.status).toBe(200);
 		// The bounds the signer chose, not undefined echoed back, as the
-		// coordinator's canonical decimal strings (plan-2611-01 D1).
+		// coordinator's canonical decimal strings.
 		expect(submitted.mmrStart).toBe(String(ADVANCE_MMR_START));
 		expect(submitted.mmrEnd).toBe(String(ADVANCE_HORIZON_SPAN));
 	});
@@ -824,7 +824,7 @@ describe('demanded-window widening (FOR-612)', () => {
 	});
 });
 
-describe('delegation.required range wire format (plan-2611-01 D1)', () => {
+describe('delegation.required range wire format', () => {
 	async function postWindow(window: Record<string, unknown>) {
 		const root = await generateTestKs256Root();
 		const delegatedPublicKeyCbor = await generateDelegatedPublicKeyCbor();

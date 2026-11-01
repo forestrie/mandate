@@ -30,7 +30,7 @@ describe('samplePendingEntries', () => {
 		expect(BigInt(entries[1]!.mmrStart)).toBeGreaterThan(BigInt(entries[0]!.mmrStart));
 	});
 
-	it('carries range bounds as canonical decimal strings (plan-2611-01 D1)', () => {
+	it('carries range bounds as canonical decimal strings', () => {
 		for (const entry of samplePendingEntries(2)) {
 			expect(entry.mmrStart).toMatch(/^(0|[1-9][0-9]*)$/);
 			expect(entry.mmrEnd).toMatch(/^(0|[1-9][0-9]*)$/);

@@ -8,7 +8,7 @@
  * agent signs from 0 to a fixed span past the demanded end, and a
  * window-less (standing key) event gets `[0, span]`.
  *
- * MMR indices are uint64 end to end (canopy plan-2611-01, FOR-613): the
+ * MMR indices are uint64 end to end (FOR-613): the
  * window is `bigint`, and `@forestrie/delegation-cose` encodes it as
  * canonical CBOR uint64.
  */

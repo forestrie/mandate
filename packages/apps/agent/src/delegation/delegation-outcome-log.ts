@@ -14,7 +14,7 @@ export type DelegationOutcome =
 /**
  * Structured per-request log for pending-delegations queue / exit audit
  * (FOR-113). The range is logged as decimal strings, the coordinator's wire
- * form (canopy plan-2611-01 D1): `JSON.stringify` throws on `bigint`, and a
+ * form: `JSON.stringify` throws on `bigint`, and a
  * number would round above 2^53. A window-less event logs no range.
  */
 export function logDelegationOutcome(

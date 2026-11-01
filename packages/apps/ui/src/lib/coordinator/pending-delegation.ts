@@ -1,9 +1,9 @@
 /**
  * Pending delegation entries as the console works with them: the coordinator
  * sends each MMR range bound as a canonical decimal uint64 string
- * (canopy plan-2611-01 D1, `GET /api/delegations/pending`); the console
- * parses them to `bigint` here, at the edge, and formats them back only
- * when building a certificate submit body.
+ * (`GET /api/delegations/pending`); the console parses them to `bigint`
+ * here, at the edge, and formats them back only when building a
+ * certificate submit body.
  */
 
 import {

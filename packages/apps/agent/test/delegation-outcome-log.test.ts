@@ -20,7 +20,7 @@ describe('logDelegationOutcome', () => {
 		expect(parsed.outcome).toBe('signed_and_submitted');
 		expect(parsed.requestKey).toBe('rk-1');
 		// JSON.stringify throws on bigint; the range is logged as the same
-		// decimal strings the coordinator sends (plan-2611-01 D1).
+		// decimal strings the coordinator sends.
 		expect(parsed.mmrStart).toBe('1');
 		expect(parsed.mmrEnd).toBe('18446744073709551615');
 		spy.mockRestore();

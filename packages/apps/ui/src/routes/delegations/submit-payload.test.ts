@@ -71,8 +71,7 @@ describe('buildSubmitCertificateBodyFromCert', () => {
 		expect(body.expiresAt - body.issuedAt).toBe(3600);
 		// The coordinator requires the submitted range to equal the
 		// certificate's own; the signed range is wider than the entry's
-		// demanded [0, 4] (FOR-612). Decimal strings on the wire
-		// (plan-2611-01 D1).
+		// demanded [0, 4] (FOR-612). Decimal strings on the wire.
 		expect([body.mmrStart, body.mmrEnd]).toEqual(['0', String(4 + 65535)]);
 	});
 });

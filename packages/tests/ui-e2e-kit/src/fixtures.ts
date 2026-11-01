@@ -16,7 +16,7 @@ export const SAMPLE_DELEGATED_PUBLIC_KEY_B64 =
 
 /**
  * One coordinator `PendingEntry` as the BFF returns it; range bounds are
- * canonical decimal uint64 strings (canopy plan-2611-01 D1).
+ * canonical decimal uint64 strings.
  */
 export function samplePendingEntry(overrides: Partial<PendingEntry> = {}): PendingEntry {
 	return {

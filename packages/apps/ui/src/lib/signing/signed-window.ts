@@ -5,7 +5,7 @@
  * share no runtime library). ADR-0050 §2 lets a signer cover "at least the
  * demanded window"; signing exactly the demanded window made every later
  * seal raise a new demand, one owner signature per seal window (FOR-612).
- * MMR indices are uint64 end to end (canopy plan-2611-01, FOR-613).
+ * MMR indices are uint64 end to end (FOR-613).
  */
 
 import { UINT64_MAX } from '@forestrie/delegation-cose';

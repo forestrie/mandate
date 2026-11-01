@@ -21,7 +21,7 @@ function listOf(...entries: PendingEntry[]): PendingListResponse {
 	return { entries, offset: 0, limit: 50, shardCount: 1 };
 }
 
-describe('parsePendingListResponse (plan-2611-01 D1)', () => {
+describe('parsePendingListResponse', () => {
 	it('parses decimal-string bounds to bigint, exactly above 2^53', () => {
 		const parsed = parsePendingListResponse(
 			listOf(wireEntry({ mmrStart: '9007199254740993', mmrEnd: '18446744073709551615' }))

@@ -1,6 +1,6 @@
 /**
  * Inclusive delegation MMR range as parsed from a coordinator JSON body or
- * webhook event (canopy plan-2611-01, FOR-613). Mirrors canopy's
+ * webhook event (FOR-613). Mirrors canopy's
  * [`mmr-range.ts`](https://github.com/forestrie/canopy/blob/main/packages/apps/delegation-coordinator/src/mmr-range.ts):
  * both bounds canonical decimal uint64 strings, `mmrStart <= mmrEnd`.
  */

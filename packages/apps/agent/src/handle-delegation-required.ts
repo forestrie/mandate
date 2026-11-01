@@ -71,8 +71,8 @@ function parseEvent(rawBody: string): DelegationDemand {
 	if (mmrStart === undefined) {
 		return { ...rest, certificateSubmitUrl: submitUrl };
 	}
-	// Each bound is a canonical decimal uint64 string (canopy plan-2611-01
-	// D1); a JSON number is malformed, never coerced (hard cutover, D5).
+	// Each bound is a canonical decimal uint64 string; a JSON number is
+	// malformed, never coerced (hard cutover).
 	try {
 		return { ...rest, ...parseMmrRange({ mmrStart, mmrEnd }), certificateSubmitUrl: submitUrl };
 	} catch (error) {

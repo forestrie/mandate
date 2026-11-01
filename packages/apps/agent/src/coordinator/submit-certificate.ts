@@ -18,7 +18,7 @@ export async function submitDelegationCertificate(opts: {
 	const info = parseDelegationCertificate(opts.certificate);
 	const body: SubmitDelegationCertificateRequest = {
 		logId: opts.logId,
-		// Decimal strings on the wire (canopy plan-2611-01 D1).
+		// Decimal strings on the wire.
 		mmrStart: formatDecimalUint64(opts.mmrStart),
 		mmrEnd: formatDecimalUint64(opts.mmrEnd),
 		delegatedPublicKey: opts.delegatedPublicKeyBase64,

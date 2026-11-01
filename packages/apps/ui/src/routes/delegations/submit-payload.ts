@@ -8,7 +8,7 @@ import { bytesToBase64 } from '$lib/signing/bytes.js';
  * bytes. The range comes from the certificate, not the entry: the console
  * signs wider than the demanded window (FOR-612), and the coordinator
  * requires the submitted range to equal the certificate's own, as decimal
- * strings (canopy plan-2611-01 D1).
+ * strings.
  */
 export function buildSubmitCertificateBodyFromCert(
 	entry: Pick<PendingDelegation, 'logIdHex32' | 'delegatedPublicKey'>,
