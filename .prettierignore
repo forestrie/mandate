@@ -10,3 +10,8 @@ packages/apps/ui/static/
 
 # Test fixtures mirroring pnpm-lock.yaml / registry response shapes byte-for-byte
 scripts/fixtures/
+
+# Synced agent layer: byte-for-byte copies written by `agentfiles sync`
+# from forestrie-agents; reformatting them shows up as drift
+.agents/
+.claude/
