@@ -4,7 +4,7 @@
 
 Superseded (was: Accepted, FOR-106) — superseded by
 [FOR-336](https://linear.app/forestrie/issue/FOR-336) /
-[plan-2607-12](https://github.com/forestrie/devdocs/blob/main/plans/plan-2607-12-forestrie-cli-public-packages.md):
+[plan-2607-12](https://github.com/forestrie/work/blob/main/plans/plan-2607-12-forestrie-cli-public-packages.md):
 `@forestrie/delegation-cose` is published to **public npmjs** with SLSA
 provenance via trusted publishing; mandate installs it tokenlessly from
 `registry.npmjs.org` and verifies provenance identity in CI
