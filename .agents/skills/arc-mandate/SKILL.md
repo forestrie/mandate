@@ -33,7 +33,7 @@ Privy auth in deploy-web.
 |-------|------|
 | Agent router | [AGENTS.md](https://github.com/forestrie/mandate/blob/main/AGENTS.md) |
 | UI browser e2e plan | [docs/plans/plan-0047-ui-browser-e2e.md](https://github.com/forestrie/mandate/blob/main/docs/plans/plan-0047-ui-browser-e2e.md) |
-| Delegation (platform) | [devdocs glossary — BYOK](https://github.com/forestrie/devdocs/blob/main/glossary.md) |
+| Delegation (platform) | [devdocs glossary — BYOK](https://github.com/forestrie/protocol/blob/main/glossary.md) |
 | Canopy delegation coordinator | [arc-canopy](../arc-canopy/SKILL.md) |
 
 ## Sibling repos
