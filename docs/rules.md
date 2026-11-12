@@ -19,6 +19,7 @@ Each rule has **Why**, a source link and **Enforced-by**. Versioning:
 MAJOR removes or redefines a rule, MINOR adds one, PATCH rewords.
 
 ### M1 — The user's registered publicRoot is the sole root of trust
+
 The user owns `K(L)` (or the Privy wallet whose key is `K(L)`); the operator
 MUST NOT hold a long-lived user root in any mode. Security invariants I1–I8 hold.
 **Why:** BYOK's whole promise is that operator compromise cannot forge or
@@ -27,6 +28,7 @@ rewrite the user's log.
 **Enforced-by:** test:packages/libs/privy-admin/test/owner-topology.test.ts, review
 
 ### M2 — Mode C kill switch needs both bits; the user can always revoke
+
 Sealing in Mode C requires **both** the user enable bit and the operator enable
 bit; the user can unilaterally clear theirs and the operator cannot bypass it.
 **Why:** the user must retain a unilateral stop even while the operator hosts the
@@ -35,6 +37,7 @@ sealing infrastructure.
 **Enforced-by:** test:packages/libs/privy-admin/test/revoke-mode-c.test.ts, test:packages/libs/privy-admin/test/owner-topology.test.ts, review
 
 ### M3 — Protocol-level exit needs no operator cooperation
+
 A user can re-assign `publicRoot` on-chain and re-delegate to a different sealer
 without mandate's involvement. **Why:** an exit that depends on the operator is
 not an exit — it is a lock-in.
@@ -42,6 +45,7 @@ not an exit — it is a lock-in.
 **Enforced-by:** review
 
 ### M4 — Payment identity is orthogonal to sealing authority
+
 x402 / USDC payment identity MUST NOT be fed into grant verification, and grants
 MUST NOT gate payment. Two planes. **Why:** coupling them would let a payment
 lapse silently revoke authority (or vice-versa) — neither is the other's
@@ -50,6 +54,7 @@ authority source.
 **Enforced-by:** review
 
 ### M5 — The delegation agent brokers; it never signs with a held root
+
 `delegation.required` routes signing to the **user** signer in Mode B; the agent
 mediates the exchange and validates returned certificates but holds no root key.
 **Why:** the broker is a message router, not an authority — holding a key would
@@ -58,6 +63,7 @@ collapse M1.
 **Enforced-by:** test:packages/apps/agent/test/handle-delegation-required.test.ts, test:packages/apps/agent/test/validate-certificate.test.ts, review
 
 ### M6 — Inline Safe deploy uses published deploy-core; deploy-web stays neutral
+
 `/onboard`'s inline Safe branch (CreateCall / CREATE2) uses the published
 `@forestrie/deploy-core` Safe client; deploy-web remains a neutral **EOA-only**
 thin shell and STS is deploy-time best-effort only. **Why:** the structural fix
