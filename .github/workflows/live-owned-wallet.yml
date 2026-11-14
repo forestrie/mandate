@@ -105,11 +105,16 @@ jobs:
           fi
           echo "live-onboard secrets preflight ok"
 
+  # The onboard test signs its attestation with the Mode C wallet, through
+  # mandate's authorization key, so mandate must be a signer on that wallet.
+  # live-mode-c adds it (onboardModeCWallet) and both live-mode-c and the
+  # live-hands-off kill-switch case revoke and restore it. Run after both, so
+  # no sign lands in a revoked window and the signer is known to be present.
   live-onboard:
     name: Self-service onboard request live test (FOR-177)
     runs-on: ubuntu-latest
     environment: live-signer
-    needs: live-onboard-secrets-check
+    needs: [live-onboard-secrets-check, live-hands-off, live-mode-c]
     steps:
       - uses: actions/checkout@v4
 

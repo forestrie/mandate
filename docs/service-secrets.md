@@ -317,6 +317,8 @@ flowchart TD
   provision[live-provision]
   modeC[live-mode-c]
   modeB[live-mode-b]
+  onboardPreflight[live-onboard-secrets-check]
+  onboard[live-onboard]
   preflight --> owned
   preflight --> provision
   owned --> handsOff
@@ -324,7 +326,13 @@ flowchart TD
   preflight --> modeC
   modeBPreflight --> modeB
   provision --> modeC
+  onboardPreflight --> onboard
+  handsOff --> onboard
+  modeC --> onboard
 ```
+
+`live-onboard` signs with the Mode C wallet, which `live-mode-c` and the
+`live-hands-off` kill-switch case revoke and restore, so it runs after both.
 
 | Job              | Primary env                                                                                          |
 | ---------------- | ---------------------------------------------------------------------------------------------------- |
