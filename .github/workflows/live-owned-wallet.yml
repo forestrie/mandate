@@ -58,6 +58,7 @@ jobs:
           check "$E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN" E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN
           check "$E2E_CANOPY_OPS_ADMIN_TOKEN" E2E_CANOPY_OPS_ADMIN_TOKEN
           check "$E2E_CANOPY_UNIVOCITY_ADDR" E2E_CANOPY_UNIVOCITY_ADDR
+          check "$E2E_CANOPY_BOOTSTRAP_KEY_HEX" E2E_CANOPY_BOOTSTRAP_KEY_HEX
           check "$E2E_CANOPY_CHAIN_ID" E2E_CANOPY_CHAIN_ID
           check "$E2E_DELEGATION_COORDINATOR_URL" E2E_DELEGATION_COORDINATOR_URL
           check "$E2E_MANDATE_AGENT_WEBHOOK_URL" E2E_MANDATE_AGENT_WEBHOOK_URL
@@ -77,6 +78,7 @@ jobs:
           E2E_CANOPY_API_URL: ${{ secrets.E2E_CANOPY_API_URL }}
           E2E_CANOPY_CHAIN_ID: ${{ secrets.E2E_CANOPY_CHAIN_ID }}
           E2E_CANOPY_UNIVOCITY_ADDR: ${{ secrets.E2E_CANOPY_UNIVOCITY_ADDR }}
+          E2E_CANOPY_BOOTSTRAP_KEY_HEX: ${{ secrets.E2E_CANOPY_BOOTSTRAP_KEY_HEX }}
         run: |
           set -euo pipefail
           missing=0
@@ -120,6 +122,7 @@ jobs:
           E2E_CANOPY_API_URL: ${{ secrets.E2E_CANOPY_API_URL }}
           E2E_CANOPY_CHAIN_ID: ${{ secrets.E2E_CANOPY_CHAIN_ID }}
           E2E_CANOPY_UNIVOCITY_ADDR: ${{ secrets.E2E_CANOPY_UNIVOCITY_ADDR }}
+          E2E_CANOPY_BOOTSTRAP_KEY_HEX: ${{ secrets.E2E_CANOPY_BOOTSTRAP_KEY_HEX }}
           E2E_CANOPY_OPS_ADMIN_TOKEN: ${{ secrets.E2E_CANOPY_OPS_ADMIN_TOKEN }}
         run: pnpm --filter @mandate/register test:live:onboard
 
