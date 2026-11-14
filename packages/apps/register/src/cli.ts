@@ -8,6 +8,7 @@ import {
 	requestOnboardToken
 } from './onboard-client.js';
 import { buildOnboardAttestationKs256Remote } from './onboard-attestation.js';
+import { checkOnboardRequestAttestationInputs } from './onboard-request-attestation-inputs.js';
 import { onboardModeCWallet, PrivyRestClient } from '@mandate/privy-admin';
 import { runRevokeModeCCommand } from './revoke-mode-c-command.js';
 import { runDescribePostRevokeActionsCommand } from './describe-post-revoke-command.js';
@@ -16,7 +17,7 @@ import type { OperatorRootKeysMap } from './describe-post-revoke-actions.js';
 import type { DelegationMode } from './delegation-mode.js';
 import { parseUnivocityVariant } from './univocity-genesis-variant.js';
 
-function usageOnboardRequest(): void {
+function usageOnboardRequest(): never {
 	console.error(`Usage: mandate-register onboard request [options]
 
 Options:
@@ -239,25 +240,24 @@ async function buildOnboardRequestAttestation(args: {
 	chainId: string;
 	univocityAddr: string;
 }): Promise<Uint8Array> {
-	const rootSignerAddress = readFlag('--root-address');
-	const logIdHex32 = readFlag('--log-id');
-	const signerUrl = envOr(readFlag('--signer-url'), 'MANDATE_SIGNER_URL');
-	if (!rootSignerAddress || !logIdHex32 || !signerUrl) {
-		console.error(
-			'onboard request needs --root-address, --log-id and a signer URL ' +
-				'(--signer-url or MANDATE_SIGNER_URL)'
-		);
+	const inputs = checkOnboardRequestAttestationInputs({
+		rootSignerAddress: readFlag('--root-address'),
+		logIdHex32: readFlag('--log-id'),
+		signerUrl: envOr(readFlag('--signer-url'), 'MANDATE_SIGNER_URL')
+	});
+	if (!inputs.ok) {
+		console.error(`onboard request needs ${inputs.missing.join(', ')}`);
 		usageOnboardRequest();
 	}
 	const bearerToken = requireOperationalEnv('MANDATE_SIGNER_TOKEN');
 
 	return buildOnboardAttestationKs256Remote(
 		{
-			signerUrl: signerUrl!,
+			signerUrl: inputs.signerUrl,
 			bearerToken,
 			keyRef: readFlag('--key-ref') ?? 'user-log-wallet',
-			rootSignerAddress: rootSignerAddress!,
-			logIdHex32: logIdHex32!
+			rootSignerAddress: inputs.rootSignerAddress,
+			logIdHex32: inputs.logIdHex32
 		},
 		{
 			chainId: args.chainId,

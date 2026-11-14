@@ -21,8 +21,9 @@ describe('mandate-register onboard request CLI attestation (plan-2607-45 slice 0
 		expect(CLI_SOURCE).toContain("envOr(readFlag('--signer-url'), 'MANDATE_SIGNER_URL')");
 	});
 
+	// The rule itself is table-tested in onboard-request-attestation-inputs.test.ts.
 	it('requires all attestation inputs instead of posting unattested', () => {
-		expect(CLI_SOURCE).toContain('onboard request needs --root-address');
+		expect(CLI_SOURCE).toContain('checkOnboardRequestAttestationInputs({');
 		expect(CLI_SOURCE).not.toContain('!rootSignerAddress && !logIdHex32 && !signerUrl');
 		expect(CLI_SOURCE).not.toContain('Promise<Uint8Array | undefined>');
 	});
