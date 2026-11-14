@@ -29,12 +29,29 @@ describe('onboard-client', () => {
 			chainId: '84532',
 			univocityAddr: 'aa'.repeat(40),
 			contactEmail: 'a@b.com',
+			attestation: new Uint8Array([0x84, 0x41, 0x01]),
 			fetchImpl
 		});
 
 		expect(out.requestId).toBe('id-1');
 		expect(out.redeemCode).toBe('rc');
 		expect(fetchImpl).toHaveBeenCalledOnce();
+	});
+
+	it('rejects an empty attestation without calling canopy', async () => {
+		const fetchImpl = vi.fn();
+		await expect(
+			requestOnboardToken({
+				canopyBaseUrl: 'https://api.test',
+				label: 'fork',
+				chainId: '84532',
+				univocityAddr: 'aa'.repeat(20),
+				contactEmail: 'a@b.com',
+				attestation: new Uint8Array(0),
+				fetchImpl: fetchImpl as unknown as typeof fetch
+			})
+		).rejects.toThrow(/attestation is required/);
+		expect(fetchImpl).not.toHaveBeenCalled();
 	});
 
 	it('carries the attestation as untagged bytes at CBOR key 7 (FOR-484)', async () => {

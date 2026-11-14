@@ -222,13 +222,11 @@ registration control plane.
 After step 1, submit an **onboard request** with your deployed Univocity binding.
 The request carries a **bootstrap-key attestation** (ADR-0059 D8): a CWT signed
 by the chain-declared bootstrap key, proving the requester controls the
-instance being registered. Where the canopy lane arms
-`ONBOARD_REQUIRE_KEY_ATTESTATION`, an unattested request is rejected. The CLI
+instance being registered. Canopy rejects every request without it. The CLI
 signs it through the remote mandate signer (`--root-address`, `--log-id`, and
-`--signer-url`/`MANDATE_SIGNER_URL` + `MANDATE_SIGNER_TOKEN`); omit those flags
-only on lanes that do not require attestation. The canopy operator approves
-(or dev lane auto-approves); you **redeem** with the one-time code to receive
-the bearer.
+`--signer-url`/`MANDATE_SIGNER_URL` + `MANDATE_SIGNER_TOKEN`, all required).
+The canopy operator approves (or dev lane auto-approves); you **redeem** with
+the one-time code to receive the bearer.
 
 ```mermaid
 sequenceDiagram

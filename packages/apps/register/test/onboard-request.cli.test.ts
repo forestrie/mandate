@@ -17,13 +17,15 @@ describe('mandate-register onboard request CLI attestation (plan-2607-45 slice 0
 		expect(CLI_SOURCE).toContain('MANDATE_SIGNER_TOKEN');
 	});
 
-	it('arms attestation from MANDATE_SIGNER_URL env, not only flags (M2)', () => {
+	it('reads the signer URL from flag or MANDATE_SIGNER_URL env', () => {
 		expect(CLI_SOURCE).toContain("envOr(readFlag('--signer-url'), 'MANDATE_SIGNER_URL')");
-		expect(CLI_SOURCE).toContain('!rootSignerAddress && !logIdHex32 && !signerUrl');
 	});
 
-	it('fails loudly on a partial attestation flag set instead of posting unattested', () => {
-		expect(CLI_SOURCE).toContain('attested onboard request needs');
+	// The rule itself is table-tested in onboard-request-attestation-inputs.test.ts.
+	it('requires all attestation inputs instead of posting unattested', () => {
+		expect(CLI_SOURCE).toContain('checkOnboardRequestAttestationInputs({');
+		expect(CLI_SOURCE).not.toContain('!rootSignerAddress && !logIdHex32 && !signerUrl');
+		expect(CLI_SOURCE).not.toContain('Promise<Uint8Array | undefined>');
 	});
 
 	it('rejects an unknown --mode instead of coercing to Privy-custody (M3)', () => {

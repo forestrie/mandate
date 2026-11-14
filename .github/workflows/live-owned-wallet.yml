@@ -77,6 +77,11 @@ jobs:
           E2E_CANOPY_API_URL: ${{ secrets.E2E_CANOPY_API_URL }}
           E2E_CANOPY_CHAIN_ID: ${{ secrets.E2E_CANOPY_CHAIN_ID }}
           E2E_CANOPY_UNIVOCITY_ADDR: ${{ secrets.E2E_CANOPY_UNIVOCITY_ADDR }}
+          MANDATE_PRIVY_APP_ID: ${{ secrets.MANDATE_PRIVY_APP_ID }}
+          MANDATE_PRIVY_APP_SECRET: ${{ secrets.MANDATE_PRIVY_APP_SECRET }}
+          MANDATE_PRIVY_API_BASE: ${{ secrets.MANDATE_PRIVY_API_BASE }}
+          MANDATE_PRIVY_AUTHORIZATION_KEY: ${{ secrets.MANDATE_PRIVY_AUTHORIZATION_KEY }}
+          E2E_MODE_C_USER_PRIVY_WALLET_ID: ${{ secrets.E2E_MODE_C_USER_PRIVY_WALLET_ID }}
         run: |
           set -euo pipefail
           missing=0
@@ -89,17 +94,31 @@ jobs:
           check "$E2E_CANOPY_API_URL" E2E_CANOPY_API_URL
           check "$E2E_CANOPY_CHAIN_ID" E2E_CANOPY_CHAIN_ID
           check "$E2E_CANOPY_UNIVOCITY_ADDR" E2E_CANOPY_UNIVOCITY_ADDR
+          check "$MANDATE_PRIVY_APP_ID" MANDATE_PRIVY_APP_ID
+          check "$MANDATE_PRIVY_APP_SECRET" MANDATE_PRIVY_APP_SECRET
+          check "$MANDATE_PRIVY_API_BASE" MANDATE_PRIVY_API_BASE
+          check "$MANDATE_PRIVY_AUTHORIZATION_KEY" MANDATE_PRIVY_AUTHORIZATION_KEY
+          check "$E2E_MODE_C_USER_PRIVY_WALLET_ID" E2E_MODE_C_USER_PRIVY_WALLET_ID
           if [ "$missing" -ne 0 ]; then
             echo "Sync Doppler mandate-forestrie (dev + e2e) to GitHub live-signer" >&2
             exit 1
           fi
           echo "live-onboard secrets preflight ok"
 
+  # The onboard test signs its attestation with the Mode C wallet, through
+  # mandate's authorization key, so mandate must be a signer on that wallet.
+  # live-mode-c adds it (onboardModeCWallet) and both live-mode-c and the
+  # live-hands-off kill-switch case revoke and restore it. Run after both, so
+  # no sign lands in a revoked window, but whether they pass or not: a failure
+  # there must not skip the only live check that canopy accepts the
+  # attestation. If one stopped with the signer revoked, or live-mode-c never
+  # added it, the Privy sign here fails with a 502 and says so.
   live-onboard:
     name: Self-service onboard request live test (FOR-177)
     runs-on: ubuntu-latest
     environment: live-signer
-    needs: live-onboard-secrets-check
+    needs: [live-onboard-secrets-check, live-hands-off, live-mode-c]
+    if: ${{ !cancelled() && needs.live-onboard-secrets-check.result == 'success' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -121,6 +140,12 @@ jobs:
           E2E_CANOPY_CHAIN_ID: ${{ secrets.E2E_CANOPY_CHAIN_ID }}
           E2E_CANOPY_UNIVOCITY_ADDR: ${{ secrets.E2E_CANOPY_UNIVOCITY_ADDR }}
           E2E_CANOPY_OPS_ADMIN_TOKEN: ${{ secrets.E2E_CANOPY_OPS_ADMIN_TOKEN }}
+          MANDATE_PRIVY_APP_ID: ${{ secrets.MANDATE_PRIVY_APP_ID }}
+          MANDATE_PRIVY_APP_SECRET: ${{ secrets.MANDATE_PRIVY_APP_SECRET }}
+          MANDATE_PRIVY_API_BASE: ${{ secrets.MANDATE_PRIVY_API_BASE }}
+          MANDATE_PRIVY_AUTHORIZATION_KEY: ${{ secrets.MANDATE_PRIVY_AUTHORIZATION_KEY }}
+          E2E_MODE_C_USER_PRIVY_WALLET_ID: ${{ secrets.E2E_MODE_C_USER_PRIVY_WALLET_ID }}
+          E2E_MODE_C_USER_WALLET_ADDRESS: ${{ secrets.E2E_MODE_C_USER_WALLET_ADDRESS }}
         run: pnpm --filter @mandate/register test:live:onboard
 
   live-owned:

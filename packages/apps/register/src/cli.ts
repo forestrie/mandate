@@ -8,6 +8,7 @@ import {
 	requestOnboardToken
 } from './onboard-client.js';
 import { buildOnboardAttestationKs256Remote } from './onboard-attestation.js';
+import { checkOnboardRequestAttestationInputs } from './onboard-request-attestation-inputs.js';
 import { onboardModeCWallet, PrivyRestClient } from '@mandate/privy-admin';
 import { runRevokeModeCCommand } from './revoke-mode-c-command.js';
 import { runDescribePostRevokeActionsCommand } from './describe-post-revoke-command.js';
@@ -16,7 +17,7 @@ import type { OperatorRootKeysMap } from './describe-post-revoke-actions.js';
 import type { DelegationMode } from './delegation-mode.js';
 import { parseUnivocityVariant } from './univocity-genesis-variant.js';
 
-function usageOnboardRequest(): void {
+function usageOnboardRequest(): never {
 	console.error(`Usage: mandate-register onboard request [options]
 
 Options:
@@ -27,18 +28,14 @@ Options:
   --contact-email    Operator contact email (required)
   --mandate-origin   Deployed mandate UI URL (optional)
 
-Bootstrap-key attestation (ADR-0059 D8 — required where canopy arms
-ONBOARD_REQUIRE_KEY_ATTESTATION; signed by the remote mandate signer):
-  --root-address     Bootstrap wallet address the signer recovery-checks (0x…)
-  --log-id           32-hex log id the signer KEY_DIRECTORY authorises
-  --signer-url       mandate-signer /v1/sign URL (MANDATE_SIGNER_URL)
+Bootstrap-key attestation (ADR-0059 D8 — always required; signed by the
+remote mandate signer):
+  --root-address     Bootstrap wallet address the signer recovery-checks (0x…) (required)
+  --log-id           32-hex log id the signer KEY_DIRECTORY authorises (required)
+  --signer-url       mandate-signer /v1/sign URL (required; or MANDATE_SIGNER_URL)
   --key-ref          KEY_DIRECTORY keyRef (default: user-log-wallet)
   --attest-aud       aud claim (default: the canopy URL origin)
-  MANDATE_SIGNER_TOKEN env: bearer for the signer call (required to attest)
-
-Any attestation flag (or MANDATE_SIGNER_URL in env) arms attesting, and the
-rest become required. Omit them all to post an unattested request (rejected
-wherever the canopy policy is armed).
+  MANDATE_SIGNER_TOKEN env: bearer for the signer call (required)
 `);
 	process.exit(1);
 }
@@ -233,39 +230,34 @@ function requirePrivyClientConfig(): {
 
 /**
  * Build the D8 bootstrap-key attestation for `onboard request` via the remote
- * mandate signer (the bootstrap key never leaves custody). Attestation is
- * armed by ANY of --root-address, --log-id, --signer-url, or a
- * MANDATE_SIGNER_URL env — so a partial flag set OR an env-only signer
- * config fails loudly instead of silently posting unattested
- * (plan-2607-03 M2).
+ * mandate signer (the bootstrap key never leaves custody). canopy refuses an
+ * unattested request, so --root-address, --log-id and a signer URL
+ * (--signer-url or MANDATE_SIGNER_URL) are all required; a missing one prints
+ * usage and exits.
  */
 async function buildOnboardRequestAttestation(args: {
 	canopyBaseUrl: string;
 	chainId: string;
 	univocityAddr: string;
-}): Promise<Uint8Array | undefined> {
-	const rootSignerAddress = readFlag('--root-address');
-	const logIdHex32 = readFlag('--log-id');
-	const signerUrl = envOr(readFlag('--signer-url'), 'MANDATE_SIGNER_URL');
-	if (!rootSignerAddress && !logIdHex32 && !signerUrl) {
-		return undefined;
-	}
-	if (!rootSignerAddress || !logIdHex32 || !signerUrl) {
-		console.error(
-			'attested onboard request needs --root-address, --log-id and a signer URL ' +
-				'(--signer-url or MANDATE_SIGNER_URL)'
-		);
+}): Promise<Uint8Array> {
+	const inputs = checkOnboardRequestAttestationInputs({
+		rootSignerAddress: readFlag('--root-address'),
+		logIdHex32: readFlag('--log-id'),
+		signerUrl: envOr(readFlag('--signer-url'), 'MANDATE_SIGNER_URL')
+	});
+	if (!inputs.ok) {
+		console.error(`onboard request needs ${inputs.missing.join(', ')}`);
 		usageOnboardRequest();
 	}
 	const bearerToken = requireOperationalEnv('MANDATE_SIGNER_TOKEN');
 
 	return buildOnboardAttestationKs256Remote(
 		{
-			signerUrl: signerUrl!,
+			signerUrl: inputs.signerUrl,
 			bearerToken,
 			keyRef: readFlag('--key-ref') ?? 'user-log-wallet',
-			rootSignerAddress: rootSignerAddress!,
-			logIdHex32: logIdHex32!
+			rootSignerAddress: inputs.rootSignerAddress,
+			logIdHex32: inputs.logIdHex32
 		},
 		{
 			chainId: args.chainId,

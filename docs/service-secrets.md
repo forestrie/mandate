@@ -68,23 +68,23 @@ Three wallet topologies; see CONTEXT.md and ADR-0005 §7.
 The retired early `mandate-forestrie` wallet (ownerless + mandate additional
 signer; renamed **`mandate-forestrie-archived`** in Privy) must not be referenced.
 
-| Name                                | Synthetic role                                                      | Tests that mutate                                                 |
-| ----------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `E2E_SIGNER_TEST_PRIVY_WALLET_ID`   | User-owned signer test wallet (mandate additional signer)           | `live-owned`, `live-hands-off` (success path) — **never revoked** |
-| `E2E_SIGNER_TEST_WALLET_ADDRESS`    | Signer test wallet Ethereum address                                 | —                                                                 |
-| `E2E_SIGNER_TEST_OWNER_AUTH_KEY`    | Owner key for signer test wallet PATCH (onboard/re-onboard only)    | Provision script / manual re-onboard                              |
-| `E2E_MODE_C_USER_PRIVY_WALLET_ID`   | Mode C **kill-switch** test user wallet (distinct from signer test) | `live-mode-c`, `live-hands-off` (kill-switch), `live-provision`   |
-| `E2E_MODE_C_USER_WALLET_ADDRESS`    | Optional address for Mode C wallet                                  | —                                                                 |
-| `E2E_MODE_C_PRIVY_OWNER_AUTH_KEY`   | Test user owner key for wallet PATCH                                | onboard, revoke, kill-switch                                      |
-| `E2E_MODE_C_PRIVY_POLICY_ID`        | Optional; reuse delegation policy across E2E jobs                   | provision, mode-c, hands-off restore                              |
-| `E2E_CANOPY_API_URL`                | Dev Canopy SCRAPI base                                              | `live-provision`                                                  |
-| `E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN` | Onboard bearer for genesis                                          | `live-provision`                                                  |
-| `E2E_CANOPY_OPS_ADMIN_TOKEN`        | Mint onboard token if payments token unset                          | `live-provision`                                                  |
-| `E2E_CANOPY_UNIVOCITY_ADDR`         | Dev Univocity contract (40-hex)                                     | `live-provision`                                                  |
-| `E2E_CANOPY_CHAIN_ID`               | EIP-155 chain id for dev Canopy genesis                             | `live-provision`                                                  |
-| `E2E_DELEGATION_COORDINATOR_URL`    | Dev coordinator origin                                              | `live-provision`                                                  |
-| `E2E_MANDATE_AGENT_WEBHOOK_URL`     | Agent webhook for genesis `?webhookUrl=`                            | `live-provision`                                                  |
-| `E2E_USER_SIGNER_URL`               | Mode B reference user signer `POST /v1/sign` URL                    | `live-mode-b` (FOR-210)                                           |
+| Name                                | Synthetic role                                                                                                        | Tests that mutate                                                                                       |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `E2E_SIGNER_TEST_PRIVY_WALLET_ID`   | User-owned signer test wallet (mandate additional signer)                                                             | `live-owned`, `live-hands-off` (success path) — **never revoked**                                       |
+| `E2E_SIGNER_TEST_WALLET_ADDRESS`    | Signer test wallet Ethereum address                                                                                   | —                                                                                                       |
+| `E2E_SIGNER_TEST_OWNER_AUTH_KEY`    | Owner key for signer test wallet PATCH (onboard/re-onboard only)                                                      | Provision script / manual re-onboard                                                                    |
+| `E2E_MODE_C_USER_PRIVY_WALLET_ID`   | Mode C **kill-switch** test user wallet (distinct from signer test); the bootstrap key of `E2E_CANOPY_UNIVOCITY_ADDR` | `live-mode-c`, `live-hands-off` (kill-switch), `live-provision`, `live-onboard` (signs the attestation) |
+| `E2E_MODE_C_USER_WALLET_ADDRESS`    | Optional address for Mode C wallet                                                                                    | —                                                                                                       |
+| `E2E_MODE_C_PRIVY_OWNER_AUTH_KEY`   | Test user owner key for wallet PATCH                                                                                  | onboard, revoke, kill-switch                                                                            |
+| `E2E_MODE_C_PRIVY_POLICY_ID`        | Optional; reuse delegation policy across E2E jobs                                                                     | provision, mode-c, hands-off restore                                                                    |
+| `E2E_CANOPY_API_URL`                | Dev Canopy SCRAPI base                                                                                                | `live-provision`, `live-onboard`                                                                        |
+| `E2E_CANOPY_PAYMENTS_ONBOARD_TOKEN` | Onboard bearer for genesis                                                                                            | `live-provision`                                                                                        |
+| `E2E_CANOPY_OPS_ADMIN_TOKEN`        | Mint onboard token if payments token unset; approve a pending onboard request                                         | `live-provision`, `live-onboard`                                                                        |
+| `E2E_CANOPY_UNIVOCITY_ADDR`         | Dev Univocity contract (40-hex); its `bootstrapConfig()` key is the Mode C wallet                                     | `live-provision`, `live-onboard`                                                                        |
+| `E2E_CANOPY_CHAIN_ID`               | EIP-155 chain id for dev Canopy genesis and onboarding                                                                | `live-provision`, `live-onboard`                                                                        |
+| `E2E_DELEGATION_COORDINATOR_URL`    | Dev coordinator origin                                                                                                | `live-provision`                                                                                        |
+| `E2E_MANDATE_AGENT_WEBHOOK_URL`     | Agent webhook for genesis `?webhookUrl=`                                                                              | `live-provision`                                                                                        |
+| `E2E_USER_SIGNER_URL`               | Mode B reference user signer `POST /v1/sign` URL                                                                      | `live-mode-b` (FOR-210)                                                                                 |
 
 Reuse `E2E_MODE_C_PRIVY_POLICY_ID` across provision, mode-c revoke-restore, and
 hands-off kill-switch restore to avoid policy sprawl.
@@ -317,6 +317,8 @@ flowchart TD
   provision[live-provision]
   modeC[live-mode-c]
   modeB[live-mode-b]
+  onboardPreflight[live-onboard-secrets-check]
+  onboard[live-onboard]
   preflight --> owned
   preflight --> provision
   owned --> handsOff
@@ -324,15 +326,23 @@ flowchart TD
   preflight --> modeC
   modeBPreflight --> modeB
   provision --> modeC
+  onboardPreflight --> onboard
+  handsOff --> onboard
+  modeC --> onboard
 ```
 
-| Job              | Primary env                                                                                      |
-| ---------------- | ------------------------------------------------------------------------------------------------ |
-| `live-owned`     | `MANDATE_*` + `E2E_SIGNER_TEST_*`                                                                |
-| `live-hands-off` | above + `E2E_MODE_C_*`                                                                           |
-| `live-provision` | `E2E_CANOPY_*`, `E2E_DELEGATION_*`, `E2E_MANDATE_AGENT_WEBHOOK_URL`, `MANDATE_*`, `E2E_MODE_C_*` |
-| `live-mode-c`    | `MANDATE_*` + `E2E_MODE_C_*`                                                                     |
-| `live-mode-b`    | `E2E_CANOPY_*`, `E2E_USER_SIGNER_URL`, `USER_SIGNER_*`, `MANDATE_SIGNER_URL`, `LIVE_MODE_B=1`    |
+`live-onboard` signs with the Mode C wallet, which `live-mode-c` and the
+`live-hands-off` kill-switch case revoke and restore, so it runs after both
+finish, whether they pass or not; it needs only its own preflight to pass.
+
+| Job              | Primary env                                                                                          |
+| ---------------- | ---------------------------------------------------------------------------------------------------- |
+| `live-owned`     | `MANDATE_*` + `E2E_SIGNER_TEST_*`                                                                    |
+| `live-hands-off` | above + `E2E_MODE_C_*`                                                                               |
+| `live-provision` | `E2E_CANOPY_*`, `E2E_DELEGATION_*`, `E2E_MANDATE_AGENT_WEBHOOK_URL`, `MANDATE_*`, `E2E_MODE_C_*`     |
+| `live-onboard`   | `E2E_CANOPY_*`, `MANDATE_PRIVY_*` (app id, secret, API base, authorization key), `E2E_MODE_C_USER_*` |
+| `live-mode-c`    | `MANDATE_*` + `E2E_MODE_C_*`                                                                         |
+| `live-mode-b`    | `E2E_CANOPY_*`, `E2E_USER_SIGNER_URL`, `USER_SIGNER_*`, `MANDATE_SIGNER_URL`, `LIVE_MODE_B=1`        |
 
 Local examples:
 
