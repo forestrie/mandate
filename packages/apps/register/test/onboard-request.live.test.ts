@@ -1,13 +1,27 @@
 /**
  * Live e2e: self-service onboard request → approve (ops or dev auto-approve) → redeem.
- * Skips when E2E_CANOPY_API_URL, chain, Univocity addr, or the bootstrap key
- * (E2E_CANOPY_BOOTSTRAP_KEY_HEX) are unset.
+ *
+ * canopy refuses an onboard request without the bootstrap-key attestation
+ * (devdocs ADR-0059 decision 8), so the test signs one the way the CLI does:
+ * `buildOnboardAttestationKs256Remote` posts the Sig_structure to the
+ * `@mandate/signer` `/v1/sign` route, run here in-process with the Privy
+ * credentials (as `provision-e2e.live.test.ts` does). The bootstrap key stays
+ * in Privy custody. It is the Mode C test wallet: `live-provision` runs
+ * genesis on the same E2E_CANOPY_UNIVOCITY_ADDR with that wallet as the KS256
+ * bootstrap key, so the contract's `bootstrapConfig()` names it.
+ *
+ * Skips when the canopy, chain, Univocity or Privy inputs are unset.
+ *
+ *   doppler run --project mandate-forestrie --config dev -- \
+ *   doppler run --project mandate-forestrie --config e2e -- \
+ *     pnpm --filter @mandate/register test:live:onboard
  */
 
-import { secp256k1 } from '@noble/curves/secp256k1';
-import { keccak_256 } from '@noble/hashes/sha3';
+import { randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { buildOnboardAttestationKs256 } from '../src/onboard-attestation.js';
+import { handleSign } from '../../signer/src/handle-sign.js';
+import type { Env as SignerEnv } from '../../signer/src/env.js';
+import { buildOnboardAttestationKs256Remote } from '../src/onboard-attestation.js';
 import {
 	getOnboardRequestStatus,
 	redeemOnboardToken,
@@ -19,22 +33,84 @@ const opsToken = process.env.E2E_CANOPY_OPS_ADMIN_TOKEN?.trim();
 const chainId = process.env.E2E_CANOPY_CHAIN_ID?.trim();
 const univocityAddr = process.env.E2E_CANOPY_UNIVOCITY_ADDR?.trim();
 
-/**
- * KS256 private key (hex) of the bootstrap EOA that the contract at
- * E2E_CANOPY_UNIVOCITY_ADDR declares; canopy refuses an unattested request
- * and verifies the attestation against that key.
- */
-const bootstrapKeyHex = process.env.E2E_CANOPY_BOOTSTRAP_KEY_HEX?.trim().replace(/^0x/i, '');
+const appId = process.env.MANDATE_PRIVY_APP_ID?.trim();
+const appSecret = process.env.MANDATE_PRIVY_APP_SECRET?.trim();
+const privyApiBase = process.env.MANDATE_PRIVY_API_BASE?.trim().replace(/\/$/, '');
+const authorizationKey = process.env.MANDATE_PRIVY_AUTHORIZATION_KEY?.trim();
+const walletId = process.env.E2E_MODE_C_USER_PRIVY_WALLET_ID?.trim();
 
-const liveReady = !!canopyBaseUrl && !!chainId && !!univocityAddr && !!bootstrapKeyHex;
+const liveReady =
+	!!canopyBaseUrl &&
+	!!chainId &&
+	!!univocityAddr &&
+	!!appId &&
+	!!appSecret &&
+	!!privyApiBase &&
+	!!authorizationKey &&
+	!!walletId;
 
-/** Sign keccak256(Sig_structure) in-process: 65-byte r‖s‖v, v in {0,1}. */
-async function signWithBootstrapKey(sigStructure: Uint8Array): Promise<Uint8Array> {
-	const sig = secp256k1.sign(keccak_256(sigStructure), bootstrapKeyHex!, { prehash: false });
-	const out = new Uint8Array(65);
-	out.set(sig.toCompactRawBytes(), 0);
-	out[64] = sig.recovery ?? 0;
-	return out;
+// The signer runs in-process, so its URL, bearer, keyRef and authorised log
+// id are local to this test; only the Privy wallet behind them is real.
+const SIGNER_URL = 'http://signer.test/v1/sign';
+const SIGNER_TOKEN = 'live-onboard-signer-token';
+const KEY_REF = 'onboard-live';
+const LOG_ID = randomBytes(16).toString('hex');
+
+async function resolveWalletAddress(): Promise<string> {
+	const provided = process.env.E2E_MODE_C_USER_WALLET_ADDRESS?.trim();
+	if (provided) return provided;
+	const basicAuth = Buffer.from(`${appId}:${appSecret}`).toString('base64');
+	const response = await fetch(`${privyApiBase}/v1/wallets/${walletId}`, {
+		headers: { Authorization: `Basic ${basicAuth}`, 'privy-app-id': appId! }
+	});
+	if (!response.ok) {
+		throw new Error(`wallet lookup failed: ${response.status}`);
+	}
+	const body = (await response.json()) as { address?: string };
+	if (!body.address) throw new Error('wallet missing address');
+	return body.address;
+}
+
+/** Sign the attestation through `/v1/sign`; Privy holds the bootstrap key. */
+async function buildAttestationInCustody(rootSignerAddress: string): Promise<Uint8Array> {
+	const signerEnv: SignerEnv = {
+		MANDATE_SIGNER_TOKEN: SIGNER_TOKEN,
+		MANDATE_PRIVY_APP_ID: appId!,
+		MANDATE_PRIVY_APP_SECRET: appSecret!,
+		MANDATE_PRIVY_API_BASE: privyApiBase!,
+		MANDATE_PRIVY_AUTHORIZATION_KEY: authorizationKey,
+		KEY_DIRECTORY: JSON.stringify({
+			[KEY_REF]: {
+				walletId: walletId!,
+				rootSignerAddress,
+				logIds: [LOG_ID],
+				requiresAuthorizationSignature: true
+			}
+		})
+	};
+	const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+		if (String(input) !== SIGNER_URL) {
+			throw new Error(`unexpected fetch: ${String(input)}`);
+		}
+		return handleSign(new Request(SIGNER_URL, init), { env: signerEnv });
+	}) as typeof fetch;
+
+	return buildOnboardAttestationKs256Remote(
+		{
+			signerUrl: SIGNER_URL,
+			bearerToken: SIGNER_TOKEN,
+			keyRef: KEY_REF,
+			rootSignerAddress,
+			logIdHex32: LOG_ID,
+			fetchImpl
+		},
+		{
+			chainId: chainId!,
+			univocityAddr: univocityAddr!.replace(/^0x/i, '').toLowerCase(),
+			aud: new URL(canopyBaseUrl!).origin,
+			nowSec: Math.floor(Date.now() / 1000)
+		}
+	);
 }
 
 async function ensureApproved(requestId: string, initialStatus: string): Promise<void> {
@@ -79,15 +155,7 @@ async function ensureApproved(requestId: string, initialStatus: string): Promise
 
 describe.skipIf(!liveReady)('onboard self-service live', () => {
 	it('request → approve → redeem returns usable token', async () => {
-		const attestation = await buildOnboardAttestationKs256(
-			{
-				chainId: chainId!,
-				univocityAddr: univocityAddr!.replace(/^0x/i, '').toLowerCase(),
-				aud: new URL(canopyBaseUrl!).origin,
-				nowSec: Math.floor(Date.now() / 1000)
-			},
-			signWithBootstrapKey
-		);
+		const attestation = await buildAttestationInCustody(await resolveWalletAddress());
 		const requested = await requestOnboardToken({
 			canopyBaseUrl: canopyBaseUrl!,
 			label: `live-onboard-${Date.now()}`,
@@ -113,7 +181,7 @@ describe.skipIf(!liveReady)('onboard self-service live', () => {
 
 describe('onboard self-service live preflight', () => {
 	it.skipIf(liveReady)(
-		'skipped — set E2E_CANOPY_API_URL, E2E_CANOPY_CHAIN_ID, E2E_CANOPY_UNIVOCITY_ADDR and E2E_CANOPY_BOOTSTRAP_KEY_HEX (the instance bootstrap key signs the required attestation)',
+		'skipped — set E2E_CANOPY_API_URL, E2E_CANOPY_CHAIN_ID, E2E_CANOPY_UNIVOCITY_ADDR, MANDATE_PRIVY_APP_ID, MANDATE_PRIVY_APP_SECRET, MANDATE_PRIVY_API_BASE, MANDATE_PRIVY_AUTHORIZATION_KEY and E2E_MODE_C_USER_PRIVY_WALLET_ID (the Mode C wallet is the instance bootstrap key and signs the required attestation)',
 		() => {
 			expect(liveReady).toBe(false);
 		}

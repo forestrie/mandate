@@ -77,7 +77,11 @@ jobs:
           E2E_CANOPY_API_URL: ${{ secrets.E2E_CANOPY_API_URL }}
           E2E_CANOPY_CHAIN_ID: ${{ secrets.E2E_CANOPY_CHAIN_ID }}
           E2E_CANOPY_UNIVOCITY_ADDR: ${{ secrets.E2E_CANOPY_UNIVOCITY_ADDR }}
-          E2E_CANOPY_BOOTSTRAP_KEY_HEX: ${{ secrets.E2E_CANOPY_BOOTSTRAP_KEY_HEX }}
+          MANDATE_PRIVY_APP_ID: ${{ secrets.MANDATE_PRIVY_APP_ID }}
+          MANDATE_PRIVY_APP_SECRET: ${{ secrets.MANDATE_PRIVY_APP_SECRET }}
+          MANDATE_PRIVY_API_BASE: ${{ secrets.MANDATE_PRIVY_API_BASE }}
+          MANDATE_PRIVY_AUTHORIZATION_KEY: ${{ secrets.MANDATE_PRIVY_AUTHORIZATION_KEY }}
+          E2E_MODE_C_USER_PRIVY_WALLET_ID: ${{ secrets.E2E_MODE_C_USER_PRIVY_WALLET_ID }}
         run: |
           set -euo pipefail
           missing=0
@@ -90,7 +94,11 @@ jobs:
           check "$E2E_CANOPY_API_URL" E2E_CANOPY_API_URL
           check "$E2E_CANOPY_CHAIN_ID" E2E_CANOPY_CHAIN_ID
           check "$E2E_CANOPY_UNIVOCITY_ADDR" E2E_CANOPY_UNIVOCITY_ADDR
-          check "$E2E_CANOPY_BOOTSTRAP_KEY_HEX" E2E_CANOPY_BOOTSTRAP_KEY_HEX
+          check "$MANDATE_PRIVY_APP_ID" MANDATE_PRIVY_APP_ID
+          check "$MANDATE_PRIVY_APP_SECRET" MANDATE_PRIVY_APP_SECRET
+          check "$MANDATE_PRIVY_API_BASE" MANDATE_PRIVY_API_BASE
+          check "$MANDATE_PRIVY_AUTHORIZATION_KEY" MANDATE_PRIVY_AUTHORIZATION_KEY
+          check "$E2E_MODE_C_USER_PRIVY_WALLET_ID" E2E_MODE_C_USER_PRIVY_WALLET_ID
           if [ "$missing" -ne 0 ]; then
             echo "Sync Doppler mandate-forestrie (dev + e2e) to GitHub live-signer" >&2
             exit 1
@@ -122,8 +130,13 @@ jobs:
           E2E_CANOPY_API_URL: ${{ secrets.E2E_CANOPY_API_URL }}
           E2E_CANOPY_CHAIN_ID: ${{ secrets.E2E_CANOPY_CHAIN_ID }}
           E2E_CANOPY_UNIVOCITY_ADDR: ${{ secrets.E2E_CANOPY_UNIVOCITY_ADDR }}
-          E2E_CANOPY_BOOTSTRAP_KEY_HEX: ${{ secrets.E2E_CANOPY_BOOTSTRAP_KEY_HEX }}
           E2E_CANOPY_OPS_ADMIN_TOKEN: ${{ secrets.E2E_CANOPY_OPS_ADMIN_TOKEN }}
+          MANDATE_PRIVY_APP_ID: ${{ secrets.MANDATE_PRIVY_APP_ID }}
+          MANDATE_PRIVY_APP_SECRET: ${{ secrets.MANDATE_PRIVY_APP_SECRET }}
+          MANDATE_PRIVY_API_BASE: ${{ secrets.MANDATE_PRIVY_API_BASE }}
+          MANDATE_PRIVY_AUTHORIZATION_KEY: ${{ secrets.MANDATE_PRIVY_AUTHORIZATION_KEY }}
+          E2E_MODE_C_USER_PRIVY_WALLET_ID: ${{ secrets.E2E_MODE_C_USER_PRIVY_WALLET_ID }}
+          E2E_MODE_C_USER_WALLET_ADDRESS: ${{ secrets.E2E_MODE_C_USER_WALLET_ADDRESS }}
         run: pnpm --filter @mandate/register test:live:onboard
 
   live-owned:
