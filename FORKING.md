@@ -24,14 +24,13 @@ sequenceDiagram
     participant C as Canopy operator
     participant U as End user
 
-    Note over M,C: 1. On-chain anchor + credentials
-    M->>C: Request chainId + Univocity address (or deploy yourself)
-    C-->>M: Chain binding
-    M->>C: Request onboard token for your instance
-    C-->>M: Onboard bearer (shown once)
-
-    Note over M: 2. Mandate instance
+    Note over M: 1. Mandate instance
     M->>M: Privy app + operator wallet + Cloudflare deploy
+
+    Note over M,C: 2. On-chain anchor + credentials
+    M->>M: Deploy Univocity with your bootstrap signer
+    M->>C: Onboard request, attested by the bootstrap signer
+    C-->>M: Onboard bearer (shown once)
 
     Note over M: 3. Payment-authoritative log
     M->>M: Run provision → genesis + webhook
@@ -48,6 +47,24 @@ sequenceDiagram
 Mandate is the **operator console and sealing plane** for BYOK user logs. Canopy
 is the **transparency pipe**. You need both, plus an onboard token from whoever
 runs the Canopy ops plane.
+
+### Order of operations
+
+One key ties steps 1, 2 and 4 together. The bootstrap signer you deploy
+Univocity with (step 1) signs your onboard request's attestation (step 2),
+and it must be your genesis `bootstrapKey` (step 4). Canopy refuses an
+attestation, or a genesis, made with any other key. In production that key
+is step 3's ownerless operator wallet. So the wallet, and the signer Worker
+that holds it, come first:
+
+1. **Step 3**: create the Privy app and the bootstrap wallet, and deploy the
+   signer Worker with a `KEY_DIRECTORY` entry for the wallet.
+2. **Choose your forest id `R`** (step 2 shows how), and list its log id in
+   that `KEY_DIRECTORY` entry.
+3. **Step 1**, with the wallet's address as the bootstrap signer.
+4. **Step 2**, signed by the wallet through your signer.
+5. **Step 4**, with the same `R` and the same wallet.
+6. Steps 5 and 6.
 
 ---
 
@@ -80,8 +97,8 @@ sequenceDiagram
     participant Rel as Univocity releases
     participant Chain as Target chain
 
-    alt A — Reuse existing deployment (fastest)
-        M->>C: Ask for chainId + contract address on their lane
+    alt A — Operator deploys for you (fastest)
+        M->>C: Ask for a contract with your bootstrap signer
         C-->>M: chainId, univocityAddr
     else B — Deploy from official release (independent fork)
         M->>Rel: Download deployer binary for release tag
@@ -98,14 +115,14 @@ sequenceDiagram
     M->>M: Record chainId + address for genesis
 ```
 
-| Path   | When to use                                                                                                                               |
-| ------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **A**  | Fork on a shared Forestrie dev lane                                                                                                       |
-| **B**  | Independent fork; prebuilt deployer + release tag — no Foundry — see [releases](https://github.com/forestrie/univocity/releases)          |
-| **B′** | Same as **B** but in the browser — [univocity-deploy](https://univocity-deploy.pages.dev) (EOA only; manifest + sidecar verified in-page) |
-| **B″** | Safe 1x1 (Mode D) forks: inline in the mandate console's `/onboard` wizard — propose + execute with the owner wallet, no CLI              |
-| **C**  | Custom contract changes                                                                                                                   |
-| **D**  | Local smoke only — not production                                                                                                         |
+| Path   | When to use                                                                                                                                                |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A**  | The canopy operator deploys a contract with your bootstrap signer. A lane's own anchor can't be reused: canopy binds one forest to each Univocity instance |
+| **B**  | Independent fork; prebuilt deployer + release tag — no Foundry — see [releases](https://github.com/forestrie/univocity/releases)                           |
+| **B′** | Same as **B** but in the browser — [univocity-deploy](https://univocity-deploy.pages.dev) (EOA only; manifest + sidecar verified in-page)                  |
+| **B″** | Safe 1x1 (Mode D) forks: inline in the mandate console's `/onboard` wizard — propose + execute with the owner wallet, no CLI                               |
+| **C**  | Custom contract changes                                                                                                                                    |
+| **D**  | Local smoke only — not production                                                                                                                          |
 
 **B (detail):** download `deployer-darwin-arm64` or `deployer-linux-x64` from
 the [univocity-tools v0.6.0 release](https://github.com/forestrie/univocity-tools/releases/tag/v0.6.0)
@@ -228,6 +245,38 @@ signs it through the remote mandate signer (`--root-address`, `--log-id`, and
 The canopy operator approves (or dev lane auto-approves); you **redeem** with
 the one-time code to receive the bearer.
 
+Each attestation buys one request. Canopy refuses a second request with the
+same attestation (409 `attestation already used; sign a new one`), so a retry
+signs again. A counterfactual UUPS instance that is not deployed yet can't be
+attested, because canopy reads the bootstrap key from the deployed contract:
+get its token by break-glass instead.
+
+Before you request:
+
+- Univocity is deployed with your bootstrap signer (step 1).
+- Your signer Worker is deployed (step 3), and its `KEY_DIRECTORY` entry
+  holds the bootstrap wallet and lists your forest's log id. The log id is not
+  part of the attestation. It tells the signer which log the signature is for,
+  and the signer refuses a log id its entry doesn't list.
+- You have chosen your forest id `R`, so the attestation's log id and step 4's
+  genesis agree:
+
+```bash
+# Choose the forest id once; step 4 provisions with the same value
+FOREST_R=$(uuidgen | tr '[:upper:]' '[:lower:]')
+LOG_ID_HEX32=$(printf %s "$FOREST_R" | tr -d -)
+```
+
+```json
+{
+	"operator-root": {
+		"walletId": "<Privy wallet id>",
+		"rootSignerAddress": "0x<bootstrap wallet address>",
+		"logIds": ["<LOG_ID_HEX32>"]
+	}
+}
+```
+
 ```mermaid
 sequenceDiagram
     participant M as Mandate operator
@@ -252,6 +301,7 @@ mandate-register onboard request \
   --contact-email "you@example.com" \
   --root-address "$ROOT_WALLET_ADDR" \
   --log-id "$LOG_ID_HEX32" \
+  --key-ref operator-root \
   --signer-url "$MANDATE_SIGNER_URL"   # bearer via MANDATE_SIGNER_TOKEN env
 
 # Poll until approved
@@ -341,8 +391,13 @@ doppler run --project mandate-forestrie --config dev -- \
   --coordinator-url "$DELEGATION_COORDINATOR_URL" \
   --webhook-url "$MANDATE_AGENT_WEBHOOK_URL" \
   --univocity-addr "$CANOPY_UNIVOCITY_ADDR" \
-  --chain-id "$CANOPY_CHAIN_ID"
+  --chain-id "$CANOPY_CHAIN_ID" \
+  --forest-r "$FOREST_R"
 ```
+
+Pass the `R` you chose for step 2. Genesis refuses a `bootstrapKey` other than
+the contract's bootstrap signer (422 `genesis bootstrapKey/alg does not
+match`).
 
 | Output field          | Keep                                               |
 | --------------------- | -------------------------------------------------- |
@@ -679,13 +734,16 @@ sequenceDiagram
 
 ## Troubleshooting
 
-| Symptom                         | Check                                         |
-| ------------------------------- | --------------------------------------------- |
-| Genesis 401                     | Onboard token wrong or revoked                |
-| Genesis 503 coordinator         | Webhook URL unreachable from Canopy           |
-| Statement 403 `signer_mismatch` | Statement signer ≠ grant binding              |
-| Receipt poll never completes    | Ask Canopy operator: Ranger + Sealer health   |
-| Agent never seals               | Webhook URL, Worker secrets, log enabled flag |
+| Symptom                                        | Check                                                             |
+| ---------------------------------------------- | ----------------------------------------------------------------- |
+| Genesis 401                                    | Onboard token wrong or revoked                                    |
+| Genesis 422 `bootstrapKey/alg does not match`  | Genesis wallet is not the contract's bootstrap signer             |
+| Onboard request 400 on the attestation         | Bootstrap signer, `--root-address`, signer `KEY_DIRECTORY` log id |
+| Onboard request 409 `attestation already used` | Sign a fresh attestation: each one buys one request               |
+| Genesis 503 coordinator                        | Webhook URL unreachable from Canopy                               |
+| Statement 403 `signer_mismatch`                | Statement signer ≠ grant binding                                  |
+| Receipt poll never completes                   | Ask Canopy operator: Ranger + Sealer health                       |
+| Agent never seals                              | Webhook URL, Worker secrets, log enabled flag                     |
 
 ---
 
