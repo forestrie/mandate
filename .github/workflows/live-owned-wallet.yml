@@ -109,12 +109,16 @@ jobs:
   # mandate's authorization key, so mandate must be a signer on that wallet.
   # live-mode-c adds it (onboardModeCWallet) and both live-mode-c and the
   # live-hands-off kill-switch case revoke and restore it. Run after both, so
-  # no sign lands in a revoked window and the signer is known to be present.
+  # no sign lands in a revoked window, but whether they pass or not: a failure
+  # there must not skip the only live check that canopy accepts the
+  # attestation. If one stopped with the signer revoked, or live-mode-c never
+  # added it, the Privy sign here fails with a 502 and says so.
   live-onboard:
     name: Self-service onboard request live test (FOR-177)
     runs-on: ubuntu-latest
     environment: live-signer
     needs: [live-onboard-secrets-check, live-hands-off, live-mode-c]
+    if: ${{ !cancelled() && needs.live-onboard-secrets-check.result == 'success' }}
     steps:
       - uses: actions/checkout@v4
 

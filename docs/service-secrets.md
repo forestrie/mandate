@@ -332,7 +332,8 @@ flowchart TD
 ```
 
 `live-onboard` signs with the Mode C wallet, which `live-mode-c` and the
-`live-hands-off` kill-switch case revoke and restore, so it runs after both.
+`live-hands-off` kill-switch case revoke and restore, so it runs after both
+finish, whether they pass or not; it needs only its own preflight to pass.
 
 | Job              | Primary env                                                                                          |
 | ---------------- | ---------------------------------------------------------------------------------------------------- |
