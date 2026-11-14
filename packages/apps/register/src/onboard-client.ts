@@ -21,10 +21,10 @@ export interface RequestOnboardOptions {
 	mandateOrigin?: string;
 	/**
 	 * Bootstrap-key registrant attestation (see `onboard-attestation.ts`).
-	 * Required by canopy wherever ONBOARD_REQUIRE_KEY_ATTESTATION is armed
-	 * (dev, since 2026-07-27); verified whenever present.
+	 * Always required: canopy refuses an onboard request without it and
+	 * verifies it against the instance's chain-declared bootstrap key.
 	 */
-	attestation?: Uint8Array;
+	attestation: Uint8Array;
 	fetchImpl?: typeof fetch;
 }
 
@@ -68,18 +68,19 @@ function normalizeBase(base: string): string {
 export async function requestOnboardToken(
 	opts: RequestOnboardOptions
 ): Promise<RequestOnboardResult> {
+	if (!(opts.attestation instanceof Uint8Array) || opts.attestation.length === 0) {
+		throw new Error('request onboard: attestation is required and must be non-empty');
+	}
 	const fetchImpl = opts.fetchImpl ?? fetch;
 	const body = new Map<number, unknown>([
 		[CBOR_LABEL, opts.label],
+		[CBOR_ATTESTATION, opts.attestation],
 		[CBOR_CHAIN_ID, opts.chainId],
 		[CBOR_UNIVOCITY_ADDR, opts.univocityAddr.replace(/^0x/i, '')],
 		[CBOR_CONTACT_EMAIL, opts.contactEmail]
 	]);
 	if (opts.mandateOrigin) {
 		body.set(CBOR_MANDATE_ORIGIN, opts.mandateOrigin);
-	}
-	if (opts.attestation) {
-		body.set(CBOR_ATTESTATION, opts.attestation);
 	}
 
 	const response = await fetchImpl(`${normalizeBase(opts.canopyBaseUrl)}/api/onboarding/requests`, {
