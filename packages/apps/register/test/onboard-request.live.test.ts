@@ -56,6 +56,10 @@ const SIGNER_TOKEN = 'live-onboard-signer-token';
 const KEY_REF = 'onboard-live';
 const LOG_ID = randomBytes(16).toString('hex');
 
+// Privy signs, canopy verifies the attestation against a chain read, and the
+// ops-approve path polls; vitest's 5 s default is too short for all of it.
+const TIMEOUT_MS = 120_000;
+
 async function resolveWalletAddress(): Promise<string> {
 	const provided = process.env.E2E_MODE_C_USER_WALLET_ADDRESS?.trim();
 	if (provided) return provided;
@@ -154,29 +158,33 @@ async function ensureApproved(requestId: string, initialStatus: string): Promise
 }
 
 describe.skipIf(!liveReady)('onboard self-service live', () => {
-	it('request → approve → redeem returns usable token', async () => {
-		const attestation = await buildAttestationInCustody(await resolveWalletAddress());
-		const requested = await requestOnboardToken({
-			canopyBaseUrl: canopyBaseUrl!,
-			label: `live-onboard-${Date.now()}`,
-			chainId: chainId!,
-			univocityAddr: univocityAddr!,
-			contactEmail: 'live-test@forestrie.dev',
-			attestation
-		});
+	it(
+		'request → approve → redeem returns usable token',
+		async () => {
+			const attestation = await buildAttestationInCustody(await resolveWalletAddress());
+			const requested = await requestOnboardToken({
+				canopyBaseUrl: canopyBaseUrl!,
+				label: `live-onboard-${Date.now()}`,
+				chainId: chainId!,
+				univocityAddr: univocityAddr!,
+				contactEmail: 'live-test@forestrie.dev',
+				attestation
+			});
 
-		await ensureApproved(requested.requestId, requested.status);
+			await ensureApproved(requested.requestId, requested.status);
 
-		const status = await getOnboardRequestStatus(canopyBaseUrl!, requested.requestId);
-		expect(status.status).toBe('approved');
+			const status = await getOnboardRequestStatus(canopyBaseUrl!, requested.requestId);
+			expect(status.status).toBe('approved');
 
-		const token = await redeemOnboardToken({
-			canopyBaseUrl: canopyBaseUrl!,
-			requestId: requested.requestId,
-			redeemCode: requested.redeemCode
-		});
-		expect(token.length).toBeGreaterThan(0);
-	});
+			const token = await redeemOnboardToken({
+				canopyBaseUrl: canopyBaseUrl!,
+				requestId: requested.requestId,
+				redeemCode: requested.redeemCode
+			});
+			expect(token.length).toBeGreaterThan(0);
+		},
+		TIMEOUT_MS
+	);
 });
 
 describe('onboard self-service live preflight', () => {
